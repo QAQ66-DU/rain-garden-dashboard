@@ -1,0 +1,32 @@
+# Assumptions and unresolved questions
+
+Every assumption is visible and replaceable; none should be mistaken for a confirmed site or sensor property.
+
+## Approved Phase 1 assumptions
+
+- Orchard Park is synthetic, uses `Europe/London`, and has public location text “Synthetic demonstration site; exact location not supplied.”
+- Generated timestamps and values use a fixed UTC anchor, fixed random seed, and one-hour demo cadence.
+- The one-hour cadence is not a claim about real equipment.
+- Status is calculated at the dataset reference time with configurable 90-minute stale and 180-minute offline demo defaults.
+- The public raw-measurement query defaults to seven days, permits at most 31 days, and rejects matching sets above 5,000 rows.
+- In-memory rate limiting is acceptable only for a single process; a reverse proxy/shared limiter is required for horizontal scaling.
+- TTN authentication is secret-based and constant-time, but real payload mapping is disabled.
+- No software licence is added until university and partner intellectual-property ownership is confirmed.
+
+## Scientific limits
+
+- Metric names and units are controlled, but site-specific sensor accuracy, calibration, operating ranges, sampling schedules, depth comparability, and performance thresholds are not confirmed.
+- Only definition-level physical bounds, such as relative humidity not exceeding 100%, may create an initial out-of-range flag.
+- Synthetic variation is illustrative and is not a rainfall-runoff model or evidence of system performance.
+- Soil-moisture values from different depths or positions are not averaged. Phase 1 reports their spread and channel identities.
+- Missing observations are absent records, never implicit zeros.
+
+## Unresolved questions for later phases
+
+- Exact device models, firmware, TTN identifiers, payload schemas, frame-counter behavior, and unit declarations.
+- Confirmed channel depths/positions and which channels may be compared scientifically.
+- Site coordinates, disclosure policy, data retention, backup, and deletion policy.
+- Scientifically justified validity, stale/offline, rainfall-event, response, and recovery thresholds.
+- OIDC provider or authenticated reverse proxy, deployment environment, TLS termination, shared rate limiting, and audit requirements.
+- Software licensing and intellectual-property ownership.
+
