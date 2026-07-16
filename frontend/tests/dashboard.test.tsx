@@ -1,0 +1,83 @@
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it } from 'vitest';
+
+import { MeasurementDisplay } from '../src/components/MeasurementDisplay';
+import { weatherDeviceId } from './fixtures/api';
+import { renderRoute, renderWithQueryClient } from './render';
+import { server } from './server';
+
+describe('monitoring dashboard', () => {
+  it('shows a provenance-labelled, summary-first overview without hiding sensor channels', async () => {
+    renderRoute();
+
+    expect(
+      await screen.findByRole('heading', { name: 'North Campus Rain Garden' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Synthetic demonstration data')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Soil-moisture spread' })).toBeInTheDocument();
+    expect(screen.getByText('Soil moisture at 10 cm')).toBeInTheDocument();
+    expect(screen.getByText('Soil moisture at 30 cm')).toBeInTheDocument();
+    expect(screen.getByText('Median')).toBeInTheDocument();
+    expect(screen.queryByText('Average')).not.toBeInTheDocument();
+  });
+
+  it('lists all status states and filters devices by public display name', async () => {
+    const user = userEvent.setup();
+    renderRoute('/devices');
+
+    expect(await screen.findByRole('heading', { name: 'Weather Station' })).toBeInTheDocument();
+    expect(screen.getAllByText('Online')).not.toHaveLength(0);
+    expect(screen.getAllByText('Stale')).not.toHaveLength(0);
+    expect(screen.getAllByText('Offline')).not.toHaveLength(0);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search devices' }), 'soil');
+
+    expect(await screen.findByRole('heading', { name: 'Soil Profile Sensor' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Weather Station' })).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent('DevEUI');
+  });
+
+  it('renders one explicitly selected sensor channel as a raw seven-day series', async () => {
+    renderRoute(`/devices/${weatherDeviceId}`);
+
+    expect(await screen.findByRole('heading', { name: 'Weather Station' })).toBeInTheDocument();
+    expect(await screen.findByTestId('time-series-chart')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rainfall gauge over time' })).toBeInTheDocument();
+    const controls = screen.getByRole('region', { name: 'Chart controls' });
+    expect(within(controls).getByRole('combobox')).toHaveValue(
+      '00000000-0000-4000-8000-000000000021',
+    );
+    expect(screen.getByText(/Missing records are not converted to zero/)).toBeInTheDocument();
+  });
+
+  it('shows a useful standard API error without exposing internals', async () => {
+    server.use(
+      http.get('*/api/v1/overview', () =>
+        HttpResponse.json({ detail: 'Overview is temporarily unavailable.' }, { status: 503 }),
+      ),
+    );
+    renderRoute();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Overview is temporarily unavailable.',
+    );
+    expect(document.body).not.toHaveTextContent('Traceback');
+  });
+});
+
+describe('measurement semantics', () => {
+  it('distinguishes a measured zero from missing data', () => {
+    renderWithQueryClient(
+      <div>
+        <MeasurementDisplay value={0} unit="mm" />
+        <MeasurementDisplay value={null} unit="mm" />
+      </div>,
+    );
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('mm')).toBeInTheDocument();
+    expect(screen.getByText('Not available')).toBeInTheDocument();
+  });
+});

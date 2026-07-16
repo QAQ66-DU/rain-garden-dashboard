@@ -1,9 +1,18 @@
+import { Suspense } from 'react';
+import { Outlet } from 'react-router-dom';
+
+import { AppLayout } from './components/AppLayout';
+import { LoadingState } from './components/DataState';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 export function App() {
   return (
-    <main className="foundation-shell">
-      <p className="eyebrow">MSc Data Science research project</p>
-      <h1>Rain Garden Monitoring Dashboard</h1>
-      <p>The tested synthetic monitoring views are being initialized.</p>
-    </main>
+    <ErrorBoundary>
+      <AppLayout>
+        <Suspense fallback={<LoadingState title="Loading dashboard view" />}>
+          <Outlet />
+        </Suspense>
+      </AppLayout>
+    </ErrorBoundary>
   );
 }

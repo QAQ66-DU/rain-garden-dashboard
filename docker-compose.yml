@@ -67,8 +67,6 @@ services:
     build:
       context: ./frontend
       target: development
-    environment:
-      VITE_API_BASE_URL: /api/v1
     volumes:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules
