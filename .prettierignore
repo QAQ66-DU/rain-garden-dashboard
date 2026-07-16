@@ -1,0 +1,7 @@
+backend/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/src/api/generated.d.ts
+frontend/openapi.json
+

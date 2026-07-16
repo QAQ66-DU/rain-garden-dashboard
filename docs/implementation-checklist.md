@@ -31,4 +31,3 @@ This checklist incorporates the approved architectural amendments. Phase 2 and l
 - [ ] Add backend unit/integration, catalog consistency, frontend component, contract, and Playwright smoke tests.
 - [ ] Run the complete local and Docker quality gates and inspect the final diff/security posture.
 - [ ] Commit logical stages atomically and report all known limitations.
-

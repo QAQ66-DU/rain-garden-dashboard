@@ -69,4 +69,3 @@ Public endpoints return public IDs, labels, calculated freshness, normalized mea
 ## Deployment
 
 Docker Compose runs PostgreSQL, backend, and frontend. Development targets provide reload behavior; production targets use a non-root backend process and Nginx static hosting/proxying. Migrations are an explicit deployment step rather than an automatic multi-replica startup side effect. Seed data is an explicit demo-only command.
-

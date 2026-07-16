@@ -44,4 +44,3 @@ These rules apply to every change in this repository. The project is maintained 
 - Exact coordinates, raw uplinks, DevEUIs, and external device IDs are private by default.
 - Phase 0 and Phase 1 contain synthetic data only. Do not imply TTN compatibility or real observations.
 - Do not add Replit dependencies, SQLite, microservices, Kubernetes, Kafka, Redis, Celery, GraphQL, or advanced research analytics.
-

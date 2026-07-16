@@ -44,4 +44,3 @@ Real TTN payload mapping, threshold editing, shared distributed rate limiting, a
 ## Future scope
 
 Real TTN integration, richer quality monitoring, safe CSV export, scientifically approved rainfall-event analytics, authenticated production deployment, backups, and stakeholder evaluation require separate approval.
-

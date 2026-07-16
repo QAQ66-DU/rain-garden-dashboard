@@ -29,4 +29,3 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 - Scientifically justified validity, stale/offline, rainfall-event, response, and recovery thresholds.
 - OIDC provider or authenticated reverse proxy, deployment environment, TLS termination, shared rate limiting, and audit requirements.
 - Software licensing and intellectual-property ownership.
-

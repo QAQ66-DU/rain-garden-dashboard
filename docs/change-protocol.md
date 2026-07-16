@@ -41,12 +41,11 @@ High and critical dependency findings fail CI. Lower-severity findings remain vi
 
 ## Impact matrix
 
-| Change | Required review |
-|---|---|
-| Metric or unit | catalog, migration/seed, dictionary generation, API, UI units, fixtures, tests |
-| Sensor channel | schema, uniqueness, comparability, public metadata, filters, chart labels |
-| Database field | privacy classification, migration, model/schema/repository, fresh DB test |
-| API contract | routes/services, OpenAPI, generated TypeScript, consumers, fixtures, contract tests |
-| Freshness threshold | configuration, reference-time semantics, status tests, UI copy, assumptions |
-| Ingestion | auth, size/content checks, idempotency, logs, raw-data privacy, threat model |
-
+| Change              | Required review                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| Metric or unit      | catalog, migration/seed, dictionary generation, API, UI units, fixtures, tests      |
+| Sensor channel      | schema, uniqueness, comparability, public metadata, filters, chart labels           |
+| Database field      | privacy classification, migration, model/schema/repository, fresh DB test           |
+| API contract        | routes/services, OpenAPI, generated TypeScript, consumers, fixtures, contract tests |
+| Freshness threshold | configuration, reference-time semantics, status tests, UI copy, assumptions         |
+| Ingestion           | auth, size/content checks, idempotency, logs, raw-data privacy, threat model        |
