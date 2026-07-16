@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.db.sync_catalog import sync_metric_catalog
@@ -10,6 +11,7 @@ from app.db.synthetic import (
     generate_synthetic_uplinks,
     stable_uuid,
 )
+from app.ingestion.contracts import CanonicalUplink
 from app.ingestion.service import ingest_canonical_uplink
 from app.models.device import Device
 from app.models.enums import DeviceType, LocationDisclosure
@@ -19,13 +21,12 @@ from app.models.site import Site
 SITE_ID = stable_uuid("site:orchard-park")
 
 
-def seed() -> None:
-    with SessionLocal.begin() as session:
+def seed_session(session: Session) -> tuple[CanonicalUplink, ...] | None:
+    with session.begin_nested():
         sync_metric_catalog(session)
         session.flush()
         if session.scalar(select(Site).where(Site.id == SITE_ID)) is not None:
-            print("Synthetic dataset is already present; no rows were changed.")
-            return
+            return None
 
         site = Site(
             id=SITE_ID,
@@ -161,6 +162,15 @@ def seed() -> None:
         if duplicate_result.created:
             raise RuntimeError("Synthetic duplicate uplink was not idempotent")
 
+    return uplinks
+
+
+def seed() -> None:
+    with SessionLocal.begin() as session:
+        uplinks = seed_session(session)
+    if uplinks is None:
+        print("Synthetic dataset is already present; no rows were changed.")
+        return
     print(
         "Seeded deterministic synthetic data: "
         f"{SYNTHETIC_DAYS} days, seed {SYNTHETIC_RANDOM_SEED}, "

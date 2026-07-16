@@ -47,6 +47,8 @@ jobs:
         working-directory: backend
       - run: uv run alembic upgrade head
         working-directory: backend
+      - run: uv run python -m app.db.seed
+        working-directory: backend
       - run: uv run pytest --cov=app --cov-report=term-missing
         working-directory: backend
 
@@ -139,4 +141,3 @@ jobs:
         run: docker compose logs --no-color
       - if: always()
         run: docker compose down -v
-

@@ -1,0 +1,151 @@
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from decimal import Decimal
+from typing import cast
+from uuid import UUID
+
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
+
+from app.models.measurement import Measurement
+from app.models.metric_definition import MetricDefinition
+from app.models.sensor_channel import SensorChannel
+from app.models.uplink_event import UplinkEvent
+
+
+@dataclass(frozen=True, slots=True)
+class MeasurementRecord:
+    measurement_id: UUID
+    channel_id: UUID
+    channel_code: str
+    channel_name: str
+    metric_code: str
+    metric_name: str
+    unit_code: str
+    unit_symbol: str
+    depth_cm: float | None
+    position_label: str | None
+    value: Decimal
+    measured_at: datetime
+    quality_flag: str
+    quality_notes: str | None
+
+
+def dataset_reference_time(session: Session) -> datetime | None:
+    return session.scalar(select(func.max(UplinkEvent.received_at)))
+
+
+def _conditions(
+    device_id: UUID,
+    start: datetime,
+    end: datetime,
+    metric_code: str | None,
+    sensor_channel_id: UUID | None,
+) -> list[ColumnElement[bool]]:
+    conditions: list[ColumnElement[bool]] = [
+        Measurement.device_id == device_id,
+        Measurement.measured_at >= start,
+        Measurement.measured_at <= end,
+    ]
+    if metric_code is not None:
+        conditions.append(SensorChannel.metric_code == metric_code)
+    if sensor_channel_id is not None:
+        conditions.append(Measurement.sensor_channel_id == sensor_channel_id)
+    return conditions
+
+
+def count_measurements(
+    session: Session,
+    *,
+    device_id: UUID,
+    start: datetime,
+    end: datetime,
+    metric_code: str | None,
+    sensor_channel_id: UUID | None,
+) -> int:
+    value = session.scalar(
+        select(func.count())
+        .select_from(Measurement)
+        .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
+        .where(*_conditions(device_id, start, end, metric_code, sensor_channel_id))
+    )
+    return int(value or 0)
+
+
+def list_measurements(
+    session: Session,
+    *,
+    device_id: UUID,
+    start: datetime,
+    end: datetime,
+    metric_code: str | None,
+    sensor_channel_id: UUID | None,
+    after: tuple[datetime, UUID] | None,
+    page_size: int,
+) -> list[MeasurementRecord]:
+    conditions = _conditions(device_id, start, end, metric_code, sensor_channel_id)
+    if after is not None:
+        timestamp, identifier = after
+        conditions.append(
+            or_(
+                Measurement.measured_at > timestamp,
+                and_(Measurement.measured_at == timestamp, Measurement.id > identifier),
+            )
+        )
+    rows = session.execute(
+        select(
+            Measurement.id,
+            Measurement.sensor_channel_id,
+            SensorChannel.channel_code,
+            SensorChannel.display_name,
+            SensorChannel.metric_code,
+            MetricDefinition.display_name,
+            SensorChannel.unit_code,
+            MetricDefinition.unit_symbol,
+            SensorChannel.depth_cm,
+            SensorChannel.position_label,
+            Measurement.numeric_value,
+            Measurement.measured_at,
+            Measurement.quality_flag,
+            Measurement.quality_notes,
+        )
+        .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
+        .join(
+            MetricDefinition,
+            and_(
+                MetricDefinition.metric_code == SensorChannel.metric_code,
+                MetricDefinition.unit_code == SensorChannel.unit_code,
+            ),
+        )
+        .where(*conditions)
+        .order_by(Measurement.measured_at, Measurement.id)
+        .limit(page_size + 1)
+    ).all()
+    return [
+        MeasurementRecord(
+            measurement_id=cast(UUID, row[0]),
+            channel_id=cast(UUID, row[1]),
+            channel_code=cast(str, row[2]),
+            channel_name=cast(str, row[3]),
+            metric_code=cast(str, row[4]),
+            metric_name=cast(str, row[5]),
+            unit_code=cast(str, row[6]),
+            unit_symbol=cast(str, row[7]),
+            depth_cm=cast(float | None, row[8]),
+            position_label=cast(str | None, row[9]),
+            value=cast(Decimal, row[10]),
+            measured_at=cast(datetime, row[11]),
+            quality_flag=cast(str, row[12]),
+            quality_notes=cast(str | None, row[13]),
+        )
+        for row in rows
+    ]
+
+
+def current_reference_time(session: Session, *, demo_mode: bool) -> datetime:
+    if demo_mode:
+        reference = dataset_reference_time(session)
+        if reference is not None:
+            return reference
+    return datetime.now(UTC)

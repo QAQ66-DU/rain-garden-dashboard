@@ -1,0 +1,155 @@
+from datetime import UTC, datetime
+
+import pytest
+from app.core.config import Settings
+from app.db.seed import SITE_ID
+from app.db.synthetic import stable_uuid
+from app.services.errors import ServiceError
+from app.services.measurements import list_measurements
+from sqlalchemy.orm import Session
+from starlette.testclient import TestClient
+
+pytestmark = pytest.mark.integration
+
+WEATHER_DEVICE_ID = stable_uuid("device:synthetic-weather-001")
+
+
+def test_health_and_security_headers(api_client: TestClient) -> None:
+    response = api_client.get("/api/v1/health", headers={"X-Request-ID": "integration-check"})
+
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+    assert response.headers["x-request-id"] == "integration-check"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+
+
+def test_overview_is_channel_aware_and_synthetic(api_client: TestClient) -> None:
+    response = api_client.get("/api/v1/overview")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["synthetic"] is True
+    assert body["devices"] == {
+        "total": 3,
+        "online": 1,
+        "stale": 1,
+        "offline": 1,
+        "unknown": 0,
+    }
+    assert body["data_quality"]["warning_count"] == 1
+    soil = body["soil_moisture"]
+    assert "average" not in soil
+    assert soil["contributing_channel_count"] == 2
+    assert [channel["depth_cm"] for channel in soil["contributing_channels"]] == [10.0, 30.0]
+    assert soil["minimum"] <= soil["median"] <= soil["maximum"]
+
+
+def test_public_responses_exclude_private_fields(api_client: TestClient) -> None:
+    site = api_client.get(f"/api/v1/sites/{SITE_ID}")
+    devices = api_client.get("/api/v1/devices")
+    detail = api_client.get(f"/api/v1/devices/{WEATHER_DEVICE_ID}")
+
+    assert site.status_code == devices.status_code == detail.status_code == 200
+    serialized = f"{site.text}\n{devices.text}\n{detail.text}"
+    for forbidden in (
+        "external_device_id",
+        "raw_payload",
+        "private_latitude",
+        "private_longitude",
+        "channel_metadata",
+        "DevEUI",
+        "synthetic-weather-001",
+    ):
+        assert forbidden not in serialized
+
+
+def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
+    first = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
+        params={"metric_code": "rainfall_mm", "page_size": 3},
+    )
+
+    assert first.status_code == 200
+    first_body = first.json()
+    assert first_body["total_matching"] == 169
+    assert len(first_body["items"]) == 3
+    assert first_body["next_cursor"] is not None
+    assert all(item["unit_symbol"] == "mm" for item in first_body["items"])
+
+    second = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
+        params={
+            "metric_code": "rainfall_mm",
+            "page_size": 3,
+            "cursor": first_body["next_cursor"],
+        },
+    )
+    assert second.status_code == 200
+    assert datetime.fromisoformat(
+        second.json()["items"][0]["measured_at"]
+    ) > datetime.fromisoformat(first_body["items"][-1]["measured_at"])
+
+
+def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
+    settings = Settings(
+        database_url="postgresql+psycopg://test:test@localhost/test",
+        max_measurement_result_rows=10,
+    )
+
+    with pytest.raises(ServiceError) as error:
+        list_measurements(
+            db_session,
+            settings,
+            WEATHER_DEVICE_ID,
+            start=datetime(2026, 5, 25, 12, tzinfo=UTC),
+            end=datetime(2026, 6, 1, 12, tzinfo=UTC),
+            metric_code="rainfall_mm",
+            sensor_channel_id=None,
+            page_size=10,
+            cursor=None,
+        )
+
+    assert error.value.error_code == "result_set_too_large"
+    assert "169 rows" in error.value.detail
+
+
+def test_webhook_authentication_and_disabled_adapter(api_client: TestClient) -> None:
+    missing = api_client.post("/api/v1/ingestion/ttn", json={})
+    wrong = api_client.post(
+        "/api/v1/ingestion/ttn",
+        json={},
+        headers={"X-Webhook-Secret": "wrong-secret"},
+    )
+    accepted_auth = api_client.post(
+        "/api/v1/ingestion/ttn",
+        json={},
+        headers={"X-Webhook-Secret": "integration-test-webhook-secret"},
+    )
+
+    assert missing.status_code == wrong.status_code == 401
+    assert accepted_auth.status_code == 501
+    assert accepted_auth.json()["error_code"] == "ttn_adapter_disabled"
+
+
+def test_webhook_content_type_and_body_size_are_enforced(api_client: TestClient) -> None:
+    headers = {"X-Webhook-Secret": "integration-test-webhook-secret"}
+    wrong_type = api_client.post("/api/v1/ingestion/ttn", content="not-json", headers=headers)
+    oversized = api_client.post(
+        "/api/v1/ingestion/ttn", json={"blob": "x" * 2_000}, headers=headers
+    )
+
+    assert wrong_type.status_code == 415
+    assert oversized.status_code == 413
+    assert oversized.json()["error_code"] == "request_body_too_large"
+
+
+def test_validation_error_uses_problem_contract(api_client: TestClient) -> None:
+    response = api_client.get("/api/v1/devices", params={"page_size": 0})
+
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("application/problem+json")
+    body = response.json()
+    assert body["error_code"] == "validation_error"
+    assert body["correlation_id"]
+    assert "traceback" not in response.text.lower()

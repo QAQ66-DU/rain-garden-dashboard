@@ -1,0 +1,1513 @@
+{
+  "components": {
+    "schemas": {
+      "ConnectivityStatus": {
+        "enum": [
+          "unknown",
+          "online",
+          "stale",
+          "offline"
+        ],
+        "title": "ConnectivityStatus",
+        "type": "string"
+      },
+      "DeviceDetail": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/SensorChannelPublic"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "device_type": {
+            "title": "Device Type",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "latest_battery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurementValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_measurements": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementValue"
+            },
+            "title": "Latest Measurements",
+            "type": "array"
+          },
+          "location_disclosure": {
+            "title": "Location Disclosure",
+            "type": "string"
+          },
+          "operational_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operational Override"
+          },
+          "site_id": {
+            "format": "uuid",
+            "title": "Site Id",
+            "type": "string"
+          },
+          "site_name": {
+            "title": "Site Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "site_name",
+          "display_name",
+          "device_type",
+          "operational_override",
+          "last_seen_at",
+          "location_disclosure",
+          "freshness",
+          "latest_battery",
+          "channels",
+          "latest_measurements"
+        ],
+        "title": "DeviceDetail",
+        "type": "object"
+      },
+      "DeviceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DevicePublic"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "reference_time",
+          "synthetic"
+        ],
+        "title": "DeviceList",
+        "type": "object"
+      },
+      "DevicePublic": {
+        "properties": {
+          "device_type": {
+            "title": "Device Type",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "latest_battery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurementValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location_disclosure": {
+            "title": "Location Disclosure",
+            "type": "string"
+          },
+          "operational_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operational Override"
+          },
+          "site_id": {
+            "format": "uuid",
+            "title": "Site Id",
+            "type": "string"
+          },
+          "site_name": {
+            "title": "Site Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "site_name",
+          "display_name",
+          "device_type",
+          "operational_override",
+          "last_seen_at",
+          "location_disclosure",
+          "freshness",
+          "latest_battery"
+        ],
+        "title": "DevicePublic",
+        "type": "object"
+      },
+      "DeviceStatusCounts": {
+        "properties": {
+          "offline": {
+            "title": "Offline",
+            "type": "integer"
+          },
+          "online": {
+            "title": "Online",
+            "type": "integer"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "online",
+          "stale",
+          "offline",
+          "unknown"
+        ],
+        "title": "DeviceStatusCounts",
+        "type": "object"
+      },
+      "Freshness": {
+        "properties": {
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "calculated_status": {
+            "$ref": "#/components/schemas/ConnectivityStatus"
+          },
+          "offline_after_minutes": {
+            "title": "Offline After Minutes",
+            "type": "integer"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "stale_after_minutes": {
+            "title": "Stale After Minutes",
+            "type": "integer"
+          },
+          "status_basis": {
+            "title": "Status Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calculated_status",
+          "reference_time",
+          "age_seconds",
+          "stale_after_minutes",
+          "offline_after_minutes",
+          "status_basis"
+        ],
+        "title": "Freshness",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "version",
+          "timestamp"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "MeasurementPage": {
+        "properties": {
+          "default_range_applied": {
+            "title": "Default Range Applied",
+            "type": "boolean"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementValue"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "total_matching": {
+            "title": "Total Matching",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "total_matching",
+          "start",
+          "end",
+          "reference_time",
+          "default_range_applied",
+          "synthetic"
+        ],
+        "title": "MeasurementPage",
+        "type": "object"
+      },
+      "MeasurementValue": {
+        "properties": {
+          "channel_code": {
+            "title": "Channel Code",
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "channel_name": {
+            "title": "Channel Name",
+            "type": "string"
+          },
+          "depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Cm"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "numeric_value": {
+            "title": "Numeric Value",
+            "type": "number"
+          },
+          "position_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Label"
+          },
+          "quality_flag": {
+            "title": "Quality Flag",
+            "type": "string"
+          },
+          "quality_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Notes"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "unit_symbol": {
+            "title": "Unit Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "channel_code",
+          "channel_name",
+          "metric_code",
+          "metric_name",
+          "numeric_value",
+          "unit_code",
+          "unit_symbol",
+          "measured_at",
+          "quality_flag",
+          "quality_notes",
+          "depth_cm",
+          "position_label"
+        ],
+        "title": "MeasurementValue",
+        "type": "object"
+      },
+      "Overview": {
+        "properties": {
+          "data_quality": {
+            "$ref": "#/components/schemas/QualityWindow"
+          },
+          "devices": {
+            "$ref": "#/components/schemas/DeviceStatusCounts"
+          },
+          "display_timezone": {
+            "title": "Display Timezone",
+            "type": "string"
+          },
+          "last_data_update": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Data Update"
+          },
+          "latest_rainfall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurementValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "public_location_label": {
+            "title": "Public Location Label",
+            "type": "string"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "site_id": {
+            "format": "uuid",
+            "title": "Site Id",
+            "type": "string"
+          },
+          "site_name": {
+            "title": "Site Name",
+            "type": "string"
+          },
+          "soil_moisture": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SoilMoistureSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "synthetic_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synthetic Notice"
+          }
+        },
+        "required": [
+          "site_id",
+          "site_name",
+          "public_location_label",
+          "display_timezone",
+          "synthetic",
+          "synthetic_notice",
+          "reference_time",
+          "last_data_update",
+          "devices",
+          "latest_rainfall",
+          "soil_moisture",
+          "data_quality"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
+      "QualityWindow": {
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "warning_count"
+        ],
+        "title": "QualityWindow",
+        "type": "object"
+      },
+      "SensorChannelPublic": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "channel_code": {
+            "title": "Channel Code",
+            "type": "string"
+          },
+          "depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Cm"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "position_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Label"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "unit_symbol": {
+            "title": "Unit Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "channel_code",
+          "display_name",
+          "metric_code",
+          "metric_name",
+          "unit_code",
+          "unit_symbol",
+          "depth_cm",
+          "position_label",
+          "active"
+        ],
+        "title": "SensorChannelPublic",
+        "type": "object"
+      },
+      "SiteList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SitePublic"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "SiteList",
+        "type": "object"
+      },
+      "SitePublic": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_timezone": {
+            "title": "Display Timezone",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "location_disclosure": {
+            "title": "Location Disclosure",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "public_location_label": {
+            "title": "Public Location Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "public_location_label",
+          "location_disclosure",
+          "display_timezone",
+          "active"
+        ],
+        "title": "SitePublic",
+        "type": "object"
+      },
+      "SoilChannelObservation": {
+        "properties": {
+          "channel_code": {
+            "title": "Channel Code",
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "channel_name": {
+            "title": "Channel Name",
+            "type": "string"
+          },
+          "depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Cm"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "numeric_value": {
+            "title": "Numeric Value",
+            "type": "number"
+          },
+          "position_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Label"
+          },
+          "quality_flag": {
+            "title": "Quality Flag",
+            "type": "string"
+          },
+          "quality_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Notes"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "unit_symbol": {
+            "title": "Unit Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "channel_code",
+          "channel_name",
+          "metric_code",
+          "metric_name",
+          "numeric_value",
+          "unit_code",
+          "unit_symbol",
+          "measured_at",
+          "quality_flag",
+          "quality_notes",
+          "depth_cm",
+          "position_label"
+        ],
+        "title": "SoilChannelObservation",
+        "type": "object"
+      },
+      "SoilMoistureSummary": {
+        "properties": {
+          "comparability_note": {
+            "title": "Comparability Note",
+            "type": "string"
+          },
+          "contributing_channel_count": {
+            "title": "Contributing Channel Count",
+            "type": "integer"
+          },
+          "contributing_channels": {
+            "items": {
+              "$ref": "#/components/schemas/SoilChannelObservation"
+            },
+            "title": "Contributing Channels",
+            "type": "array"
+          },
+          "maximum": {
+            "title": "Maximum",
+            "type": "number"
+          },
+          "median": {
+            "title": "Median",
+            "type": "number"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "minimum": {
+            "title": "Minimum",
+            "type": "number"
+          },
+          "timestamp_end": {
+            "format": "date-time",
+            "title": "Timestamp End",
+            "type": "string"
+          },
+          "timestamp_start": {
+            "format": "date-time",
+            "title": "Timestamp Start",
+            "type": "string"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "unit_symbol": {
+            "title": "Unit Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_code",
+          "unit_code",
+          "unit_symbol",
+          "minimum",
+          "median",
+          "maximum",
+          "contributing_channel_count",
+          "timestamp_start",
+          "timestamp_end",
+          "contributing_channels",
+          "comparability_note"
+        ],
+        "title": "SoilMoistureSummary",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Read-only Phase 1 API for deterministic synthetic urban green infrastructure monitoring data.",
+    "title": "Rain Garden Monitoring Dashboard API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/devices": {
+      "get": {
+        "operationId": "list_devices_api_v1_devices_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "site_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "device_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ConnectivityStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Devices",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/v1/devices/{device_id}": {
+      "get": {
+        "operationId": "get_device_api_v1_devices__device_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Device",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/v1/devices/{device_id}/measurements": {
+      "get": {
+        "operationId": "list_measurements_api_v1_devices__device_id__measurements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sensor_channel_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sensor Channel Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 250,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Measurements",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/ingestion/ttn": {
+      "post": {
+        "operationId": "receive_ttn_webhook_api_v1_ingestion_ttn_post",
+        "responses": {
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Receive Ttn Webhook",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/api/v1/overview": {
+      "get": {
+        "operationId": "overview_api_v1_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "site_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "overview"
+        ]
+      }
+    },
+    "/api/v1/sites": {
+      "get": {
+        "operationId": "list_sites_api_v1_sites_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sites",
+        "tags": [
+          "sites"
+        ]
+      }
+    },
+    "/api/v1/sites/{site_id}": {
+      "get": {
+        "operationId": "get_site_api_v1_sites__site_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "site_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Site Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SitePublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Site",
+        "tags": [
+          "sites"
+        ]
+      }
+    }
+  }
+}
