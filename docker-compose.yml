@@ -40,8 +40,10 @@ services:
       MAX_MEASUREMENT_RANGE_DAYS: ${MAX_MEASUREMENT_RANGE_DAYS:-31}
       DEFAULT_MEASUREMENT_RANGE_DAYS: ${DEFAULT_MEASUREMENT_RANGE_DAYS:-7}
       MAX_MEASUREMENT_RESULT_ROWS: ${MAX_MEASUREMENT_RESULT_ROWS:-5000}
+      DATA_DICTIONARY_PATH: /workspace-docs/data-dictionary.md
     volumes:
       - ./backend:/app
+      - ./docs:/workspace-docs:ro
       - backend-venv:/app/.venv
     ports:
       - '8000:8000'

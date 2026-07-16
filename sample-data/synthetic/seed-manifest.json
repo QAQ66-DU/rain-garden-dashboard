@@ -1,0 +1,11 @@
+{
+  "cadence_minutes": 60,
+  "days": 7,
+  "duplicate_uplink_attempts": 1,
+  "invalid_fixture": "relative_humidity_above_definition_level_maximum",
+  "mode": "synthetic",
+  "random_seed": 20260716,
+  "reference_time_utc": "2026-06-01T12:00:00+00:00",
+  "site": "Orchard Park demonstration site"
+}
+

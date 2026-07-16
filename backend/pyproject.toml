@@ -36,7 +36,7 @@ ignore = ["S101"]
 
 [tool.ruff.lint.per-file-ignores]
 "migrations/versions/*.py" = ["E501"]
-"tests/**/*.py" = ["S101"]
+"tests/**/*.py" = ["S101", "S106"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -59,4 +59,3 @@ source = ["app"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-
