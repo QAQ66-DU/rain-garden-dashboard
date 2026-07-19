@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { useOverview } from '../api/queries';
 import { ErrorState, LoadingState } from '../components/DataState';
@@ -10,6 +10,7 @@ import { formatDateTime, formatNumber } from '../utils/format';
 
 export function OverviewPage() {
   const overview = useOverview();
+  const location = useLocation();
 
   if (overview.isLoading) {
     return <LoadingState title="Loading site overview" />;
@@ -20,6 +21,15 @@ export function OverviewPage() {
 
   const data = overview.data;
   const soil = data.soil_moisture;
+  const warningParams = new URLSearchParams(location.search);
+  if (data.data_quality.start && data.data_quality.end) {
+    warningParams.set('start', data.data_quality.start);
+    warningParams.set('end', data.data_quality.end);
+  }
+  warningParams.set('preset', 'custom');
+  warningParams.set('feature', 'all');
+  warningParams.set('group', 'weather');
+  warningParams.delete('channels');
   return (
     <div className="page-stack">
       {data.synthetic ? <SyntheticBanner /> : null}
@@ -68,6 +78,14 @@ export function OverviewPage() {
           note="Latest synthetic uplink receipt"
         />
       </section>
+      <div className="overview-actions">
+        <Link
+          className="button-link"
+          to={{ pathname: '/explore', search: warningParams.toString(), hash: 'quality-warnings' }}
+        >
+          Review quality warnings in Time Explorer <span aria-hidden="true">→</span>
+        </Link>
+      </div>
 
       <section className="overview-grid">
         <article className="panel status-panel">
@@ -76,7 +94,7 @@ export function OverviewPage() {
               <p className="eyebrow">Network status</p>
               <h2>Device freshness</h2>
             </div>
-            <Link className="text-link" to="/devices">
+            <Link className="text-link" to={{ pathname: '/devices', search: location.search }}>
               Review devices →
             </Link>
           </div>

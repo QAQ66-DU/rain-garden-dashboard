@@ -30,6 +30,13 @@ class UnitConfirmationStatus(StrEnum):
     SYNTHETIC_DEMO_ONLY = "synthetic_demo_only"
 
 
+class MetricGroup(StrEnum):
+    HYDROLOGY = "hydrology"
+    SOIL = "soil"
+    WEATHER = "weather"
+    OPERATIONAL = "operational"
+
+
 class OperationalOverride(StrEnum):
     MAINTENANCE = "maintenance"
     DISABLED = "disabled"

@@ -17,6 +17,7 @@ class MetricSpec:
     valid_min: float | None
     valid_max: float | None
     validity_basis: str
+    metric_group: str = "operational"
     synthetic_demo_unit_code: str | None = None
     source: str = "Controlled monitoring vocabulary"
     expected_type: str = "number"
@@ -62,12 +63,23 @@ def _metric(
     valid_max: float | None = None,
     validity_basis: str = "No deployment-specific validity range is confirmed.",
     *,
+    metric_group: str = "operational",
     source: str = (
         "Confirmed Orchard Park measurement vocabulary; unit mapping is demo-only unless a "
         "channel is confirmed."
     ),
 ) -> MetricSpec:
-    return MetricSpec(code, name, meaning, valid_min, valid_max, validity_basis, unit, source)
+    return MetricSpec(
+        code,
+        name,
+        meaning,
+        valid_min,
+        valid_max,
+        validity_basis,
+        metric_group,
+        unit,
+        source,
+    )
 
 
 METRICS: tuple[MetricSpec, ...] = (
@@ -79,8 +91,15 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         100.0,
         "Definition-level percentage bounds for the demo-normalised representation only.",
+        metric_group="soil",
     ),
-    _metric("soil_temperature", "Soil temperature", "Soil temperature measurement.", "deg_c"),
+    _metric(
+        "soil_temperature",
+        "Soil temperature",
+        "Soil temperature measurement.",
+        "deg_c",
+        metric_group="soil",
+    ),
     _metric(
         "soil_electrical_conductivity",
         "Soil electrical conductivity",
@@ -89,14 +108,22 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         None,
         "Definition-level non-negative bound for the demo-normalised representation only.",
+        metric_group="soil",
     ),
     _metric(
         "water_level",
         "Water level",
         "Water level relative to a channel-specific, currently unconfirmed datum.",
         "mm",
+        metric_group="hydrology",
     ),
-    _metric("air_temperature", "Air temperature", "Air temperature measurement.", "deg_c"),
+    _metric(
+        "air_temperature",
+        "Air temperature",
+        "Air temperature measurement.",
+        "deg_c",
+        metric_group="weather",
+    ),
     _metric(
         "relative_humidity",
         "Relative humidity",
@@ -105,6 +132,7 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         100.0,
         "Definition-level percentage bounds; device range is unconfirmed.",
+        metric_group="weather",
     ),
     _metric(
         "wind_speed",
@@ -114,6 +142,7 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         None,
         "Definition-level non-negative bound only; device range is unconfirmed.",
+        metric_group="weather",
     ),
     _metric(
         "wind_direction",
@@ -123,6 +152,7 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         360.0,
         "Definition-level circular direction bounds only; device range is unconfirmed.",
+        metric_group="weather",
     ),
     _metric(
         "rainfall_intensity",
@@ -132,6 +162,7 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         None,
         "Definition-level non-negative bound only; device range is unconfirmed.",
+        metric_group="hydrology",
     ),
     _metric(
         "light_intensity",
@@ -141,6 +172,7 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         None,
         "Definition-level non-negative bound for the demo-normalised representation only.",
+        metric_group="weather",
     ),
     _metric(
         "uv_index",
@@ -150,9 +182,14 @@ METRICS: tuple[MetricSpec, ...] = (
         0.0,
         None,
         "Definition-level non-negative bound only; device range is unconfirmed.",
+        metric_group="weather",
     ),
     _metric(
-        "barometric_pressure", "Barometric pressure", "Barometric pressure measurement.", "hpa"
+        "barometric_pressure",
+        "Barometric pressure",
+        "Barometric pressure measurement.",
+        "hpa",
+        metric_group="weather",
     ),
     # Compatibility vocabulary retained for existing Phase 1 rows. The confirmed inventory does
     # not use these metric codes.
@@ -165,6 +202,7 @@ METRICS: tuple[MetricSpec, ...] = (
         None,
         "Legacy Phase 1 definition-level bound.",
         source="Deprecated Phase 1 synthetic vocabulary",
+        metric_group="hydrology",
     ),
     _metric(
         "air_temperature_c",
@@ -172,6 +210,7 @@ METRICS: tuple[MetricSpec, ...] = (
         "Deprecated Phase 1 temperature vocabulary.",
         "deg_c",
         source="Deprecated Phase 1 synthetic vocabulary",
+        metric_group="weather",
     ),
     _metric(
         "relative_humidity_pct",
@@ -182,6 +221,7 @@ METRICS: tuple[MetricSpec, ...] = (
         100.0,
         "Legacy Phase 1 percentage bounds.",
         source="Deprecated Phase 1 synthetic vocabulary",
+        metric_group="weather",
     ),
     _metric(
         "soil_moisture_vwc_pct",
@@ -192,6 +232,7 @@ METRICS: tuple[MetricSpec, ...] = (
         100.0,
         "Legacy Phase 1 percentage bounds.",
         source="Deprecated Phase 1 synthetic vocabulary",
+        metric_group="soil",
     ),
     _metric(
         "water_level_mm",
@@ -199,6 +240,7 @@ METRICS: tuple[MetricSpec, ...] = (
         "Deprecated Phase 1 water-level vocabulary.",
         "mm",
         source="Deprecated Phase 1 synthetic vocabulary",
+        metric_group="hydrology",
     ),
     _metric(
         "battery_voltage_v",
@@ -247,9 +289,9 @@ def render_data_dictionary() -> str:
         "This file is generated from `backend/app/metric_catalog.py`. Metrics and physical units "
         "are separate concepts. A channel may have no unit while confirmation is pending. "
         "Demo-normalised units are illustrative and do not confirm the deployed sensor mapping.\n\n"
-        "| Metric code | Meaning | Synthetic demo unit | Valid-range status | Source | "
+        "| Metric code | Group | Meaning | Synthetic demo unit | Valid-range status | Source | "
         "Deployment unit confirmed |\n"
-        "|---|---|---|---|---|---|\n"
+        "|---|---|---|---|---|---|---|\n"
     )
     rows = []
     for metric in METRICS:
@@ -260,6 +302,7 @@ def render_data_dictionary() -> str:
             + " | ".join(
                 (
                     f"`{metric.metric_code}`",
+                    metric.metric_group,
                     metric.meaning,
                     demo_unit,
                     metric.validity_basis,

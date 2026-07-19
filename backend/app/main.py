@@ -21,8 +21,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="Rain Garden Monitoring Dashboard API",
         version=__version__,
         description=(
-            "Read-only Phase 1 API for deterministic synthetic urban green infrastructure "
-            "monitoring data."
+            "Read-only API for deterministic synthetic urban green infrastructure monitoring "
+            "data, including half-open UTC period exploration."
         ),
     )
     application.state.settings = resolved_settings

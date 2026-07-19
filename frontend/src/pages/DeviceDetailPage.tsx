@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { useDevice, useMeasurements } from '../api/queries';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
@@ -12,10 +12,14 @@ import { formatDateTime, humanizeCode } from '../utils/format';
 
 export function DeviceDetailPage() {
   const { deviceId } = useParams();
+  const location = useLocation();
+  const periodParams = new URLSearchParams(location.search);
+  const periodStart = periodParams.get('start') ?? undefined;
+  const periodEnd = periodParams.get('end') ?? undefined;
   const device = useDevice(deviceId);
   const [channelId, setChannelId] = useState<string>();
   const selectedChannelId = channelId ?? device.data?.channels[0]?.id;
-  const measurements = useMeasurements(deviceId, selectedChannelId);
+  const measurements = useMeasurements(deviceId, selectedChannelId, periodStart, periodEnd);
   const selectedChannel = device.data?.channels.find((channel) => channel.id === selectedChannelId);
   const points = useMemo<ChartPoint[]>(
     () =>
@@ -40,7 +44,7 @@ export function DeviceDetailPage() {
   return (
     <div className="page-stack">
       <SyntheticBanner />
-      <Link className="back-link" to="/devices">
+      <Link className="back-link" to={{ pathname: '/devices', search: location.search }}>
         ← Back to devices
       </Link>
       <header className="device-hero">

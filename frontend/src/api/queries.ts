@@ -3,10 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchDevice,
   fetchDevices,
+  fetchExplorer,
   fetchMeasurements,
   fetchOverview,
   fetchSites,
   type DeviceFilters,
+  type ExplorerFilters,
 } from './client';
 
 export function useOverview(siteId?: string) {
@@ -27,6 +29,14 @@ export function useDevices(filters: DeviceFilters) {
   });
 }
 
+export function useExplorer(filters: ExplorerFilters | undefined) {
+  return useQuery({
+    queryKey: ['explorer', filters],
+    queryFn: () => fetchExplorer(filters as ExplorerFilters),
+    enabled: Boolean(filters),
+  });
+}
+
 export function useDevice(deviceId: string | undefined) {
   return useQuery({
     queryKey: ['device', deviceId],
@@ -35,10 +45,15 @@ export function useDevice(deviceId: string | undefined) {
   });
 }
 
-export function useMeasurements(deviceId: string | undefined, channelId: string | undefined) {
+export function useMeasurements(
+  deviceId: string | undefined,
+  channelId: string | undefined,
+  start?: string,
+  end?: string,
+) {
   return useQuery({
-    queryKey: ['measurements', deviceId, channelId],
-    queryFn: () => fetchMeasurements(deviceId ?? '', channelId ?? ''),
+    queryKey: ['measurements', deviceId, channelId, start, end],
+    queryFn: () => fetchMeasurements(deviceId ?? '', channelId ?? '', start, end),
     enabled: Boolean(deviceId && channelId),
   });
 }

@@ -11,6 +11,12 @@ def test_metric_codes_and_units_are_unique() -> None:
 
     assert len(codes) == len(set(codes))
     assert len(units) == len(set(units))
+    assert {metric.metric_group for metric in METRICS} == {
+        "hydrology",
+        "soil",
+        "weather",
+        "operational",
+    }
 
 
 def test_unknown_metric_is_rejected() -> None:

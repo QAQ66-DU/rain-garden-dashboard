@@ -47,7 +47,7 @@ export function TimeSeriesChart({ title, subtitle, unit, points }: TimeSeriesCha
             <CartesianGrid stroke="#dbe4e7" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="measuredAt"
-              tickFormatter={formatCompactDate}
+              tickFormatter={(value) => formatCompactDate(String(value))}
               minTickGap={42}
               stroke="#72817c"
               tick={{ fontSize: 12 }}

@@ -20,6 +20,7 @@ def sync_metric_catalog(session: Session) -> None:
             metric_row = MetricDefinition(metric_code=metric.metric_code)
             session.add(metric_row)
         metric_row.display_name = metric.display_name
+        metric_row.metric_group = metric.metric_group
         metric_row.meaning = metric.meaning
         metric_row.expected_type = metric.expected_type
         metric_row.valid_min = metric.valid_min

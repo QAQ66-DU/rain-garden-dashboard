@@ -48,7 +48,7 @@ def _conditions(
     conditions: list[ColumnElement[bool]] = [
         Measurement.device_id == device_id,
         Measurement.measured_at >= start,
-        Measurement.measured_at <= end,
+        Measurement.measured_at < end,
     ]
     if metric_code is not None:
         conditions.append(SensorChannel.metric_code == metric_code)

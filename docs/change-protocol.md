@@ -22,6 +22,7 @@ Ambiguity affecting scientific meaning, privacy, authentication, schema, or comp
 - Regenerate TypeScript only from the reviewed OpenAPI document.
 - Treat public-schema additions as privacy decisions and review every field.
 - Keep incomplete behavior disabled behind explicit configuration.
+- Use half-open UTC query windows `[start, end)`. Coverage requires an explicit reporting interval, schedule anchor, and jitter tolerance; do not infer a precise schedule or use rounded window duration as expected count.
 
 ## Quality gate
 

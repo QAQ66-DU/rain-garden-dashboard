@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 from app.core.config import Settings
 from app.db.seed import SITE_ID
 from app.db.synthetic import stable_uuid
+from app.models.sensor_channel import SensorChannel
 from app.services.errors import ServiceError
 from app.services.measurements import list_measurements
 from sqlalchemy.orm import Session
@@ -73,7 +75,7 @@ def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
 
     assert first.status_code == 200
     first_body = first.json()
-    assert first_body["total_matching"] == 169
+    assert first_body["total_matching"] == 168
     assert len(first_body["items"]) == 3
     assert first_body["next_cursor"] is not None
     assert all(item["unit_symbol"] == "mm/h" for item in first_body["items"])
@@ -115,7 +117,7 @@ def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
         )
 
     assert error.value.error_code == "result_set_too_large"
-    assert "169 rows" in error.value.detail
+    assert "168 rows" in error.value.detail
 
 
 def test_confirmed_inventory_features_and_pending_tree_probe(api_client: TestClient) -> None:
@@ -184,3 +186,190 @@ def test_validation_error_uses_problem_contract(api_client: TestClient) -> None:
     assert body["error_code"] == "validation_error"
     assert body["correlation_id"]
     assert "traceback" not in response.text.lower()
+
+
+def test_explorer_uses_half_open_periods_and_schedule_aligned_coverage(
+    api_client: TestClient,
+) -> None:
+    response = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "metric_group": "hydrology",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["time_window_semantics"].startswith("Half-open UTC interval [start, end)")
+    assert len(body["available_devices"]) == 8
+    assert len(body["available_channels"]) == 4
+    assert len(body["series"]) == 4
+    rainfall = next(
+        item for item in body["series"] if item["channel"]["metric_code"] == "rainfall_intensity"
+    )
+    assert len(rainfall["points"]) == 168
+    assert rainfall["coverage"] == {
+        "status": "available",
+        "status_detail": (
+            "Coverage counts unique schedule-aligned slots in the half-open UTC window [start, "
+            "end); flagged slots are received but not valid. Late means received more than "
+            "one reporting interval after measured_at."
+        ),
+        "expected_observations": 168,
+        "received_observations": 168,
+        "valid_observations": 168,
+        "flagged_observations": 0,
+        "missing_observations": 0,
+        "coverage_percentage": 100.0,
+        "late_observations": 0,
+        "out_of_tolerance_observations": 0,
+        "duplicate_slot_observations": 0,
+        "missing_intervals": [],
+    }
+    duration = next(
+        item
+        for item in rainfall["summary"]["statistics"]
+        if item["code"] == "duration_above_zero_seconds"
+    )
+    assert duration["value"] == 21_600
+    assert body["quality_warnings"][0]["quality_flag"] == "out_of_range"
+    assert body["quality_warnings"][0]["excluded_from_summaries"] is True
+    serialized_warning = str(body["quality_warnings"][0]).lower()
+    assert "raw_payload" not in serialized_warning
+    assert "external_device" not in serialized_warning
+
+    measurements = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "sensor_channel_id": rainfall["channel"]["channel_id"],
+            "page_size": 500,
+        },
+    )
+    assert measurements.status_code == 200
+    assert measurements.json()["total_matching"] == rainfall["coverage"]["received_observations"]
+    assert {
+        (item["measured_at"], item["numeric_value"], item["quality_flag"])
+        for item in measurements.json()["items"]
+    } == {
+        (item["measured_at"], item["numeric_value"], item["quality_flag"])
+        for item in rainfall["points"]
+    }
+
+
+def test_explorer_feature_and_channel_selection_are_explicit(api_client: TestClient) -> None:
+    tree = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "feature": "tree-pit",
+            "metric_group": "soil",
+        },
+    )
+    assert tree.status_code == 200
+    assert len(tree.json()["available_devices"]) == 1
+    assert tree.json()["available_channels"] == []
+    assert tree.json()["series"] == []
+
+    hydrology = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "metric_group": "hydrology",
+        },
+    ).json()
+    channel_id = hydrology["available_channels"][0]["channel_id"]
+    selected = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "metric_group": "hydrology",
+            "channels": channel_id,
+        },
+    )
+    assert selected.status_code == 200
+    assert selected.json()["selected_channel_ids"] == [channel_id]
+    assert len(selected.json()["series"]) == 1
+
+
+def test_explorer_empty_period_reports_missing_slots_without_zero_fill(
+    api_client: TestClient,
+) -> None:
+    response = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-01T12:00:00Z",
+            "end": "2026-05-01T13:00:00Z",
+            "metric_group": "hydrology",
+        },
+    )
+
+    assert response.status_code == 200
+    for series in response.json()["series"]:
+        assert series["points"] == []
+        assert series["summary"]["status"] == "no_data"
+        assert series["coverage"]["expected_observations"] == 1
+        assert series["coverage"]["received_observations"] == 0
+        assert series["coverage"]["missing_observations"] == 1
+        assert series["coverage"]["coverage_percentage"] == 0
+
+
+def test_explorer_does_not_infer_unknown_reporting_schedule(
+    api_client: TestClient, db_session: Session
+) -> None:
+    initial = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-05-25T13:00:00Z",
+            "metric_group": "hydrology",
+        },
+    ).json()
+    channel_id = initial["available_channels"][0]["channel_id"]
+    channel = db_session.get(SensorChannel, UUID(channel_id))
+    assert channel is not None
+    channel.expected_reporting_interval_seconds = None
+    channel.reporting_schedule_anchor_at = None
+    channel.reporting_jitter_tolerance_seconds = None
+    db_session.flush()
+
+    response = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-05-25T13:00:00Z",
+            "metric_group": "hydrology",
+            "channels": channel_id,
+        },
+    )
+
+    assert response.status_code == 200
+    coverage = response.json()["series"][0]["coverage"]
+    assert coverage["status"] == "unavailable"
+    assert coverage["expected_observations"] is None
+    assert coverage["coverage_percentage"] is None
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "error_code"),
+    (
+        ("2026-06-01T12:00:00Z", "2026-06-01T12:00:00Z", "invalid_time_range"),
+        ("2026-04-01T00:00:00Z", "2026-06-01T12:00:00Z", "time_range_too_large"),
+    ),
+)
+def test_explorer_rejects_invalid_periods(
+    api_client: TestClient, start: str, end: str, error_code: str
+) -> None:
+    response = api_client.get(
+        "/api/v1/explore",
+        params={"start": start, "end": end, "metric_group": "hydrology"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error_code"] == error_code

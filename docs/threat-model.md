@@ -26,10 +26,12 @@
 | Secret leakage                 | Ignored environment files, redacted logs/errors, secret scan, no frontend secrets                                    | Operator misconfiguration remains possible                        |
 | Raw data/identifier disclosure | Separate private models and allowlisted public schemas                                                               | Future endpoints require new privacy review                       |
 | Exact coordinate disclosure    | Nullable private fields excluded from public schemas; disclosure classification                                      | Database administrators can access private data                   |
-| Denial via broad queries       | 7-day default, 31-day maximum, 5,000-row preflight, cursor pages, rate limiting                                      | In-memory limiting is per process only                            |
+| Denial via broad queries       | 7-day default, 31-day maximum, observation and warning-count preflights, cursor pages, rate limiting                 | In-memory limiting is per process only                            |
 | Silent truncation              | Explicit oversize error before result delivery                                                                       | Aggregation is unavailable in Phase 1                             |
 | Spreadsheet formula injection  | CSV is not implemented; future export must neutralize `= + - @` prefixes                                             | No export path exists yet                                         |
 | Scientific misinterpretation   | Synthetic labels, explicit unit-confirmation status, channel identity, no performance scores, documented assumptions | Users may still export screenshots without context                |
+| Misleading historical coverage | Explicit schedule inputs, half-open windows, unavailable state when schedule is unknown, separate current freshness  | Real schedule and jitter settings remain unconfirmed              |
+| Quality-detail disclosure      | Allowlisted warning schema and controlled safe explanations; raw notes and payloads remain private                   | Future quality rules require renewed field-level review           |
 | Supply-chain compromise        | Lockfiles, pinned CI actions/images, audits, secret scanning                                                         | Registries and upstream releases remain external dependencies     |
 | Stack trace/database leakage   | Standard problem responses and production exception middleware                                                       | Development logs are more verbose and must not hold secrets       |
 

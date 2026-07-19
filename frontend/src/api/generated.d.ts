@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/explore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Explore */
+        get: operations["explore_api_v1_explore_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -240,6 +257,225 @@ export interface components {
             /** Unknown */
             unknown: number;
         };
+        /** ExploreChannel */
+        ExploreChannel: {
+            /**
+             * Channel Id
+             * Format: uuid
+             */
+            channel_id: string;
+            /** Channel Name */
+            channel_name: string;
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /** Device Name */
+            device_name: string;
+            /** Expected Reporting Interval Seconds */
+            expected_reporting_interval_seconds: number | null;
+            /**
+             * Feature Id
+             * Format: uuid
+             */
+            feature_id: string;
+            /** Feature Name */
+            feature_name: string;
+            /** Feature Slug */
+            feature_slug: string;
+            /** Installation Depth Cm */
+            installation_depth_cm: number | null;
+            /** Metric Code */
+            metric_code: string;
+            /** Metric Group */
+            metric_group: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Position Label */
+            position_label: string | null;
+            /** Reporting Jitter Tolerance Seconds */
+            reporting_jitter_tolerance_seconds: number | null;
+            /** Reporting Schedule Anchor At */
+            reporting_schedule_anchor_at: string | null;
+            /** Unit Code */
+            unit_code: string | null;
+            /** Unit Confirmation Status */
+            unit_confirmation_status: string;
+            /** Unit Symbol */
+            unit_symbol: string | null;
+            /** Water Level Reference Or Datum */
+            water_level_reference_or_datum: string | null;
+        };
+        /** ExploreCoverage */
+        ExploreCoverage: {
+            /** Coverage Percentage */
+            coverage_percentage: number | null;
+            /** Duplicate Slot Observations */
+            duplicate_slot_observations: number;
+            /** Expected Observations */
+            expected_observations: number | null;
+            /** Flagged Observations */
+            flagged_observations: number | null;
+            /** Late Observations */
+            late_observations: number;
+            /** Missing Intervals */
+            missing_intervals: components["schemas"]["ExploreMissingInterval"][];
+            /** Missing Observations */
+            missing_observations: number | null;
+            /** Out Of Tolerance Observations */
+            out_of_tolerance_observations: number;
+            /** Received Observations */
+            received_observations: number | null;
+            /** Status */
+            status: string;
+            /** Status Detail */
+            status_detail: string;
+            /** Valid Observations */
+            valid_observations: number | null;
+        };
+        /** ExploreDevice */
+        ExploreDevice: {
+            current_freshness: components["schemas"]["Freshness"];
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /** Device Name */
+            device_name: string;
+            /** Device Type */
+            device_type: string;
+            /**
+             * Feature Id
+             * Format: uuid
+             */
+            feature_id: string;
+            /** Feature Name */
+            feature_name: string;
+            /** Feature Slug */
+            feature_slug: string;
+            /** Sensor Configuration Status */
+            sensor_configuration_status: string;
+        };
+        /** ExploreMissingInterval */
+        ExploreMissingInterval: {
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Expected Slots */
+            expected_slots: number;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+        };
+        /** ExplorePoint */
+        ExplorePoint: {
+            /** Expected Slot At */
+            expected_slot_at: string | null;
+            /** Included In Summary */
+            included_in_summary: boolean;
+            /**
+             * Measured At
+             * Format: date-time
+             */
+            measured_at: string;
+            /**
+             * Measurement Id
+             * Format: uuid
+             */
+            measurement_id: string;
+            /** Numeric Value */
+            numeric_value: number;
+            /** Quality Flag */
+            quality_flag: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Timing Status */
+            timing_status: string;
+            /** Transmission Delay Seconds */
+            transmission_delay_seconds: number;
+        };
+        /** ExploreResponse */
+        ExploreResponse: {
+            /** Available Channels */
+            available_channels: components["schemas"]["ExploreChannel"][];
+            /** Available Devices */
+            available_devices: components["schemas"]["ExploreDevice"][];
+            /** Display Timezone */
+            display_timezone: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Feature */
+            feature: string | null;
+            /** Metric Group */
+            metric_group: string;
+            /** Quality Warnings */
+            quality_warnings: components["schemas"]["QualityWarning"][];
+            /**
+             * Reference Time
+             * Format: date-time
+             */
+            reference_time: string;
+            /** Selected Channel Ids */
+            selected_channel_ids: string[];
+            /** Series */
+            series: components["schemas"]["ExploreSeries"][];
+            /**
+             * Site Id
+             * Format: uuid
+             */
+            site_id: string;
+            /** Site Name */
+            site_name: string;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** Synthetic */
+            synthetic: boolean;
+            /** Time Window Semantics */
+            time_window_semantics: string;
+        };
+        /** ExploreSeries */
+        ExploreSeries: {
+            channel: components["schemas"]["ExploreChannel"];
+            coverage: components["schemas"]["ExploreCoverage"];
+            /** Points */
+            points: components["schemas"]["ExplorePoint"][];
+            summary: components["schemas"]["ExploreSummary"];
+        };
+        /** ExploreSummary */
+        ExploreSummary: {
+            /** Statistics */
+            statistics: components["schemas"]["ExploreSummaryStatistic"][];
+            /** Status */
+            status: string;
+            /** Status Detail */
+            status_detail: string;
+        };
+        /** ExploreSummaryStatistic */
+        ExploreSummaryStatistic: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Observed At */
+            observed_at: string | null;
+            /** Value */
+            value: number;
+        };
         /** Freshness */
         Freshness: {
             /** Age Seconds */
@@ -343,6 +579,11 @@ export interface components {
             /** Unit Symbol */
             unit_symbol: string | null;
         };
+        /**
+         * MetricGroup
+         * @enum {string}
+         */
+        MetricGroup: "hydrology" | "soil" | "weather" | "operational";
         /** MonitoringFeaturePublic */
         MonitoringFeaturePublic: {
             /** Display Name */
@@ -385,6 +626,34 @@ export interface components {
             synthetic: boolean;
             /** Synthetic Notice */
             synthetic_notice: string | null;
+        };
+        /** QualityWarning */
+        QualityWarning: {
+            /** Channel Name */
+            channel_name: string;
+            /** Device Name */
+            device_name: string;
+            /** Excluded From Summaries */
+            excluded_from_summaries: boolean;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Measurement Id
+             * Format: uuid
+             */
+            measurement_id: string;
+            /**
+             * Observation Time
+             * Format: date-time
+             */
+            observation_time: string;
+            /** Quality Flag */
+            quality_flag: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
         };
         /** QualityWindow */
         QualityWindow: {
@@ -647,6 +916,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeasurementPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    explore_api_v1_explore_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+                site_id?: string | null;
+                feature?: string | null;
+                metric_group?: components["schemas"]["MetricGroup"];
+                channels?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExploreResponse"];
                 };
             };
             /** @description Validation Error */

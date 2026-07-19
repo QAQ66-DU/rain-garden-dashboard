@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { useDevices, useSites } from '../api/queries';
 import type { ConnectivityStatus } from '../api/types';
@@ -9,6 +9,7 @@ import { SyntheticBanner } from '../components/SyntheticBanner';
 import { formatDateTime, humanizeCode } from '../utils/format';
 
 export function DevicesPage() {
+  const location = useLocation();
   const [search, setSearch] = useState('');
   const [siteId, setSiteId] = useState('');
   const [feature, setFeature] = useState('');
@@ -170,7 +171,10 @@ export function DevicesPage() {
                     <dd>{humanizeCode(device.freshness.status_basis)}</dd>
                   </div>
                 </dl>
-                <Link className="button-link" to={`/devices/${device.id}`}>
+                <Link
+                  className="button-link"
+                  to={{ pathname: `/devices/${device.id}`, search: location.search }}
+                >
                   View device details <span aria-hidden="true">→</span>
                 </Link>
               </article>

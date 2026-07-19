@@ -21,6 +21,10 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 - Synthetic variation is illustrative and is not a rainfall-runoff model or evidence of system performance.
 - Soil-moisture values from different depths or positions are not averaged. Phase 1 reports their spread and channel identities.
 - Missing observations are absent records, never implicit zeros.
+- Time Explorer windows are half-open UTC intervals `[start, end)` and are displayed in `Europe/London`; daylight-saving conversion changes labels, not scientific timestamps or slot membership.
+- The deterministic dataset explicitly anchors hourly expected slots at `2026-05-25T12:00:00Z` with a five-minute timestamp-jitter tolerance. These settings support reproducible demo coverage only and must not be promoted to confirmed deployed-device schedules.
+- Coverage percentage is received unique schedule slots divided by expected schedule slots. Flagged slots count as received but not valid; duplicate, late, and out-of-tolerance observations are labelled separately. Coverage is unavailable when schedule inputs are unknown.
+- Rainfall-intensity duration above zero is a cadence-based period summary, not rainfall-event analysis, and is unavailable unless every expected slot is valid and in tolerance.
 
 ## Unresolved questions for later phases
 

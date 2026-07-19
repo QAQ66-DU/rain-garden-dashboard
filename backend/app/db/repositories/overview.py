@@ -153,7 +153,7 @@ def quality_warning_count(session: Session, site_id: UUID, start: datetime, end:
         .where(
             Device.site_id == site_id,
             Measurement.measured_at >= start,
-            Measurement.measured_at <= end,
+            Measurement.measured_at < end,
             Measurement.quality_flag != "valid",
         )
     )

@@ -46,7 +46,7 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 - **MonitoringFeature:** UUID, site FK, controlled feature type, public slug/name, active flag, audit timestamps. A site can contain multiple Swales, tree pits, or future approved feature types without encoding the relationship in presentation text.
 - **Device:** UUID, site and monitoring-feature FKs, private external ID, display name, controlled device/configuration types, nullable operational override, nullable private latitude/longitude, disclosure classification, last-seen time, audit timestamps.
 - **SensorChannel:** UUID, device FK, unique channel code per device, metric FK, nullable physical-unit FK, controlled unit-confirmation status, nullable installation depth/position, nullable expected interval/schedule anchor/jitter tolerance/water datum, active flag, private metadata JSONB, audit timestamps. The public `installation_depth_cm` field retains `depth_cm` as a Phase 1 compatibility alias.
-- **MetricDefinition:** unit-neutral metric code and reader metadata synchronized from `backend/app/metric_catalog.py`.
+- **MetricDefinition:** unit-neutral metric code, controlled Explorer group, and reader metadata synchronized from `backend/app/metric_catalog.py`.
 - **UnitDefinition:** physical-unit code, name, symbol, and meaning synchronized separately from the same catalogue.
 - **UplinkEvent:** UUID, device FK, source/idempotency identity, event timestamps, optional frame counter/schema version, private raw JSONB, ingestion status/error, audit timestamp.
 - **Measurement:** UUID, uplink/device/channel FKs, numeric value, measured time, quality flag/notes, audit timestamp.
@@ -54,6 +54,14 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 Installation depth and position never alter the controlled metric code. Channels at different confirmed depths would both use `soil_moisture` and remain separately identifiable. No tree-pit depths or depth channel count are currently configured.
 
 `unit_confirmation_status` is independent of `unit_code`: pending channels may have no unit; real values require `confirmed`; deterministic demonstration channels use documented demo-normalised units with `synthetic_demo_only`. The status is not a physical unit code. The same separation applies to schedule metadata: coverage is unavailable unless interval and anchor are explicitly configured.
+
+## Time Explorer and coverage
+
+`GET /api/v1/explore` is a bounded, read-only site query. The endpoint validates a maximum 31-day half-open UTC window, performs result-count preflights, and delegates to a service that joins public device/channel records with pure coverage and summary calculations. Browser URLs retain `start`, `end`, feature, metric group, and explicit channel selection so the same analytical view can be shared or carried between Overview, Explore, and Devices.
+
+The scientific time axis is `measured_at`; `received_at` is returned separately for transmission-delay assessment. Expected observations are schedule-aligned slots inside `[start, end)`, calculated from the channel's explicit expected interval and schedule anchor—not from rounded window duration. A configurable jitter tolerance assigns at most one accepted observation to a slot. Duplicate-slot observations do not increase received count; flagged observations are received but not valid; out-of-tolerance and late observations retain explicit timing labels; absent slots remain missing rather than zero. “Late” means reception occurred more than one expected reporting interval after `measured_at`; it does not reuse timestamp-jitter tolerance. If interval, anchor, or tolerance is absent, precise coverage is unavailable.
+
+Period summaries are metric-specific and use valid observations. Wind direction has no arithmetic mean. Rainfall-intensity duration above zero is emitted only when cadence is known and every expected slot has a valid, in-tolerance observation. The frontend receives channel-specific series, groups only matching metric/unit/provenance combinations, renders incompatible units in separate synchronized small-multiple panels, and displays current freshness separately from historical coverage.
 
 ## Freshness and operational state
 

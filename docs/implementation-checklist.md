@@ -4,7 +4,7 @@ This records the original baseline. The later confirmed-inventory alignment supe
 three-device synthetic inventory with eight end-device records, 20 configured Swale channels, and
 one zero-channel Tree-pit probe whose configuration remains pending.
 
-This checklist incorporates the approved architectural amendments. Phase 2 and later work is explicitly excluded.
+This checklist incorporates the approved architectural amendments. Unlisted later roadmap work remains explicitly excluded.
 
 ## Phase 0: foundation
 
@@ -35,3 +35,12 @@ This checklist incorporates the approved architectural amendments. Phase 2 and l
 - [x] Add backend unit/integration, catalog consistency, frontend component, contract, and Playwright smoke tests.
 - [x] Run the complete local and Docker quality gates and inspect the final diff/security posture.
 - [x] Commit logical stages atomically and report all known limitations.
+
+## Approved post-baseline extensions
+
+- [x] Repair the reproducible ignored-artifact Prettier workflow and recreate the ignored backend environment from `uv.lock`.
+- [x] Align the confirmed Orchard Park inventory while keeping all observations synthetic and the existing local demo database untouched.
+- [x] Separate nullable physical-unit mapping from `pending`, `confirmed`, and `synthetic_demo_only` provenance.
+- [x] Add the site-wide Time Explorer with URL-persisted periods and filters, synchronized unit-separated small multiples, current-versus-historical status separation, and a safe warning drill-down.
+- [x] Implement schedule-aligned half-open coverage with duplicate, flagged, missing, late, and out-of-tolerance semantics plus an unavailable state for unknown schedules.
+- [x] Restrict rainfall duration above zero to periods with known cadence and complete valid coverage.

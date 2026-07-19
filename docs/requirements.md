@@ -9,7 +9,7 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Run through Docker on macOS, Windows, and Linux without host Python or Node.js.
 - Store sites, devices, sensor channels, raw uplink events, normalized measurements, and quality metadata in PostgreSQL 16.
 - Preserve raw synthetic uplinks privately while returning only public, normalized schemas.
-- Display Overview, Devices, and Device Detail pages.
+- Display Overview, Explore, Devices, and Device Detail pages.
 - Show synthetic provenance, last update, device freshness, units, missing states, and quality warnings.
 - Provide a selectable channel-aware time-series chart with a bounded raw query.
 - Search/filter devices by public attributes.
@@ -25,6 +25,19 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Pagination: opaque cursor; no offset pagination.
 - Maximum matching raw result set: 5,000 rows, checked before page delivery.
 - Oversized matching sets produce an explicit validation error; they are never truncated or downsampled.
+
+## Site-wide Time Explorer
+
+- Provide 24-hour, 7-day, 30-day, and custom periods using half-open UTC windows `[start, end)`; reject `start >= end` and periods longer than 31 days.
+- Preserve `start`, `end`, feature, metric group, and explicit channel selection in the URL across relevant navigation.
+- Display timestamps in the site `Europe/London` timezone while keeping `measured_at` as the scientific axis and `received_at` as separate transmission context, including daylight-saving transitions.
+- Filter available devices, channels, charts, summaries, and warnings by monitoring feature; group channel availability by controlled hydrology, soil, and weather metric groups.
+- Keep metrics, units, depths, positions, and unit-confirmation provenance channel-specific. Never combine incompatible series; show compatible channels as synchronized small multiples with units on every panel.
+- Calculate expected coverage from explicit reporting interval, schedule anchor, and configurable jitter tolerance. Count schedule-aligned slots inside the requested window rather than applying a rounded duration formula.
+- Deduplicate observations by expected slot for coverage, allow one accepted observation per slot, count flagged accepted observations as received but not valid, label late/out-of-tolerance records, and preserve missing as distinct from zero.
+- Return coverage as unavailable when interval, anchor, or jitter tolerance is unknown; do not infer a deployed reporting schedule from observations.
+- Use metric-specific summaries and exclude flagged values. Do not average wind direction. Report rainfall-intensity duration above zero only when cadence and complete valid coverage are sufficient.
+- Keep current device freshness separate from selected-period coverage and provide a bounded privacy-reviewed quality-warning drill-down from Overview and Explore.
 
 ## Soil-moisture summary
 

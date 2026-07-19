@@ -2,7 +2,7 @@
 
 A portable browser dashboard for an MSc Data Science project investigating LoRaWAN monitoring of rain gardens and related urban green infrastructure.
 
-Phase 0 and Phase 1 are complete. The inventory now reflects the confirmed Orchard Park monitoring layout, while every observation remains deterministic synthetic demonstration data. The application does not claim real The Things Network (TTN) compatibility or calculate hydrological performance scores.
+Phase 0 and Phase 1 are complete. The inventory reflects the confirmed Orchard Park monitoring layout, and a site-wide Time Explorer supports bounded historical inspection. Every observation remains deterministic synthetic demonstration data. The application does not claim real The Things Network (TTN) compatibility or calculate hydrological performance scores.
 
 ## Screenshots
 
@@ -11,6 +11,7 @@ Phase 0 and Phase 1 are complete. The inventory now reflects the confirmed Orcha
 ## What is included
 
 - A responsive Overview with device freshness, rainfall, quality, and channel-aware soil-moisture spread.
+- A site-wide Time Explorer with shareable UTC periods, feature/metric/channel filters, synchronized unit-separated charts, schedule-aligned coverage, and a safe quality-warning drill-down.
 - A searchable/filterable public device inventory.
 - A device detail view with per-channel latest values and a selectable, bounded seven-day raw time series.
 - A read-only FastAPI service backed by PostgreSQL 16.
@@ -112,9 +113,11 @@ docker compose run --rm backend uv run alembic check
 docker compose run --rm backend uv run python -m app.db.seed
 ```
 
-The initial migration is `backend/migrations/versions/0001_initial_schema.py`. Migration `0002_confirmed_orchard_inventory.py` adds normalized monitoring features, the confirmed device type, explicit configuration/schedule metadata, and a separate physical-unit catalogue. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or `synthetic_demo_only`; “unknown” is never stored as a physical unit. `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the database catalog plus generated `docs/data-dictionary.md` are checked against it.
+The initial migration is `backend/migrations/versions/0001_initial_schema.py`. Migration `0002_confirmed_orchard_inventory.py` adds normalized monitoring features, the confirmed device type, explicit configuration/schedule metadata, and a separate physical-unit catalogue. Migration `0003_time_explorer_metric_groups.py` adds the controlled metric grouping used by Time Explorer. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or `synthetic_demo_only`; “unknown” is never stored as a physical unit. `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
 The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Real ingestion remains disabled and will require explicit payload, metric, and physical-unit mapping before a channel can become `confirmed`.
+
+Historical queries use half-open UTC windows `[start, end)`, with display times converted to the site's `Europe/London` timezone. Coverage counts schedule-aligned slots from the explicit interval, anchor, and jitter tolerance; it is unavailable rather than inferred when any schedule input is missing. Duplicate-slot observations do not increase received coverage, flagged slots are received but not valid, and missing never means numeric zero. Rainfall duration above zero is shown only with complete valid scheduled coverage.
 
 ## Quality commands
 
@@ -172,11 +175,11 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
 - No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.
-- No aggregation/downsampling; raw requests are bounded and rejected above the configured ceiling.
+- No downsampling or persisted rollups; raw observations and Explorer drill-downs are bounded and rejected above the configured ceiling.
 - Synthetic status thresholds are configurable operational defaults, not scientifically confirmed values.
 - Deployed physical units, reporting schedules, water-level datum, and the tree-pit probe's depth/channel layout remain unconfirmed. The UI labels demo-normalised units and shows the tree-pit device as configuration pending.
 - Software licensing remains unresolved pending university, supervisor, and partner confirmation; no licence file is included.
 
 ## Scope boundary
 
-Phase 2 and later roadmap work is documented but not implemented. In particular, the repository contains no fabricated TTN payload schema, rainfall-event analysis, hydrological formula, machine-learning result, or performance score. The legacy Replit prototype remains requirements-only and is not a package, service, build input, or runtime dependency.
+The remaining later roadmap work is not implemented. In particular, the repository contains no fabricated TTN payload schema, rainfall-event analysis, hydrological formula, machine-learning result, or performance score. The legacy Replit prototype remains requirements-only and is not a package, service, build input, or runtime dependency.

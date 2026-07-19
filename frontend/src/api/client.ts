@@ -1,7 +1,14 @@
 import createClient from 'openapi-fetch';
 
 import type { paths } from './generated';
-import type { DeviceDetail, DeviceList, MeasurementPage, Overview, SiteList } from './types';
+import type {
+  DeviceDetail,
+  DeviceList,
+  ExploreResponse,
+  MeasurementPage,
+  Overview,
+  SiteList,
+} from './types';
 
 const browserOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
 const configuredBaseUrl: unknown = import.meta.env['VITE_API_BASE_URL'];
@@ -40,6 +47,15 @@ export interface DeviceFilters {
   deviceType?: string;
   status?: 'unknown' | 'online' | 'stale' | 'offline';
   cursor?: string;
+}
+
+export interface ExplorerFilters {
+  start: string;
+  end: string;
+  siteId?: string;
+  feature?: string;
+  metricGroup: 'hydrology' | 'soil' | 'weather';
+  channels?: string;
 }
 
 export async function fetchOverview(siteId?: string): Promise<Overview> {
@@ -81,6 +97,24 @@ export async function fetchDevices(filters: DeviceFilters): Promise<DeviceList> 
   return data;
 }
 
+export async function fetchExplorer(filters: ExplorerFilters): Promise<ExploreResponse> {
+  const query = {
+    start: filters.start,
+    end: filters.end,
+    metric_group: filters.metricGroup,
+    ...(filters.siteId ? { site_id: filters.siteId } : {}),
+    ...(filters.feature ? { feature: filters.feature } : {}),
+    ...(filters.channels !== undefined ? { channels: filters.channels } : {}),
+  };
+  const { data, error, response } = await client.GET('/api/v1/explore', {
+    params: { query },
+  });
+  if (!data) {
+    throw new ApiError(response.status, errorMessage(error));
+  }
+  return data;
+}
+
 export async function fetchDevice(deviceId: string): Promise<DeviceDetail> {
   const { data, error, response } = await client.GET('/api/v1/devices/{device_id}', {
     params: { path: { device_id: deviceId } },
@@ -94,11 +128,14 @@ export async function fetchDevice(deviceId: string): Promise<DeviceDetail> {
 export async function fetchMeasurements(
   deviceId: string,
   channelId: string,
+  start?: string,
+  end?: string,
 ): Promise<MeasurementPage> {
   async function fetchPage(cursor?: string): Promise<MeasurementPage> {
     const query = {
       sensor_channel_id: channelId,
       page_size: 500,
+      ...(start && end ? { start, end } : {}),
       ...(cursor ? { cursor } : {}),
     };
     const { data, error, response } = await client.GET('/api/v1/devices/{device_id}/measurements', {

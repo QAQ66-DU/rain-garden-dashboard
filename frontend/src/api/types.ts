@@ -4,6 +4,7 @@ export type ConnectivityStatus = components['schemas']['ConnectivityStatus'];
 export type DeviceDetail = components['schemas']['DeviceDetail'];
 export type DeviceList = components['schemas']['DeviceList'];
 export type DevicePublic = components['schemas']['DevicePublic'];
+export type ExploreResponse = components['schemas']['ExploreResponse'];
 export type MeasurementPage = components['schemas']['MeasurementPage'];
 export type MeasurementValue = components['schemas']['MeasurementValue'];
 export type Overview = components['schemas']['Overview'];

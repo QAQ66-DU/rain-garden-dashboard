@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -9,54 +9,8 @@ from app.db.repositories.devices import get_device
 from app.schemas.measurement import MeasurementPage, MeasurementValue
 from app.services.devices import validate_metric_code
 from app.services.errors import ServiceError
+from app.services.time_windows import resolve_measurement_window
 from app.utils.cursors import decode_measurement_cursor, encode_cursor
-
-
-def _normalize_time(value: datetime) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
-        raise ServiceError(
-            422,
-            "Timezone required",
-            "Measurement timestamps must include an explicit timezone offset.",
-            "timezone_required",
-        )
-    return value.astimezone(UTC)
-
-
-def _resolve_window(
-    start: datetime | None,
-    end: datetime | None,
-    reference_time: datetime,
-    settings: Settings,
-) -> tuple[datetime, datetime, bool]:
-    if (start is None) != (end is None):
-        raise ServiceError(
-            422,
-            "Incomplete measurement range",
-            "Provide both start and end timestamps, or omit both for the default range.",
-            "incomplete_time_range",
-        )
-    default_applied = start is None
-    if start is None or end is None:
-        end = reference_time
-        start = end - timedelta(days=settings.default_measurement_range_days)
-    start = _normalize_time(start)
-    end = _normalize_time(end)
-    if start >= end:
-        raise ServiceError(
-            422,
-            "Invalid measurement range",
-            "The start timestamp must be earlier than the end timestamp.",
-            "invalid_time_range",
-        )
-    if end - start > timedelta(days=settings.max_measurement_range_days):
-        raise ServiceError(
-            422,
-            "Measurement range too large",
-            f"The maximum permitted range is {settings.max_measurement_range_days} days.",
-            "time_range_too_large",
-        )
-    return start, end, default_applied
 
 
 def list_measurements(
@@ -79,7 +33,13 @@ def list_measurements(
     reference_time = measurement_repository.current_reference_time(
         session, demo_mode=settings.demo_mode
     )
-    start, end, default_applied = _resolve_window(start, end, reference_time, settings)
+    start, end, default_applied = resolve_measurement_window(
+        start,
+        end,
+        reference_time,
+        default_range_days=settings.default_measurement_range_days,
+        max_range_days=settings.max_measurement_range_days,
+    )
     total = measurement_repository.count_measurements(
         session,
         device_id=device_id,

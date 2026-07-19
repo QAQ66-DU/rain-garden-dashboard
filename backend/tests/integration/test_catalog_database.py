@@ -18,6 +18,7 @@ def test_database_catalog_matches_canonical_code_catalog(db_session: Session) ->
 
     assert [row.metric_code for row in rows] == [metric.metric_code for metric in expected]
     assert [row.validity_basis for row in rows] == [metric.validity_basis for metric in expected]
+    assert [row.metric_group for row in rows] == [metric.metric_group for metric in expected]
     units = db_session.scalars(select(UnitDefinition).order_by(UnitDefinition.unit_code)).all()
     expected_units = sorted(UNITS, key=lambda unit: unit.unit_code)
     assert [row.unit_code for row in units] == [unit.unit_code for unit in expected_units]
