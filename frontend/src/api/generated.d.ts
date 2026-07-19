@@ -170,8 +170,11 @@ export interface components {
             latest_measurements: components["schemas"]["MeasurementValue"][];
             /** Location Disclosure */
             location_disclosure: string;
+            monitoring_feature: components["schemas"]["MonitoringFeaturePublic"] | null;
             /** Operational Override */
             operational_override: string | null;
+            /** Sensor Configuration Status */
+            sensor_configuration_status: string;
             /**
              * Site Id
              * Format: uuid
@@ -211,8 +214,11 @@ export interface components {
             latest_battery: components["schemas"]["MeasurementValue"] | null;
             /** Location Disclosure */
             location_disclosure: string;
+            monitoring_feature: components["schemas"]["MonitoringFeaturePublic"] | null;
             /** Operational Override */
             operational_override: string | null;
+            /** Sensor Configuration Status */
+            sensor_configuration_status: string;
             /**
              * Site Id
              * Format: uuid
@@ -311,6 +317,8 @@ export interface components {
             channel_name: string;
             /** Depth Cm */
             depth_cm: number | null;
+            /** Installation Depth Cm */
+            installation_depth_cm: number | null;
             /**
              * Measured At
              * Format: date-time
@@ -329,9 +337,25 @@ export interface components {
             /** Quality Notes */
             quality_notes: string | null;
             /** Unit Code */
-            unit_code: string;
+            unit_code: string | null;
+            /** Unit Confirmation Status */
+            unit_confirmation_status: string;
             /** Unit Symbol */
-            unit_symbol: string;
+            unit_symbol: string | null;
+        };
+        /** MonitoringFeaturePublic */
+        MonitoringFeaturePublic: {
+            /** Display Name */
+            display_name: string;
+            /** Feature Type */
+            feature_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Public Slug */
+            public_slug: string;
         };
         /** Overview */
         Overview: {
@@ -341,7 +365,7 @@ export interface components {
             display_timezone: string;
             /** Last Data Update */
             last_data_update: string | null;
-            latest_rainfall: components["schemas"]["MeasurementValue"] | null;
+            latest_rainfall_intensity: components["schemas"]["MeasurementValue"] | null;
             /** Public Location Label */
             public_location_label: string;
             /**
@@ -381,21 +405,33 @@ export interface components {
             depth_cm: number | null;
             /** Display Name */
             display_name: string;
+            /** Expected Reporting Interval Seconds */
+            expected_reporting_interval_seconds: number | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Installation Depth Cm */
+            installation_depth_cm: number | null;
             /** Metric Code */
             metric_code: string;
             /** Metric Name */
             metric_name: string;
             /** Position Label */
             position_label: string | null;
+            /** Reporting Jitter Tolerance Seconds */
+            reporting_jitter_tolerance_seconds: number | null;
+            /** Reporting Schedule Anchor At */
+            reporting_schedule_anchor_at: string | null;
             /** Unit Code */
-            unit_code: string;
+            unit_code: string | null;
+            /** Unit Confirmation Status */
+            unit_confirmation_status: string;
             /** Unit Symbol */
-            unit_symbol: string;
+            unit_symbol: string | null;
+            /** Water Level Reference Or Datum */
+            water_level_reference_or_datum: string | null;
         };
         /** SiteList */
         SiteList: {
@@ -437,6 +473,8 @@ export interface components {
             channel_name: string;
             /** Depth Cm */
             depth_cm: number | null;
+            /** Installation Depth Cm */
+            installation_depth_cm: number | null;
             /**
              * Measured At
              * Format: date-time
@@ -455,9 +493,11 @@ export interface components {
             /** Quality Notes */
             quality_notes: string | null;
             /** Unit Code */
-            unit_code: string;
+            unit_code: string | null;
+            /** Unit Confirmation Status */
+            unit_confirmation_status: string;
             /** Unit Symbol */
-            unit_symbol: string;
+            unit_symbol: string | null;
         };
         /** SoilMoistureSummary */
         SoilMoistureSummary: {
@@ -486,9 +526,11 @@ export interface components {
              */
             timestamp_start: string;
             /** Unit Code */
-            unit_code: string;
+            unit_code: string | null;
+            /** Unit Confirmation Status */
+            unit_confirmation_status: string;
             /** Unit Symbol */
-            unit_symbol: string;
+            unit_symbol: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -517,6 +559,7 @@ export interface operations {
             query?: {
                 search?: string | null;
                 site_id?: string | null;
+                feature?: string | null;
                 device_type?: string | null;
                 status?: components["schemas"]["ConnectivityStatus"] | null;
                 page_size?: number;

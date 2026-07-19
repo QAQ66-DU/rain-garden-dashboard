@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from app.db.sync_catalog import sync_metric_catalog
 from app.ingestion.contracts import CanonicalMeasurement, CanonicalUplink
-from app.ingestion.service import ingest_canonical_uplink
+from app.ingestion.service import CanonicalIngestionError, ingest_canonical_uplink
 from app.models.device import Device
 from app.models.enums import DeviceType, LocationDisclosure
 from app.models.measurement import Measurement
@@ -116,3 +116,30 @@ def test_duplicate_canonical_uplink_is_idempotent(db_session: Session) -> None:
     stored = db_session.get(Measurement, MEASUREMENT_ID)
     assert stored is not None
     assert stored.numeric_value == Decimal("0.000000")
+
+
+def test_real_observation_requires_confirmed_unit_mapping(db_session: Session) -> None:
+    configure_test_channel(db_session)
+    timestamp = datetime(2026, 6, 1, tzinfo=UTC)
+    payload = CanonicalUplink(
+        event_id=EVENT_ID,
+        source="ttn-mapping-test",
+        idempotency_key="unconfirmed-unit-key",
+        external_device_id="private-test-device-id",
+        received_at=timestamp,
+        measured_at=timestamp,
+        raw_payload={},
+        measurements=[
+            CanonicalMeasurement(
+                measurement_id=MEASUREMENT_ID,
+                channel_code="rainfall",
+                numeric_value=Decimal("1.5"),
+                measured_at=timestamp,
+            )
+        ],
+    )
+
+    with pytest.raises(CanonicalIngestionError, match="confirmed channel unit mapping"):
+        ingest_canonical_uplink(db_session, payload)
+
+    assert db_session.get(UplinkEvent, EVENT_ID) is None

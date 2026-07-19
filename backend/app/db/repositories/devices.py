@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 from app.models.device import Device
 from app.models.measurement import Measurement
 from app.models.metric_definition import MetricDefinition
+from app.models.monitoring_feature import MonitoringFeature
 from app.models.sensor_channel import SensorChannel
 from app.models.site import Site
+from app.models.unit_definition import UnitDefinition
 from app.services.status import ConnectivityStatus
 
 
@@ -19,6 +21,10 @@ from app.services.status import ConnectivityStatus
 class DeviceWithSite:
     device: Device
     site_name: str
+    feature_id: UUID | None
+    feature_slug: str | None
+    feature_name: str | None
+    feature_type: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,8 +34,9 @@ class LatestMeasurement:
     channel_name: str
     metric_code: str
     metric_name: str
-    unit_code: str
-    unit_symbol: str
+    unit_code: str | None
+    unit_symbol: str | None
+    unit_confirmation_status: str
     depth_cm: float | None
     position_label: str | None
     value: Decimal
@@ -43,12 +50,12 @@ def _escape_like(value: str) -> str:
 
 
 def _apply_status_filter(
-    statement: Select[tuple[Device, str]],
+    statement: Select[tuple[Device, str, UUID, str, str, str]],
     status: ConnectivityStatus,
     reference_time: datetime,
     stale_minutes: int,
     offline_minutes: int,
-) -> Select[tuple[Device, str]]:
+) -> Select[tuple[Device, str, UUID, str, str, str]]:
     stale_boundary = reference_time - timedelta(minutes=stale_minutes)
     offline_boundary = reference_time - timedelta(minutes=offline_minutes)
     if status is ConnectivityStatus.UNKNOWN:
@@ -70,6 +77,7 @@ def list_devices(
     after: tuple[str, UUID] | None,
     search: str | None,
     site_id: UUID | None,
+    feature_slug: str | None,
     device_type: str | None,
     status: ConnectivityStatus | None,
     reference_time: datetime,
@@ -77,12 +85,25 @@ def list_devices(
     offline_minutes: int,
 ) -> list[DeviceWithSite]:
     normalized_name = func.lower(Device.display_name)
-    statement = select(Device, Site.name).join(Site, Site.id == Device.site_id)
+    statement = (
+        select(
+            Device,
+            Site.name,
+            MonitoringFeature.id,
+            MonitoringFeature.public_slug,
+            MonitoringFeature.display_name,
+            MonitoringFeature.feature_type,
+        )
+        .join(Site, Site.id == Device.site_id)
+        .outerjoin(MonitoringFeature, MonitoringFeature.id == Device.monitoring_feature_id)
+    )
     if search:
         pattern = f"%{_escape_like(search.strip())}%"
         statement = statement.where(Device.display_name.ilike(pattern, escape="\\"))
     if site_id is not None:
         statement = statement.where(Device.site_id == site_id)
+    if feature_slug is not None:
+        statement = statement.where(MonitoringFeature.public_slug == feature_slug)
     if device_type is not None:
         statement = statement.where(Device.device_type == device_type)
     if status is not None:
@@ -100,18 +121,43 @@ def list_devices(
     rows = session.execute(
         statement.order_by(normalized_name, Device.id).limit(page_size + 1)
     ).all()
-    return [DeviceWithSite(cast(Device, row[0]), cast(str, row[1])) for row in rows]
+    return [
+        DeviceWithSite(
+            cast(Device, row[0]),
+            cast(str, row[1]),
+            cast(UUID | None, row[2]),
+            cast(str | None, row[3]),
+            cast(str | None, row[4]),
+            cast(str | None, row[5]),
+        )
+        for row in rows
+    ]
 
 
 def get_device(session: Session, device_id: UUID) -> DeviceWithSite | None:
     row = session.execute(
-        select(Device, Site.name)
+        select(
+            Device,
+            Site.name,
+            MonitoringFeature.id,
+            MonitoringFeature.public_slug,
+            MonitoringFeature.display_name,
+            MonitoringFeature.feature_type,
+        )
         .join(Site, Site.id == Device.site_id)
+        .outerjoin(MonitoringFeature, MonitoringFeature.id == Device.monitoring_feature_id)
         .where(Device.id == device_id)
     ).one_or_none()
     if row is None:
         return None
-    return DeviceWithSite(cast(Device, row[0]), cast(str, row[1]))
+    return DeviceWithSite(
+        cast(Device, row[0]),
+        cast(str, row[1]),
+        cast(UUID | None, row[2]),
+        cast(str | None, row[3]),
+        cast(str | None, row[4]),
+        cast(str | None, row[5]),
+    )
 
 
 def list_channels(
@@ -119,13 +165,7 @@ def list_channels(
 ) -> list[tuple[SensorChannel, MetricDefinition]]:
     rows = session.execute(
         select(SensorChannel, MetricDefinition)
-        .join(
-            MetricDefinition,
-            and_(
-                MetricDefinition.metric_code == SensorChannel.metric_code,
-                MetricDefinition.unit_code == SensorChannel.unit_code,
-            ),
-        )
+        .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
         .where(SensorChannel.device_id == device_id)
         .order_by(SensorChannel.display_name, SensorChannel.id)
     ).all()
@@ -154,7 +194,8 @@ def latest_measurements_by_channel(
             SensorChannel.metric_code.label("metric_code"),
             MetricDefinition.display_name.label("metric_name"),
             SensorChannel.unit_code.label("unit_code"),
-            MetricDefinition.unit_symbol.label("unit_symbol"),
+            UnitDefinition.unit_symbol.label("unit_symbol"),
+            SensorChannel.unit_confirmation_status.label("unit_confirmation_status"),
             SensorChannel.depth_cm.label("depth_cm"),
             SensorChannel.position_label.label("position_label"),
             Measurement.numeric_value.label("value"),
@@ -164,13 +205,8 @@ def latest_measurements_by_channel(
             rank,
         )
         .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
-        .join(
-            MetricDefinition,
-            and_(
-                MetricDefinition.metric_code == SensorChannel.metric_code,
-                MetricDefinition.unit_code == SensorChannel.unit_code,
-            ),
-        )
+        .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
+        .outerjoin(UnitDefinition, UnitDefinition.unit_code == SensorChannel.unit_code)
         .where(Measurement.device_id.in_(device_ids))
         .subquery()
     )
@@ -183,8 +219,9 @@ def latest_measurements_by_channel(
                 channel_name=cast(str, row.channel_name),
                 metric_code=cast(str, row.metric_code),
                 metric_name=cast(str, row.metric_name),
-                unit_code=cast(str, row.unit_code),
-                unit_symbol=cast(str, row.unit_symbol),
+                unit_code=cast(str | None, row.unit_code),
+                unit_symbol=cast(str | None, row.unit_symbol),
+                unit_confirmation_status=cast(str, row.unit_confirmation_status),
                 depth_cm=cast(float | None, row.depth_cm),
                 position_label=cast(str | None, row.position_label),
                 value=cast(Decimal, row.value),

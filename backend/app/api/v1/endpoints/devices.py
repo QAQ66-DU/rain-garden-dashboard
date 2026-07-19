@@ -20,6 +20,7 @@ def list_devices(
     settings: AppSettings,
     search: Annotated[str | None, Query(max_length=200)] = None,
     site_id: UUID | None = None,
+    feature: Annotated[str | None, Query(max_length=100)] = None,
     device_type: Annotated[str | None, Query(max_length=50)] = None,
     status: ConnectivityStatus | None = None,
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -32,6 +33,7 @@ def list_devices(
         cursor=cursor,
         search=search,
         site_id=site_id,
+        feature_slug=feature,
         device_type=device_type,
         status=status,
     )

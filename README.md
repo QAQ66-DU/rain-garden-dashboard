@@ -2,7 +2,7 @@
 
 A portable browser dashboard for an MSc Data Science project investigating LoRaWAN monitoring of rain gardens and related urban green infrastructure.
 
-Phase 0 and Phase 1 are complete and use deterministic synthetic data only. The application does not claim real The Things Network (TTN) compatibility or calculate hydrological performance scores.
+Phase 0 and Phase 1 are complete. The inventory now reflects the confirmed Orchard Park monitoring layout, while every observation remains deterministic synthetic demonstration data. The application does not claim real The Things Network (TTN) compatibility or calculate hydrological performance scores.
 
 ## Screenshots
 
@@ -14,11 +14,11 @@ Phase 0 and Phase 1 are complete and use deterministic synthetic data only. The 
 - A searchable/filterable public device inventory.
 - A device detail view with per-channel latest values and a selectable, bounded seven-day raw time series.
 - A read-only FastAPI service backed by PostgreSQL 16.
-- A deterministic, idempotent seed for one site, three devices, 15 sensor channels, seven days of readings, missing intervals, one duplicate uplink case, and one quality warning.
+- A deterministic, idempotent seed for eight confirmed sensor/end-device records: seven configured swale devices with 20 channels and one tree-pit probe whose depth/channel configuration remains pending.
 - Generated TypeScript API types from FastAPI OpenAPI.
 - Unit, integration, contract, migration, responsive, and browser smoke tests.
 
-All values and charts display units. Missing records remain missing and are never converted to zero. Synthetic provenance is visible throughout the interface.
+The outdoor LoRaWAN gateway is infrastructure and is not counted as a monitored sensor device. Numeric demo values and charts display both a unit and its `synthetic_demo_only` provenance; this does not confirm the deployed payload or physical-unit mapping. Missing records remain missing and are never converted to zero.
 
 ## Architecture
 
@@ -70,7 +70,13 @@ Host Python and Node.js are optional contributor tools. Dashboard users need nei
 
 Open [http://localhost:5173](http://localhost:5173). The API health endpoint is [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health).
 
-The seed command is idempotent; rerunning it does not duplicate the canonical uplinks or measurements. To remove all local containers and database data:
+The seed command is idempotent; rerunning it does not duplicate the canonical uplinks or measurements. It never deletes or mixes an older Phase 1 inventory. If an existing demo database still contains that inventory, the seed stops and explains that an explicit demo-only reset is required. After reviewing the scope and confirming that the database contains no required data, run:
+
+```bash
+docker compose run --rm backend uv run python -m app.db.reset_demo --confirm-reset
+```
+
+The reset refuses production, non-demo mode, unknown device identifiers, and non-synthetic uplinks. It was not run as part of this change. To remove all local containers and database data:
 
 ```bash
 docker compose down -v
@@ -106,9 +112,9 @@ docker compose run --rm backend uv run alembic check
 docker compose run --rm backend uv run python -m app.db.seed
 ```
 
-The initial migration is `backend/migrations/versions/0001_initial_schema.py`. It creates Site, Device, SensorChannel, MetricDefinition, UplinkEvent, and Measurement storage with foreign keys, controlled enums, uniqueness constraints, and query indexes. `backend/app/metric_catalog.py` is the only editable metric/unit catalog; the database and generated `docs/data-dictionary.md` are checked against it.
+The initial migration is `backend/migrations/versions/0001_initial_schema.py`. Migration `0002_confirmed_orchard_inventory.py` adds normalized monitoring features, the confirmed device type, explicit configuration/schedule metadata, and a separate physical-unit catalogue. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or `synthetic_demo_only`; “unknown” is never stored as a physical unit. `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
-The one-hour synthetic generator cadence is a test setting, not a confirmed sensor sampling interval. Its fixed anchor, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`.
+The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Real ingestion remains disabled and will require explicit payload, metric, and physical-unit mapping before a channel can become `confirmed`.
 
 ## Quality commands
 
@@ -149,6 +155,7 @@ Repository-level portability check:
 
 ```bash
 python3 scripts/check_portability.py
+python3 scripts/check_public_privacy.py
 ```
 
 GitHub Actions repeats the static, test, PostgreSQL migration, generated-contract, Docker browser, dependency-audit, and gitleaks secret-scanning gates on pushes and pull requests.
@@ -167,6 +174,7 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 - No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.
 - No aggregation/downsampling; raw requests are bounded and rejected above the configured ceiling.
 - Synthetic status thresholds are configurable operational defaults, not scientifically confirmed values.
+- Deployed physical units, reporting schedules, water-level datum, and the tree-pit probe's depth/channel layout remain unconfirmed. The UI labels demo-normalised units and shows the tree-pit device as configuration pending.
 - Software licensing remains unresolved pending university, supervisor, and partner confirmation; no licence file is included.
 
 ## Scope boundary

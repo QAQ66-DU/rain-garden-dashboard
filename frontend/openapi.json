@@ -69,6 +69,16 @@
             "title": "Location Disclosure",
             "type": "string"
           },
+          "monitoring_feature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonitoringFeaturePublic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "operational_override": {
             "anyOf": [
               {
@@ -79,6 +89,10 @@
               }
             ],
             "title": "Operational Override"
+          },
+          "sensor_configuration_status": {
+            "title": "Sensor Configuration Status",
+            "type": "string"
           },
           "site_id": {
             "format": "uuid",
@@ -94,8 +108,10 @@
           "id",
           "site_id",
           "site_name",
+          "monitoring_feature",
           "display_name",
           "device_type",
+          "sensor_configuration_status",
           "operational_override",
           "last_seen_at",
           "location_disclosure",
@@ -190,6 +206,16 @@
             "title": "Location Disclosure",
             "type": "string"
           },
+          "monitoring_feature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonitoringFeaturePublic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "operational_override": {
             "anyOf": [
               {
@@ -200,6 +226,10 @@
               }
             ],
             "title": "Operational Override"
+          },
+          "sensor_configuration_status": {
+            "title": "Sensor Configuration Status",
+            "type": "string"
           },
           "site_id": {
             "format": "uuid",
@@ -215,8 +245,10 @@
           "id",
           "site_id",
           "site_name",
+          "monitoring_feature",
           "display_name",
           "device_type",
+          "sensor_configuration_status",
           "operational_override",
           "last_seen_at",
           "location_disclosure",
@@ -433,6 +465,17 @@
             ],
             "title": "Depth Cm"
           },
+          "installation_depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installation Depth Cm"
+          },
           "measured_at": {
             "format": "date-time",
             "title": "Measured At",
@@ -477,12 +520,30 @@
             "title": "Quality Notes"
           },
           "unit_code": {
-            "title": "Unit Code",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Code"
+          },
+          "unit_confirmation_status": {
+            "title": "Unit Confirmation Status",
             "type": "string"
           },
           "unit_symbol": {
-            "title": "Unit Symbol",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Symbol"
           }
         },
         "required": [
@@ -494,13 +555,44 @@
           "numeric_value",
           "unit_code",
           "unit_symbol",
+          "unit_confirmation_status",
           "measured_at",
           "quality_flag",
           "quality_notes",
+          "installation_depth_cm",
           "depth_cm",
           "position_label"
         ],
         "title": "MeasurementValue",
+        "type": "object"
+      },
+      "MonitoringFeaturePublic": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "public_slug": {
+            "title": "Public Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "public_slug",
+          "display_name",
+          "feature_type"
+        ],
+        "title": "MonitoringFeaturePublic",
         "type": "object"
       },
       "Overview": {
@@ -527,7 +619,7 @@
             ],
             "title": "Last Data Update"
           },
-          "latest_rainfall": {
+          "latest_rainfall_intensity": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MeasurementValue"
@@ -591,7 +683,7 @@
           "reference_time",
           "last_data_update",
           "devices",
-          "latest_rainfall",
+          "latest_rainfall_intensity",
           "soil_moisture",
           "data_quality"
         ],
@@ -662,10 +754,32 @@
             "title": "Display Name",
             "type": "string"
           },
+          "expected_reporting_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Reporting Interval Seconds"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "installation_depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installation Depth Cm"
           },
           "metric_code": {
             "title": "Metric Code",
@@ -686,13 +800,65 @@
             ],
             "title": "Position Label"
           },
+          "reporting_jitter_tolerance_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Jitter Tolerance Seconds"
+          },
+          "reporting_schedule_anchor_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Schedule Anchor At"
+          },
           "unit_code": {
-            "title": "Unit Code",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Code"
+          },
+          "unit_confirmation_status": {
+            "title": "Unit Confirmation Status",
             "type": "string"
           },
           "unit_symbol": {
-            "title": "Unit Symbol",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Symbol"
+          },
+          "water_level_reference_or_datum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Water Level Reference Or Datum"
           }
         },
         "required": [
@@ -703,8 +869,14 @@
           "metric_name",
           "unit_code",
           "unit_symbol",
+          "unit_confirmation_status",
+          "installation_depth_cm",
           "depth_cm",
           "position_label",
+          "expected_reporting_interval_seconds",
+          "reporting_schedule_anchor_at",
+          "reporting_jitter_tolerance_seconds",
+          "water_level_reference_or_datum",
           "active"
         ],
         "title": "SensorChannelPublic",
@@ -815,6 +987,17 @@
             ],
             "title": "Depth Cm"
           },
+          "installation_depth_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installation Depth Cm"
+          },
           "measured_at": {
             "format": "date-time",
             "title": "Measured At",
@@ -859,12 +1042,30 @@
             "title": "Quality Notes"
           },
           "unit_code": {
-            "title": "Unit Code",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Code"
+          },
+          "unit_confirmation_status": {
+            "title": "Unit Confirmation Status",
             "type": "string"
           },
           "unit_symbol": {
-            "title": "Unit Symbol",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Symbol"
           }
         },
         "required": [
@@ -876,9 +1077,11 @@
           "numeric_value",
           "unit_code",
           "unit_symbol",
+          "unit_confirmation_status",
           "measured_at",
           "quality_flag",
           "quality_notes",
+          "installation_depth_cm",
           "depth_cm",
           "position_label"
         ],
@@ -929,18 +1132,37 @@
             "type": "string"
           },
           "unit_code": {
-            "title": "Unit Code",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Code"
+          },
+          "unit_confirmation_status": {
+            "title": "Unit Confirmation Status",
             "type": "string"
           },
           "unit_symbol": {
-            "title": "Unit Symbol",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Symbol"
           }
         },
         "required": [
           "metric_code",
           "unit_code",
           "unit_symbol",
+          "unit_confirmation_status",
           "minimum",
           "median",
           "maximum",
@@ -1038,6 +1260,23 @@
                 }
               ],
               "title": "Site Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "feature",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature"
             }
           },
           {

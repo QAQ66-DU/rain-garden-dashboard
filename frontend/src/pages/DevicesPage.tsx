@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useDevices, useSites } from '../api/queries';
 import type { ConnectivityStatus } from '../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
-import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { formatDateTime, humanizeCode } from '../utils/format';
@@ -12,6 +11,7 @@ import { formatDateTime, humanizeCode } from '../utils/format';
 export function DevicesPage() {
   const [search, setSearch] = useState('');
   const [siteId, setSiteId] = useState('');
+  const [feature, setFeature] = useState('');
   const [deviceType, setDeviceType] = useState('');
   const [status, setStatus] = useState<ConnectivityStatus | ''>('');
   const [cursor, setCursor] = useState<string | undefined>();
@@ -19,6 +19,7 @@ export function DevicesPage() {
   const devices = useDevices({
     ...(search.trim() ? { search: search.trim() } : {}),
     ...(siteId ? { siteId } : {}),
+    ...(feature ? { feature } : {}),
     ...(deviceType ? { deviceType } : {}),
     ...(status ? { status } : {}),
     ...(cursor ? { cursor } : {}),
@@ -35,7 +36,8 @@ export function DevicesPage() {
           <p className="eyebrow">Technical inventory</p>
           <h1>Devices</h1>
           <p>
-            Search the public device inventory and review freshness, channels, and battery data.
+            Review the confirmed public inventory by monitoring feature, sensor type, and data
+            freshness.
           </p>
         </div>
       </header>
@@ -52,6 +54,20 @@ export function DevicesPage() {
               resetCursor();
             }}
           />
+        </label>
+        <label className="filter-field">
+          <span>Monitoring feature</span>
+          <select
+            value={feature}
+            onChange={(event) => {
+              setFeature(event.target.value);
+              resetCursor();
+            }}
+          >
+            <option value="">All features</option>
+            <option value="swale">Swale</option>
+            <option value="tree-pit">Tree pit</option>
+          </select>
         </label>
         <label className="filter-field">
           <span>Site</span>
@@ -83,6 +99,7 @@ export function DevicesPage() {
             <option value="weather_station">Weather station</option>
             <option value="soil_moisture_sensor">Soil-moisture sensor</option>
             <option value="water_level_sensor">Water-level sensor</option>
+            <option value="multi_depth_soil_probe">Multi-depth soil probe</option>
           </select>
         </label>
         <label className="filter-field">
@@ -122,12 +139,17 @@ export function DevicesPage() {
                       ? 'WS'
                       : device.device_type === 'soil_moisture_sensor'
                         ? 'SM'
-                        : 'WL'}
+                        : device.device_type === 'water_level_sensor'
+                          ? 'WL'
+                          : 'MD'}
                   </div>
                   <div>
                     <p>{humanizeCode(device.device_type)}</p>
                     <h2>{device.display_name}</h2>
-                    <span>{device.site_name}</span>
+                    <span>
+                      {device.monitoring_feature?.display_name ?? 'Feature not assigned'} ·{' '}
+                      {device.site_name}
+                    </span>
                   </div>
                 </div>
                 <div className="device-card__status">
@@ -140,14 +162,8 @@ export function DevicesPage() {
                     <dd>{formatDateTime(device.last_seen_at)}</dd>
                   </div>
                   <div>
-                    <dt>Latest battery</dt>
-                    <dd>
-                      <MeasurementDisplay
-                        value={device.latest_battery?.numeric_value}
-                        unit={device.latest_battery?.unit_symbol}
-                        compact
-                      />
-                    </dd>
+                    <dt>Configuration</dt>
+                    <dd>{humanizeCode(device.sensor_configuration_status)}</dd>
                   </div>
                   <div>
                     <dt>Status basis</dt>

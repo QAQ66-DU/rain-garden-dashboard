@@ -11,11 +11,14 @@ class MeasurementValue(ApiModel):
     metric_code: str
     metric_name: str
     numeric_value: float
-    unit_code: str
-    unit_symbol: str
+    unit_code: str | None
+    unit_symbol: str | None
+    unit_confirmation_status: str
     measured_at: datetime
     quality_flag: str
     quality_notes: str | None
+    installation_depth_cm: float | None
+    # Backward-compatible Phase 1 alias; installation_depth_cm is the explicit field.
     depth_cm: float | None
     position_label: str | None
 

@@ -47,16 +47,17 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
         unknown=statuses.count(ConnectivityStatus.UNKNOWN),
     )
 
-    rainfall = overview_repository.latest_valid_metric(session, site.id, "rainfall_mm")
+    rainfall = overview_repository.latest_valid_metric(session, site.id, "rainfall_intensity")
     soil_records = overview_repository.latest_valid_soil_channels(session, site.id)
     soil_summary = None
     if soil_records:
         values = [item.value for item in soil_records]
         timestamps = [item.measured_at for item in soil_records]
         soil_summary = SoilMoistureSummary(
-            metric_code="soil_moisture_vwc_pct",
+            metric_code="soil_moisture",
             unit_code=soil_records[0].unit_code,
             unit_symbol=soil_records[0].unit_symbol,
+            unit_confirmation_status=soil_records[0].unit_confirmation_status,
             minimum=float(min(values)),
             median=float(median(values)),
             maximum=float(max(values)),
@@ -94,7 +95,7 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
         reference_time=reference_time,
         last_data_update=updated_at,
         devices=counts,
-        latest_rainfall=measurement_value(rainfall) if rainfall else None,
+        latest_rainfall_intensity=measurement_value(rainfall) if rainfall else None,
         soil_moisture=soil_summary,
         data_quality=quality,
     )

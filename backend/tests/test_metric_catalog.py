@@ -2,15 +2,15 @@ from os import environ
 from pathlib import Path
 
 import pytest
-from app.metric_catalog import METRICS, get_metric, render_data_dictionary
+from app.metric_catalog import METRICS, UNITS, get_metric, render_data_dictionary
 
 
-def test_metric_codes_and_pairs_are_unique() -> None:
+def test_metric_codes_and_units_are_unique() -> None:
     codes = [metric.metric_code for metric in METRICS]
-    pairs = [(metric.metric_code, metric.unit_code) for metric in METRICS]
+    units = [unit.unit_code for unit in UNITS]
 
     assert len(codes) == len(set(codes))
-    assert len(pairs) == len(set(pairs))
+    assert len(units) == len(set(units))
 
 
 def test_unknown_metric_is_rejected() -> None:

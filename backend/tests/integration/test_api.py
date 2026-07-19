@@ -11,7 +11,8 @@ from starlette.testclient import TestClient
 
 pytestmark = pytest.mark.integration
 
-WEATHER_DEVICE_ID = stable_uuid("device:synthetic-weather-001")
+WEATHER_DEVICE_ID = stable_uuid("device:synthetic-v2-swale-weather-001")
+TREE_PROBE_ID = stable_uuid("device:synthetic-v2-tree-pit-probe-001")
 
 
 def test_health_and_security_headers(api_client: TestClient) -> None:
@@ -31,17 +32,17 @@ def test_overview_is_channel_aware_and_synthetic(api_client: TestClient) -> None
     body = response.json()
     assert body["synthetic"] is True
     assert body["devices"] == {
-        "total": 3,
-        "online": 1,
-        "stale": 1,
-        "offline": 1,
-        "unknown": 0,
+        "total": 8,
+        "online": 3,
+        "stale": 2,
+        "offline": 2,
+        "unknown": 1,
     }
     assert body["data_quality"]["warning_count"] == 1
     soil = body["soil_moisture"]
     assert "average" not in soil
-    assert soil["contributing_channel_count"] == 2
-    assert [channel["depth_cm"] for channel in soil["contributing_channels"]] == [10.0, 30.0]
+    assert soil["contributing_channel_count"] == 3
+    assert [channel["depth_cm"] for channel in soil["contributing_channels"]] == [None] * 3
     assert soil["minimum"] <= soil["median"] <= soil["maximum"]
 
 
@@ -59,7 +60,7 @@ def test_public_responses_exclude_private_fields(api_client: TestClient) -> None
         "private_longitude",
         "channel_metadata",
         "DevEUI",
-        "synthetic-weather-001",
+        "synthetic-v2-swale-weather-001",
     ):
         assert forbidden not in serialized
 
@@ -67,7 +68,7 @@ def test_public_responses_exclude_private_fields(api_client: TestClient) -> None
 def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
     first = api_client.get(
         f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
-        params={"metric_code": "rainfall_mm", "page_size": 3},
+        params={"metric_code": "rainfall_intensity", "page_size": 3},
     )
 
     assert first.status_code == 200
@@ -75,12 +76,15 @@ def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
     assert first_body["total_matching"] == 169
     assert len(first_body["items"]) == 3
     assert first_body["next_cursor"] is not None
-    assert all(item["unit_symbol"] == "mm" for item in first_body["items"])
+    assert all(item["unit_symbol"] == "mm/h" for item in first_body["items"])
+    assert all(
+        item["unit_confirmation_status"] == "synthetic_demo_only" for item in first_body["items"]
+    )
 
     second = api_client.get(
         f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
         params={
-            "metric_code": "rainfall_mm",
+            "metric_code": "rainfall_intensity",
             "page_size": 3,
             "cursor": first_body["next_cursor"],
         },
@@ -104,7 +108,7 @@ def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
             WEATHER_DEVICE_ID,
             start=datetime(2026, 5, 25, 12, tzinfo=UTC),
             end=datetime(2026, 6, 1, 12, tzinfo=UTC),
-            metric_code="rainfall_mm",
+            metric_code="rainfall_intensity",
             sensor_channel_id=None,
             page_size=10,
             cursor=None,
@@ -112,6 +116,33 @@ def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
 
     assert error.value.error_code == "result_set_too_large"
     assert "169 rows" in error.value.detail
+
+
+def test_confirmed_inventory_features_and_pending_tree_probe(api_client: TestClient) -> None:
+    devices = api_client.get("/api/v1/devices", params={"page_size": 100})
+    tree = api_client.get(f"/api/v1/devices/{TREE_PROBE_ID}")
+
+    assert devices.status_code == tree.status_code == 200
+    body = devices.json()
+    assert len(body["items"]) == 8
+    assert {item["monitoring_feature"]["display_name"] for item in body["items"]} == {
+        "Swale",
+        "Tree pit",
+    }
+    tree_body = tree.json()
+    assert tree_body["sensor_configuration_status"] == "pending"
+    assert tree_body["channels"] == []
+    assert tree_body["latest_measurements"] == []
+
+
+def test_feature_filter_returns_only_swale_devices(api_client: TestClient) -> None:
+    response = api_client.get("/api/v1/devices", params={"feature": "swale"})
+
+    assert response.status_code == 200
+    assert len(response.json()["items"]) == 7
+    assert all(
+        item["monitoring_feature"]["feature_type"] == "swale" for item in response.json()["items"]
+    )
 
 
 def test_webhook_authentication_and_disabled_adapter(api_client: TestClient) -> None:

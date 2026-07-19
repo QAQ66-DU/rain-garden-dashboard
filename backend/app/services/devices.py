@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.db.repositories import devices as device_repository
 from app.db.repositories.measurements import current_reference_time
-from app.metric_catalog import METRICS_BY_CODE
+from app.metric_catalog import METRICS_BY_CODE, get_unit
 from app.models.enums import DeviceType
 from app.schemas.device import (
     DeviceDetail,
     DeviceList,
     DevicePublic,
+    MonitoringFeaturePublic,
     SensorChannelPublic,
 )
 from app.services.errors import ServiceError
@@ -53,8 +54,22 @@ def _device_public(
         id=row.device.id,
         site_id=row.device.site_id,
         site_name=row.site_name,
+        monitoring_feature=(
+            MonitoringFeaturePublic(
+                id=row.feature_id,
+                public_slug=row.feature_slug,
+                display_name=row.feature_name,
+                feature_type=row.feature_type,
+            )
+            if row.feature_id is not None
+            and row.feature_slug is not None
+            and row.feature_name is not None
+            and row.feature_type is not None
+            else None
+        ),
         display_name=row.device.display_name,
         device_type=row.device.device_type,
+        sensor_configuration_status=row.device.sensor_configuration_status,
         operational_override=row.device.operational_override,
         last_seen_at=row.device.last_seen_at,
         location_disclosure=row.device.location_disclosure,
@@ -71,6 +86,7 @@ def list_devices(
     cursor: str | None,
     search: str | None,
     site_id: UUID | None,
+    feature_slug: str | None,
     device_type: str | None,
     status: ConnectivityStatus | None,
 ) -> DeviceList:
@@ -82,6 +98,7 @@ def list_devices(
         after=after,
         search=search,
         site_id=site_id,
+        feature_slug=feature_slug,
         device_type=_validate_device_type(device_type),
         status=status,
         reference_time=reference_time,
@@ -132,9 +149,15 @@ def get_device(session: Session, settings: Settings, device_id: UUID) -> DeviceD
             metric_code=channel.metric_code,
             metric_name=definition.display_name,
             unit_code=channel.unit_code,
-            unit_symbol=definition.unit_symbol,
+            unit_symbol=get_unit(channel.unit_code).unit_symbol if channel.unit_code else None,
+            unit_confirmation_status=channel.unit_confirmation_status,
+            installation_depth_cm=channel.depth_cm,
             depth_cm=channel.depth_cm,
             position_label=channel.position_label,
+            expected_reporting_interval_seconds=channel.expected_reporting_interval_seconds,
+            reporting_schedule_anchor_at=channel.reporting_schedule_anchor_at,
+            reporting_jitter_tolerance_seconds=channel.reporting_jitter_tolerance_seconds,
+            water_level_reference_or_datum=channel.water_level_reference_or_datum,
             active=channel.active,
         )
         for channel, definition in device_repository.list_channels(session, device_id)

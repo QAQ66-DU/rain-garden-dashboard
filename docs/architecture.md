@@ -35,7 +35,7 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 1. A canonical internal uplink is validated independently of TTN-specific fields.
 2. The ingestion service obtains idempotency through unique `(source, idempotency_key)` storage.
 3. The private raw JSONB event is stored once.
-4. Measurements reference both the event and a `SensorChannel` carrying metric, unit, depth, and position metadata.
+4. Measurements reference both the event and a `SensorChannel` carrying separate metric, nullable unit, unit-confirmation, installation-depth, position, and schedule metadata.
 5. Public repositories select normalized fields only.
 6. Services apply explicit reference times, quality exclusions, comparability rules, and freshness thresholds.
 7. Pydantic response schemas exclude private coordinates, external identifiers, and raw payloads.
@@ -43,13 +43,17 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 ## Data model
 
 - **Site:** UUID, name, description, public location label, disclosure classification, nullable private latitude/longitude, IANA display timezone, active flag, audit timestamps.
-- **Device:** UUID, site FK, private external ID, display name, device type, nullable operational override, nullable private latitude/longitude, disclosure classification, last-seen time, audit timestamps.
-- **SensorChannel:** UUID, device FK, unique channel code per device, display name, metric/unit pair, nullable depth and position, active flag, private metadata JSONB, audit timestamps.
-- **MetricDefinition:** code/unit pair and reader metadata synchronized from `backend/app/metric_catalog.py`.
+- **MonitoringFeature:** UUID, site FK, controlled feature type, public slug/name, active flag, audit timestamps. A site can contain multiple Swales, tree pits, or future approved feature types without encoding the relationship in presentation text.
+- **Device:** UUID, site and monitoring-feature FKs, private external ID, display name, controlled device/configuration types, nullable operational override, nullable private latitude/longitude, disclosure classification, last-seen time, audit timestamps.
+- **SensorChannel:** UUID, device FK, unique channel code per device, metric FK, nullable physical-unit FK, controlled unit-confirmation status, nullable installation depth/position, nullable expected interval/schedule anchor/jitter tolerance/water datum, active flag, private metadata JSONB, audit timestamps. The public `installation_depth_cm` field retains `depth_cm` as a Phase 1 compatibility alias.
+- **MetricDefinition:** unit-neutral metric code and reader metadata synchronized from `backend/app/metric_catalog.py`.
+- **UnitDefinition:** physical-unit code, name, symbol, and meaning synchronized separately from the same catalogue.
 - **UplinkEvent:** UUID, device FK, source/idempotency identity, event timestamps, optional frame counter/schema version, private raw JSONB, ingestion status/error, audit timestamp.
 - **Measurement:** UUID, uplink/device/channel FKs, numeric value, measured time, quality flag/notes, audit timestamp.
 
-Depth and position never alter the controlled metric code. A 10 cm and a 20 cm channel both use `soil_moisture_vwc_pct` and remain separately identifiable.
+Installation depth and position never alter the controlled metric code. Channels at different confirmed depths would both use `soil_moisture` and remain separately identifiable. No tree-pit depths or depth channel count are currently configured.
+
+`unit_confirmation_status` is independent of `unit_code`: pending channels may have no unit; real values require `confirmed`; deterministic demonstration channels use documented demo-normalised units with `synthetic_demo_only`. The status is not a physical unit code. The same separation applies to schedule metadata: coverage is unavailable unless interval and anchor are explicitly configured.
 
 ## Freshness and operational state
 
@@ -64,7 +68,7 @@ Phase 1 demo defaults are 90 and 180 minutes. They are operational presentation 
 
 ## API and privacy boundaries
 
-Public endpoints return public IDs, labels, calculated freshness, normalized measurements, channel metadata needed for interpretation, and approximate disclosure labels. They never return raw uplinks, external device IDs, DevEUIs, private channel metadata, or exact coordinates. Exact-coordinate access would require a separately approved authenticated endpoint.
+Public endpoints return public IDs, monitoring-feature labels, calculated freshness, normalized measurements, and channel metadata needed for interpretation. They never return raw uplinks, external device IDs, DevEUIs, private channel metadata, or exact coordinates. Confirmed coordinates are stored only on private device fields. Exact-coordinate access would require a separately approved authenticated endpoint.
 
 ## Deployment
 

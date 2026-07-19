@@ -4,7 +4,7 @@
 
 The Rain Garden Monitoring Dashboard is a portable browser application for university researchers, supervisors, public-water and council stakeholders, and technical users monitoring LoRaWAN-enabled urban green infrastructure. It supports research inspection of observations and data quality; it is not a generic IoT console and must not fabricate hydrological conclusions.
 
-## Phase 0 and Phase 1 functional scope
+## Completed baseline and confirmed-inventory scope
 
 - Run through Docker on macOS, Windows, and Linux without host Python or Node.js.
 - Store sites, devices, sensor channels, raw uplink events, normalized measurements, and quality metadata in PostgreSQL 16.
@@ -13,7 +13,8 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Show synthetic provenance, last update, device freshness, units, missing states, and quality warnings.
 - Provide a selectable channel-aware time-series chart with a bounded raw query.
 - Search/filter devices by public attributes.
-- Seed at least seven deterministic days for one site and three devices.
+- Represent the confirmed Orchard Park inventory as eight sensor/end devices grouped under Swale and Tree pit; exclude the outdoor gateway from monitored-device counts.
+- Seed at least seven deterministic days for the seven configured swale devices. Keep the tree-pit probe at zero channels and observations until its depth/channel configuration is confirmed.
 - Expose versioned read-only REST endpoints and an authenticated but disabled TTN scaffold.
 
 ## Measurement query contract
@@ -36,6 +37,7 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 - Safe configuration, bounded requests, public-data minimization, stable API errors, and no secret/payload leakage.
 - OpenAPI is the API contract source; generated frontend types must be current.
 - The metric catalog, database catalog, and generated data dictionary must reconcile automatically.
+- Metric and physical-unit catalogues are separate. A nullable `unit_code` is interpreted only through `unit_confirmation_status`; real numeric ingestion requires an explicitly confirmed mapping.
 
 ## Explicit non-goals
 

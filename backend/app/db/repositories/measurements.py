@@ -11,6 +11,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from app.models.measurement import Measurement
 from app.models.metric_definition import MetricDefinition
 from app.models.sensor_channel import SensorChannel
+from app.models.unit_definition import UnitDefinition
 from app.models.uplink_event import UplinkEvent
 
 
@@ -22,8 +23,9 @@ class MeasurementRecord:
     channel_name: str
     metric_code: str
     metric_name: str
-    unit_code: str
-    unit_symbol: str
+    unit_code: str | None
+    unit_symbol: str | None
+    unit_confirmation_status: str
     depth_cm: float | None
     position_label: str | None
     value: Decimal
@@ -102,7 +104,8 @@ def list_measurements(
             SensorChannel.metric_code,
             MetricDefinition.display_name,
             SensorChannel.unit_code,
-            MetricDefinition.unit_symbol,
+            UnitDefinition.unit_symbol,
+            SensorChannel.unit_confirmation_status,
             SensorChannel.depth_cm,
             SensorChannel.position_label,
             Measurement.numeric_value,
@@ -111,13 +114,8 @@ def list_measurements(
             Measurement.quality_notes,
         )
         .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
-        .join(
-            MetricDefinition,
-            and_(
-                MetricDefinition.metric_code == SensorChannel.metric_code,
-                MetricDefinition.unit_code == SensorChannel.unit_code,
-            ),
-        )
+        .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
+        .outerjoin(UnitDefinition, UnitDefinition.unit_code == SensorChannel.unit_code)
         .where(*conditions)
         .order_by(Measurement.measured_at, Measurement.id)
         .limit(page_size + 1)
@@ -130,14 +128,15 @@ def list_measurements(
             channel_name=cast(str, row[3]),
             metric_code=cast(str, row[4]),
             metric_name=cast(str, row[5]),
-            unit_code=cast(str, row[6]),
-            unit_symbol=cast(str, row[7]),
-            depth_cm=cast(float | None, row[8]),
-            position_label=cast(str | None, row[9]),
-            value=cast(Decimal, row[10]),
-            measured_at=cast(datetime, row[11]),
-            quality_flag=cast(str, row[12]),
-            quality_notes=cast(str | None, row[13]),
+            unit_code=cast(str | None, row[6]),
+            unit_symbol=cast(str | None, row[7]),
+            unit_confirmation_status=cast(str, row[8]),
+            depth_cm=cast(float | None, row[9]),
+            position_label=cast(str | None, row[10]),
+            value=cast(Decimal, row[11]),
+            measured_at=cast(datetime, row[12]),
+            quality_flag=cast(str, row[13]),
+            quality_notes=cast(str | None, row[14]),
         )
         for row in rows
     ]

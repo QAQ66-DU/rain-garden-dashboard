@@ -2,9 +2,10 @@
 
 Every assumption is visible and replaceable; none should be mistaken for a confirmed site or sensor property.
 
-## Approved Phase 1 assumptions
+## Confirmed inventory and demo assumptions
 
-- Orchard Park is synthetic, uses `Europe/London`, and has public location text “Synthetic demonstration site; exact location not supplied.”
+- Orchard Park, Edinburgh, has confirmed Swale and Tree-pit monitoring features and eight sensor/end-device locations. Exact coordinates are stored privately and withheld from public contracts and browser assets.
+- The outdoor LoRaWAN gateway is network infrastructure, not a sensor/end device, and is excluded from monitored-device counts.
 - Generated timestamps and values use a fixed UTC anchor, fixed random seed, and one-hour demo cadence.
 - The one-hour cadence is not a claim about real equipment.
 - Status is calculated at the dataset reference time with configurable 90-minute stale and 180-minute offline demo defaults.
@@ -15,7 +16,7 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 
 ## Scientific limits
 
-- Metric names and units are controlled, but site-specific sensor accuracy, calibration, operating ranges, sampling schedules, depth comparability, and performance thresholds are not confirmed.
+- Metric names and physical-unit codes are controlled separately. Demo-normalised units are `synthetic_demo_only`; deployed payload/unit mappings, sensor accuracy, calibration, operating ranges, sampling schedules, depth comparability, and performance thresholds are not confirmed.
 - Only definition-level physical bounds, such as relative humidity not exceeding 100%, may create an initial out-of-range flag.
 - Synthetic variation is illustrative and is not a rainfall-runoff model or evidence of system performance.
 - Soil-moisture values from different depths or positions are not averaged. Phase 1 reports their spread and channel identities.
@@ -23,9 +24,9 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 
 ## Unresolved questions for later phases
 
-- Exact device models, firmware, TTN identifiers, payload schemas, frame-counter behavior, and unit declarations.
-- Confirmed channel depths/positions and which channels may be compared scientifically.
-- Site coordinates, disclosure policy, data retention, backup, and deletion policy.
+- Exact device models, firmware, TTN identifiers, payload schemas, frame-counter behavior, and deployed unit declarations.
+- The tree-pit probe's number of depth channels, installation depths/spacing, payload mapping, and which channels may be compared scientifically.
+- Water-level reference/datum, confirmed reporting schedules, configurable jitter tolerances for real devices, data retention, backup, and deletion policy.
 - Scientifically justified validity, stale/offline, rainfall-event, response, and recovery thresholds.
 - OIDC provider or authenticated reverse proxy, deployment environment, TLS termination, shared rate limiting, and audit requirements.
 - Software licensing and intellectual-property ownership.

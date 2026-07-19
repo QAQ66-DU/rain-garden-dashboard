@@ -514,6 +514,28 @@ h2 {
   white-space: nowrap;
 }
 
+.unit-status {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.63rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.unit-status--demo {
+  color: #734d16;
+  background: var(--amber-soft);
+}
+
+.unit-status--confirmed {
+  color: #466527;
+  background: var(--olive-soft);
+}
+
 .soil-summary {
   display: grid;
   margin-bottom: 1rem;
@@ -584,7 +606,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
-  grid-template-columns: minmax(230px, 1.5fr) repeat(3, minmax(150px, 1fr));
+  grid-template-columns: minmax(230px, 1.5fr) repeat(4, minmax(140px, 1fr));
   gap: 0.75rem;
 }
 
@@ -919,6 +941,10 @@ h2 {
 .latest-card .measurement {
   margin-bottom: 0.75rem;
   font-size: 1.55rem;
+}
+
+.latest-card .unit-status {
+  margin-bottom: 0.75rem;
 }
 
 .latest-card small {

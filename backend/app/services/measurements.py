@@ -129,9 +129,11 @@ def list_measurements(
                 numeric_value=float(item.value),
                 unit_code=item.unit_code,
                 unit_symbol=item.unit_symbol,
+                unit_confirmation_status=item.unit_confirmation_status,
                 measured_at=item.measured_at,
                 quality_flag=item.quality_flag,
                 quality_notes=item.quality_notes,
+                installation_depth_cm=item.depth_cm,
                 depth_cm=item.depth_cm,
                 position_label=item.position_label,
             )

@@ -36,6 +36,7 @@ function errorMessage(error: unknown): string {
 export interface DeviceFilters {
   search?: string;
   siteId?: string;
+  feature?: string;
   deviceType?: string;
   status?: 'unknown' | 'online' | 'stale' | 'offline';
   cursor?: string;
@@ -66,6 +67,7 @@ export async function fetchDevices(filters: DeviceFilters): Promise<DeviceList> 
     page_size: 50,
     ...(filters.search ? { search: filters.search } : {}),
     ...(filters.siteId ? { site_id: filters.siteId } : {}),
+    ...(filters.feature ? { feature: filters.feature } : {}),
     ...(filters.deviceType ? { device_type: filters.deviceType } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.cursor ? { cursor: filters.cursor } : {}),

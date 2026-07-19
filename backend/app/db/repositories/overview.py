@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.repositories.devices import LatestMeasurement
@@ -11,6 +11,7 @@ from app.models.device import Device
 from app.models.measurement import Measurement
 from app.models.metric_definition import MetricDefinition
 from app.models.sensor_channel import SensorChannel
+from app.models.unit_definition import UnitDefinition
 from app.models.uplink_event import UplinkEvent
 
 
@@ -41,7 +42,8 @@ def latest_valid_metric(
             SensorChannel.metric_code,
             MetricDefinition.display_name,
             SensorChannel.unit_code,
-            MetricDefinition.unit_symbol,
+            UnitDefinition.unit_symbol,
+            SensorChannel.unit_confirmation_status,
             SensorChannel.depth_cm,
             SensorChannel.position_label,
             Measurement.numeric_value,
@@ -51,13 +53,8 @@ def latest_valid_metric(
         )
         .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
         .join(Device, Device.id == Measurement.device_id)
-        .join(
-            MetricDefinition,
-            and_(
-                MetricDefinition.metric_code == SensorChannel.metric_code,
-                MetricDefinition.unit_code == SensorChannel.unit_code,
-            ),
-        )
+        .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
+        .outerjoin(UnitDefinition, UnitDefinition.unit_code == SensorChannel.unit_code)
         .where(
             Device.site_id == site_id,
             SensorChannel.metric_code == metric_code,
@@ -74,14 +71,15 @@ def latest_valid_metric(
         channel_name=cast(str, row[2]),
         metric_code=cast(str, row[3]),
         metric_name=cast(str, row[4]),
-        unit_code=cast(str, row[5]),
-        unit_symbol=cast(str, row[6]),
-        depth_cm=cast(float | None, row[7]),
-        position_label=cast(str | None, row[8]),
-        value=cast(Decimal, row[9]),
-        measured_at=cast(datetime, row[10]),
-        quality_flag=cast(str, row[11]),
-        quality_notes=cast(str | None, row[12]),
+        unit_code=cast(str | None, row[5]),
+        unit_symbol=cast(str | None, row[6]),
+        unit_confirmation_status=cast(str, row[7]),
+        depth_cm=cast(float | None, row[8]),
+        position_label=cast(str | None, row[9]),
+        value=cast(Decimal, row[10]),
+        measured_at=cast(datetime, row[11]),
+        quality_flag=cast(str, row[12]),
+        quality_notes=cast(str | None, row[13]),
     )
 
 
@@ -102,7 +100,8 @@ def latest_valid_soil_channels(session: Session, site_id: UUID) -> list[LatestMe
             SensorChannel.metric_code.label("metric_code"),
             MetricDefinition.display_name.label("metric_name"),
             SensorChannel.unit_code.label("unit_code"),
-            MetricDefinition.unit_symbol.label("unit_symbol"),
+            UnitDefinition.unit_symbol.label("unit_symbol"),
+            SensorChannel.unit_confirmation_status.label("unit_confirmation_status"),
             SensorChannel.depth_cm.label("depth_cm"),
             SensorChannel.position_label.label("position_label"),
             Measurement.numeric_value.label("value"),
@@ -113,16 +112,11 @@ def latest_valid_soil_channels(session: Session, site_id: UUID) -> list[LatestMe
         )
         .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
         .join(Device, Device.id == Measurement.device_id)
-        .join(
-            MetricDefinition,
-            and_(
-                MetricDefinition.metric_code == SensorChannel.metric_code,
-                MetricDefinition.unit_code == SensorChannel.unit_code,
-            ),
-        )
+        .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
+        .outerjoin(UnitDefinition, UnitDefinition.unit_code == SensorChannel.unit_code)
         .where(
             Device.site_id == site_id,
-            SensorChannel.metric_code == "soil_moisture_vwc_pct",
+            SensorChannel.metric_code == "soil_moisture",
             Measurement.quality_flag == "valid",
             SensorChannel.active.is_(True),
         )
@@ -135,8 +129,9 @@ def latest_valid_soil_channels(session: Session, site_id: UUID) -> list[LatestMe
             channel_name=cast(str, row.channel_name),
             metric_code=cast(str, row.metric_code),
             metric_name=cast(str, row.metric_name),
-            unit_code=cast(str, row.unit_code),
-            unit_symbol=cast(str, row.unit_symbol),
+            unit_code=cast(str | None, row.unit_code),
+            unit_symbol=cast(str | None, row.unit_symbol),
+            unit_confirmation_status=cast(str, row.unit_confirmation_status),
             depth_cm=cast(float | None, row.depth_cm),
             position_label=cast(str | None, row.position_label),
             value=cast(Decimal, row.value),

@@ -1,11 +1,18 @@
 {
   "cadence_minutes": 60,
+  "configured_channel_count": 20,
   "days": 7,
+  "end_device_count": 8,
   "duplicate_uplink_attempts": 1,
   "invalid_fixture": "relative_humidity_above_definition_level_maximum",
+  "measurement_count": 3345,
   "mode": "synthetic",
   "random_seed": 20260716,
   "reference_time_utc": "2026-06-01T12:00:00+00:00",
-  "site": "Orchard Park demonstration site"
+  "reporting_jitter_tolerance_seconds": 300,
+  "schedule_anchor_utc": "2026-05-25T12:00:00+00:00",
+  "site": "Orchard Park monitoring site",
+  "tree_pit_configured_channel_count": 0,
+  "uplink_count": 1168,
+  "unit_confirmation_status": "synthetic_demo_only"
 }
-

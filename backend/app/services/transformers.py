@@ -25,9 +25,11 @@ def measurement_value(record: LatestMeasurement) -> MeasurementValue:
         numeric_value=float(record.value),
         unit_code=record.unit_code,
         unit_symbol=record.unit_symbol,
+        unit_confirmation_status=record.unit_confirmation_status,
         measured_at=record.measured_at,
         quality_flag=record.quality_flag,
         quality_notes=record.quality_notes,
+        installation_depth_cm=record.depth_cm,
         depth_cm=record.depth_cm,
         position_label=record.position_label,
     )

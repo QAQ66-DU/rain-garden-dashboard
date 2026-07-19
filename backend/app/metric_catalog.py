@@ -2,104 +2,229 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class UnitSpec:
+    unit_code: str
+    display_name: str
+    unit_symbol: str
+    meaning: str
+
+
+@dataclass(frozen=True, slots=True)
 class MetricSpec:
     metric_code: str
     display_name: str
-    unit_code: str
-    unit_symbol: str
     meaning: str
     valid_min: float | None
     valid_max: float | None
     validity_basis: str
-    source: str = "Approved Phase 1 controlled vocabulary"
+    synthetic_demo_unit_code: str | None = None
+    source: str = "Controlled monitoring vocabulary"
     expected_type: str = "number"
     scientifically_confirmed: bool = False
 
 
+UNITS: tuple[UnitSpec, ...] = (
+    UnitSpec("mm", "millimetres", "mm", "Length expressed in millimetres."),
+    UnitSpec("deg_c", "degrees Celsius", "°C", "Temperature on the Celsius scale."),
+    UnitSpec("pct", "percent", "%", "Dimensionless percentage."),
+    UnitSpec(
+        "vwc_pct",
+        "volumetric water content percent",
+        "% VWC",
+        "Volumetric water content expressed as a percentage.",
+    ),
+    UnitSpec(
+        "us_cm",
+        "microsiemens per centimetre",
+        "µS/cm",
+        "Electrical conductivity expressed in microsiemens per centimetre.",
+    ),
+    UnitSpec("m_s", "metres per second", "m/s", "Speed expressed in metres per second."),
+    UnitSpec("degree", "degrees", "°", "Angular direction in degrees."),
+    UnitSpec(
+        "mm_h", "millimetres per hour", "mm/h", "Intensity expressed as millimetres per hour."
+    ),
+    UnitSpec("lux", "lux", "lx", "Illuminance expressed in lux."),
+    UnitSpec("uv_index", "UV index", "UV index", "Dimensionless ultraviolet index."),
+    UnitSpec("hpa", "hectopascals", "hPa", "Pressure expressed in hectopascals."),
+    UnitSpec("v", "volts", "V", "Electric potential expressed in volts."),
+    UnitSpec("dbm", "decibel-milliwatts", "dBm", "Power ratio referenced to one milliwatt."),
+    UnitSpec("db", "decibels", "dB", "Dimensionless logarithmic ratio."),
+)
+
+
+def _metric(
+    code: str,
+    name: str,
+    meaning: str,
+    unit: str | None,
+    valid_min: float | None = None,
+    valid_max: float | None = None,
+    validity_basis: str = "No deployment-specific validity range is confirmed.",
+    *,
+    source: str = (
+        "Confirmed Orchard Park measurement vocabulary; unit mapping is demo-only unless a "
+        "channel is confirmed."
+    ),
+) -> MetricSpec:
+    return MetricSpec(code, name, meaning, valid_min, valid_max, validity_basis, unit, source)
+
+
 METRICS: tuple[MetricSpec, ...] = (
-    MetricSpec(
-        "rainfall_mm",
-        "Rainfall",
-        "mm",
-        "mm",
-        "Accumulated rainfall reported for the observation interval.",
+    _metric(
+        "soil_moisture",
+        "Soil moisture",
+        "Soil moisture measurement.",
+        "vwc_pct",
+        0.0,
+        100.0,
+        "Definition-level percentage bounds for the demo-normalised representation only.",
+    ),
+    _metric("soil_temperature", "Soil temperature", "Soil temperature measurement.", "deg_c"),
+    _metric(
+        "soil_electrical_conductivity",
+        "Soil electrical conductivity",
+        "Soil electrical conductivity measurement.",
+        "us_cm",
         0.0,
         None,
-        "Definition-level non-negative bound only; device range is unconfirmed.",
+        "Definition-level non-negative bound for the demo-normalised representation only.",
     ),
-    MetricSpec(
-        "air_temperature_c",
-        "Air temperature",
-        "deg_c",
-        "°C",
-        "Air temperature in degrees Celsius.",
-        None,
-        None,
-        "No Phase 1 validity range is confirmed.",
+    _metric(
+        "water_level",
+        "Water level",
+        "Water level relative to a channel-specific, currently unconfirmed datum.",
+        "mm",
     ),
-    MetricSpec(
-        "relative_humidity_pct",
+    _metric("air_temperature", "Air temperature", "Air temperature measurement.", "deg_c"),
+    _metric(
+        "relative_humidity",
         "Relative humidity",
+        "Relative humidity measurement.",
         "pct",
-        "%",
-        "Relative humidity as a percentage.",
         0.0,
         100.0,
         "Definition-level percentage bounds; device range is unconfirmed.",
     ),
-    MetricSpec(
-        "soil_moisture_vwc_pct",
-        "Soil moisture",
-        "vwc_pct",
-        "% VWC",
-        "Volumetric water content expressed as a percentage.",
+    _metric(
+        "wind_speed",
+        "Wind speed",
+        "Wind speed measurement.",
+        "m_s",
+        0.0,
+        None,
+        "Definition-level non-negative bound only; device range is unconfirmed.",
+    ),
+    _metric(
+        "wind_direction",
+        "Wind direction",
+        "Circular wind direction measurement.",
+        "degree",
+        0.0,
+        360.0,
+        "Definition-level circular direction bounds only; device range is unconfirmed.",
+    ),
+    _metric(
+        "rainfall_intensity",
+        "Rainfall intensity",
+        "Instantaneous or interval-representative rainfall intensity; never accumulated rainfall.",
+        "mm_h",
+        0.0,
+        None,
+        "Definition-level non-negative bound only; device range is unconfirmed.",
+    ),
+    _metric(
+        "light_intensity",
+        "Light intensity",
+        "Light-intensity measurement.",
+        "lux",
+        0.0,
+        None,
+        "Definition-level non-negative bound for the demo-normalised representation only.",
+    ),
+    _metric(
+        "uv_index",
+        "UV index",
+        "Ultraviolet index measurement.",
+        "uv_index",
+        0.0,
+        None,
+        "Definition-level non-negative bound only; device range is unconfirmed.",
+    ),
+    _metric(
+        "barometric_pressure", "Barometric pressure", "Barometric pressure measurement.", "hpa"
+    ),
+    # Compatibility vocabulary retained for existing Phase 1 rows. The confirmed inventory does
+    # not use these metric codes.
+    _metric(
+        "rainfall_mm",
+        "Legacy rainfall",
+        "Deprecated accumulated-rainfall demo vocabulary.",
+        "mm",
+        0.0,
+        None,
+        "Legacy Phase 1 definition-level bound.",
+        source="Deprecated Phase 1 synthetic vocabulary",
+    ),
+    _metric(
+        "air_temperature_c",
+        "Legacy air temperature",
+        "Deprecated Phase 1 temperature vocabulary.",
+        "deg_c",
+        source="Deprecated Phase 1 synthetic vocabulary",
+    ),
+    _metric(
+        "relative_humidity_pct",
+        "Legacy relative humidity",
+        "Deprecated Phase 1 humidity vocabulary.",
+        "pct",
         0.0,
         100.0,
-        "Definition-level percentage bounds; calibration and device range are unconfirmed.",
+        "Legacy Phase 1 percentage bounds.",
+        source="Deprecated Phase 1 synthetic vocabulary",
     ),
-    MetricSpec(
+    _metric(
+        "soil_moisture_vwc_pct",
+        "Legacy soil moisture",
+        "Deprecated Phase 1 soil-moisture vocabulary.",
+        "vwc_pct",
+        0.0,
+        100.0,
+        "Legacy Phase 1 percentage bounds.",
+        source="Deprecated Phase 1 synthetic vocabulary",
+    ),
+    _metric(
         "water_level_mm",
-        "Water level",
+        "Legacy water level",
+        "Deprecated Phase 1 water-level vocabulary.",
         "mm",
-        "mm",
-        "Water level relative to an unconfirmed sensor datum.",
-        None,
-        None,
-        "Reference datum and valid range are unconfirmed.",
+        source="Deprecated Phase 1 synthetic vocabulary",
     ),
-    MetricSpec(
+    _metric(
         "battery_voltage_v",
         "Battery voltage",
-        "v",
-        "V",
         "Device battery voltage.",
-        None,
-        None,
-        "Battery chemistry, nominal voltage, and valid range are unconfirmed.",
+        "v",
+        source="Phase 1 operational vocabulary",
     ),
-    MetricSpec(
+    _metric(
         "rssi_dbm",
         "Received signal strength",
-        "dbm",
-        "dBm",
         "Received signal strength indicator.",
-        None,
-        None,
-        "Radio and network metadata ranges are unconfirmed.",
+        "dbm",
+        source="Phase 1 operational vocabulary",
     ),
-    MetricSpec(
+    _metric(
         "snr_db",
         "Signal-to-noise ratio",
-        "db",
-        "dB",
         "LoRa signal-to-noise ratio.",
-        None,
-        None,
-        "Radio and network metadata ranges are unconfirmed.",
+        "db",
+        source="Phase 1 operational vocabulary",
     ),
 )
 
 METRICS_BY_CODE = {metric.metric_code: metric for metric in METRICS}
+UNITS_BY_CODE = {unit.unit_code: unit for unit in UNITS}
 
 
 def get_metric(metric_code: str) -> MetricSpec:
@@ -109,31 +234,37 @@ def get_metric(metric_code: str) -> MetricSpec:
         raise ValueError(f"Unsupported metric code: {metric_code}") from exc
 
 
+def get_unit(unit_code: str) -> UnitSpec:
+    try:
+        return UNITS_BY_CODE[unit_code]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported unit code: {unit_code}") from exc
+
+
 def render_data_dictionary() -> str:
     header = (
         "# Data dictionary\n\n"
-        "This file is generated from `backend/app/metric_catalog.py`. Do not edit the table "
-        "manually. Sensor-specific ranges, calibration, precision, and field confirmation remain "
-        "unresolved unless explicitly stated.\n\n"
-        "| Metric code | Meaning | Unit code | Display unit | Expected type | "
-        "Valid-range status | Source | Scientifically confirmed |\n"
-        "|---|---|---|---|---|---|---|---|\n"
+        "This file is generated from `backend/app/metric_catalog.py`. Metrics and physical units "
+        "are separate concepts. A channel may have no unit while confirmation is pending. "
+        "Demo-normalised units are illustrative and do not confirm the deployed sensor mapping.\n\n"
+        "| Metric code | Meaning | Synthetic demo unit | Valid-range status | Source | "
+        "Deployment unit confirmed |\n"
+        "|---|---|---|---|---|---|\n"
     )
     rows = []
     for metric in METRICS:
-        confirmed = "Yes" if metric.scientifically_confirmed else "No — vocabulary only"
+        unit = UNITS_BY_CODE.get(metric.synthetic_demo_unit_code or "")
+        demo_unit = f"`{unit.unit_code}` ({unit.unit_symbol})" if unit else "None"
         rows.append(
             "| "
             + " | ".join(
                 (
                     f"`{metric.metric_code}`",
                     metric.meaning,
-                    f"`{metric.unit_code}`",
-                    metric.unit_symbol,
-                    metric.expected_type,
+                    demo_unit,
                     metric.validity_basis,
                     metric.source,
-                    confirmed,
+                    "No — channel status controls confirmation",
                 )
             )
             + " |"

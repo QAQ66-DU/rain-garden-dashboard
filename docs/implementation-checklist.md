@@ -1,5 +1,9 @@
 # Phase 0 and Phase 1 implementation checklist
 
+This records the original baseline. The later confirmed-inventory alignment supersedes its
+three-device synthetic inventory with eight end-device records, 20 configured Swale channels, and
+one zero-channel Tree-pit probe whose configuration remains pending.
+
 This checklist incorporates the approved architectural amendments. Phase 2 and later work is explicitly excluded.
 
 ## Phase 0: foundation

@@ -19,8 +19,9 @@ class SoilChannelObservation(MeasurementValue):
 
 class SoilMoistureSummary(ApiModel):
     metric_code: str
-    unit_code: str
-    unit_symbol: str
+    unit_code: str | None
+    unit_symbol: str | None
+    unit_confirmation_status: str
     minimum: float
     median: float
     maximum: float
@@ -47,6 +48,6 @@ class Overview(ApiModel):
     reference_time: datetime
     last_data_update: datetime | None
     devices: DeviceStatusCounts
-    latest_rainfall: MeasurementValue | None
+    latest_rainfall_intensity: MeasurementValue | None
     soil_moisture: SoilMoistureSummary | None
     data_quality: QualityWindow

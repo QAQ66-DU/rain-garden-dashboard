@@ -19,11 +19,11 @@ def assess_measurement(metric_code: str, value: Decimal) -> QualityAssessment:
     if metric.valid_min is not None and value < Decimal(str(metric.valid_min)):
         return QualityAssessment(
             QualityFlag.OUT_OF_RANGE,
-            f"Below definition-level minimum of {metric.valid_min:g} {metric.unit_symbol}.",
+            f"Below definition-level minimum of {metric.valid_min:g}.",
         )
     if metric.valid_max is not None and value > Decimal(str(metric.valid_max)):
         return QualityAssessment(
             QualityFlag.OUT_OF_RANGE,
-            f"Above definition-level maximum of {metric.valid_max:g} {metric.unit_symbol}.",
+            f"Above definition-level maximum of {metric.valid_max:g}.",
         )
     return QualityAssessment(QualityFlag.VALID, None)

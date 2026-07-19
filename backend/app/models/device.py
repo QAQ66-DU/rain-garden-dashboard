@@ -1,7 +1,14 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -12,6 +19,12 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "devices"
     __table_args__ = (
         UniqueConstraint("id", "site_id", name="uq_devices_id_site_id"),
+        ForeignKeyConstraint(
+            ["monitoring_feature_id", "site_id"],
+            ["monitoring_features.id", "monitoring_features.site_id"],
+            name="fk_devices_monitoring_feature_site",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             "private_latitude IS NULL OR private_latitude BETWEEN -90 AND 90",
             name="private_latitude_range",
@@ -21,8 +34,13 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="private_longitude_range",
         ),
         CheckConstraint(
-            "device_type IN ('weather_station', 'soil_moisture_sensor', 'water_level_sensor')",
+            "device_type IN ('weather_station', 'soil_moisture_sensor', "
+            "'water_level_sensor', 'multi_depth_soil_probe')",
             name="device_type",
+        ),
+        CheckConstraint(
+            "sensor_configuration_status IN ('configured', 'pending')",
+            name="sensor_configuration_status",
         ),
         CheckConstraint(
             "operational_override IS NULL OR operational_override IN ('maintenance', 'disabled')",
@@ -35,9 +53,13 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     site_id: Mapped[UUID] = mapped_column(ForeignKey("sites.id", ondelete="RESTRICT"), index=True)
+    monitoring_feature_id: Mapped[UUID | None] = mapped_column(index=True)
     external_device_id: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     device_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    sensor_configuration_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="configured"
+    )
     operational_override: Mapped[str | None] = mapped_column(String(20))
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     private_latitude: Mapped[float | None]

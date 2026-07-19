@@ -7,6 +7,7 @@ import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { TimeSeriesChart, type ChartPoint } from '../components/TimeSeriesChart';
+import { UnitStatusNote } from '../components/UnitStatusNote';
 import { formatDateTime, humanizeCode } from '../utils/format';
 
 export function DeviceDetailPage() {
@@ -35,6 +36,7 @@ export function DeviceDetailPage() {
 
   const data = device.data;
   const status = data.freshness.calculated_status;
+  const hasChannels = data.channels.length > 0;
   return (
     <div className="page-stack">
       <SyntheticBanner />
@@ -48,7 +50,10 @@ export function DeviceDetailPage() {
             <StatusBadge status={status} />
           </div>
           <h1>{data.display_name}</h1>
-          <p>{data.site_name}</p>
+          <p>
+            {data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} ·{' '}
+            {data.site_name}
+          </p>
         </div>
         <dl className="hero-facts">
           <div>
@@ -56,14 +61,8 @@ export function DeviceDetailPage() {
             <dd>{formatDateTime(data.last_seen_at)}</dd>
           </div>
           <div>
-            <dt>Latest battery</dt>
-            <dd>
-              <MeasurementDisplay
-                value={data.latest_battery?.numeric_value}
-                unit={data.latest_battery?.unit_symbol}
-                compact
-              />
-            </dd>
+            <dt>Configuration</dt>
+            <dd>{humanizeCode(data.sensor_configuration_status)}</dd>
           </div>
           <div>
             <dt>Reference time</dt>
@@ -84,68 +83,87 @@ export function DeviceDetailPage() {
         </aside>
       ) : null}
 
-      <section className="latest-section">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Per-channel snapshot</p>
-            <h2>Latest measurements</h2>
-          </div>
-          <span className="count-chip">{String(data.latest_measurements.length)} channels</span>
-        </div>
-        <div className="latest-grid">
-          {data.latest_measurements.map((item) => (
-            <article key={item.channel_id} className="latest-card">
-              <p>{item.channel_name}</p>
-              <MeasurementDisplay value={item.numeric_value} unit={item.unit_symbol} />
-              <small>
-                {item.depth_cm === null ? '' : `${String(item.depth_cm)} cm · `}
-                {formatDateTime(item.measured_at)}
-              </small>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="chart-controls" aria-label="Chart controls">
-        <label>
-          <span>Sensor channel</span>
-          <select
-            value={selectedChannelId ?? ''}
-            onChange={(event) => {
-              setChannelId(event.target.value);
-            }}
-          >
-            {data.channels.map((channel) => (
-              <option value={channel.id} key={channel.id}>
-                {channel.display_name}
-                {channel.depth_cm === null ? '' : ` · ${String(channel.depth_cm)} cm`} ·{' '}
-                {channel.unit_symbol}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p>
-          Each selection plots one channel only. Depth and position are not merged or assumed
-          comparable.
-        </p>
-      </section>
-
-      {measurements.isLoading ? <LoadingState title="Loading time series" /> : null}
-      {measurements.isError ? <ErrorState message={measurements.error.message} /> : null}
-      {measurements.data && measurements.data.items.length === 0 ? (
+      {!hasChannels ? (
         <EmptyState
-          title="No measurements in this range"
-          message="The channel has no observations in the default seven-day window. Missing values are not shown as zero."
+          title="Sensor configuration pending"
+          message="This confirmed inventory item has no configured public channels or observations yet. Metric, payload, depth, and unit mappings must be verified before real data can be accepted."
         />
-      ) : null}
-      {selectedChannel && measurements.data && points.length > 0 ? (
-        <TimeSeriesChart
-          title={`${selectedChannel.display_name} over time`}
-          subtitle={`${String(points.length)} raw observations · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
-          unit={selectedChannel.unit_symbol}
-          points={points}
-        />
-      ) : null}
+      ) : (
+        <>
+          <section className="latest-section">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Per-channel snapshot</p>
+                <h2>Latest measurements</h2>
+              </div>
+              <span className="count-chip">{String(data.latest_measurements.length)} channels</span>
+            </div>
+            <div className="latest-grid">
+              {data.latest_measurements.map((item) => (
+                <article key={item.channel_id} className="latest-card">
+                  <p>{item.channel_name}</p>
+                  <MeasurementDisplay value={item.numeric_value} unit={item.unit_symbol} />
+                  <UnitStatusNote status={item.unit_confirmation_status} />
+                  <small>
+                    {item.installation_depth_cm === null
+                      ? ''
+                      : `${String(item.installation_depth_cm)} cm · `}
+                    {formatDateTime(item.measured_at)}
+                  </small>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="chart-controls" aria-label="Chart controls">
+            <label>
+              <span>Sensor channel</span>
+              <select
+                value={selectedChannelId ?? ''}
+                onChange={(event) => {
+                  setChannelId(event.target.value);
+                }}
+              >
+                {data.channels.map((channel) => (
+                  <option value={channel.id} key={channel.id}>
+                    {channel.display_name}
+                    {channel.installation_depth_cm === null
+                      ? ''
+                      : ` · ${String(channel.installation_depth_cm)} cm`}{' '}
+                    · {channel.unit_symbol ?? 'unit pending'}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <p>
+                Each selection plots one channel only. Depth and position are not merged or assumed
+                comparable.
+              </p>
+              {selectedChannel ? (
+                <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
+              ) : null}
+            </div>
+          </section>
+
+          {measurements.isLoading ? <LoadingState title="Loading time series" /> : null}
+          {measurements.isError ? <ErrorState message={measurements.error.message} /> : null}
+          {measurements.data && measurements.data.items.length === 0 ? (
+            <EmptyState
+              title="No measurements in this range"
+              message="The channel has no observations in the default seven-day window. Missing values are not shown as zero."
+            />
+          ) : null}
+          {selectedChannel && measurements.data && points.length > 0 ? (
+            <TimeSeriesChart
+              title={`${selectedChannel.display_name} over time`}
+              subtitle={`${String(points.length)} raw observations · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
+              unit={selectedChannel.unit_symbol ?? 'unit pending'}
+              points={points}
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

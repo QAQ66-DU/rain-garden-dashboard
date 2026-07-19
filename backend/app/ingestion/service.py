@@ -53,6 +53,14 @@ def ingest_canonical_uplink(session: Session, payload: CanonicalUplink) -> Inges
     }
     if unknown_channels:
         raise CanonicalIngestionError("Canonical uplink references an unknown sensor channel")
+    if not payload.source.startswith("synthetic") and any(
+        channels[item.channel_code].unit_code is None
+        or channels[item.channel_code].unit_confirmation_status != "confirmed"
+        for item in payload.measurements
+    ):
+        raise CanonicalIngestionError(
+            "Non-synthetic ingestion requires an explicitly confirmed channel unit mapping"
+        )
 
     event = UplinkEvent(
         id=payload.event_id,

@@ -45,13 +45,21 @@ jobs:
         working-directory: backend
       - run: uv run mypy .
         working-directory: backend
+      - run: uv run alembic upgrade 0001
+        working-directory: backend
+      - run: uv run python ../scripts/phase1_upgrade_fixture.py prepare
+        working-directory: backend
       - run: uv run alembic upgrade head
+        working-directory: backend
+      - run: uv run python ../scripts/phase1_upgrade_fixture.py verify
+        working-directory: backend
+      - run: uv run python ../scripts/phase1_upgrade_fixture.py cleanup
         working-directory: backend
       - run: uv run alembic check
         working-directory: backend
       - run: uv run python -m app.db.seed
         working-directory: backend
-      - run: uv run pytest --cov=app --cov-report=term-missing
+      - run: uv run pytest --cov=app --cov-branch --cov-report=term-missing
         working-directory: backend
 
   frontend:
@@ -102,6 +110,7 @@ jobs:
         working-directory: backend
       - run: npm run check:api
         working-directory: frontend
+      - run: python3 scripts/check_public_privacy.py
 
   end-to-end:
     runs-on: ubuntu-latest

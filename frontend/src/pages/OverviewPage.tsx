@@ -5,6 +5,7 @@ import { ErrorState, LoadingState } from '../components/DataState';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { MetricCard } from '../components/MetricCard';
 import { SyntheticBanner } from '../components/SyntheticBanner';
+import { UnitStatusNote } from '../components/UnitStatusNote';
 import { formatDateTime, formatNumber } from '../utils/format';
 
 export function OverviewPage() {
@@ -42,16 +43,16 @@ export function OverviewPage() {
           note={`${String(data.devices.online)} online · ${String(data.devices.stale)} stale · ${String(data.devices.offline)} offline`}
         />
         <MetricCard
-          label="Latest rainfall reading"
+          label="Latest rainfall intensity"
           value={
             <MeasurementDisplay
-              value={data.latest_rainfall?.numeric_value}
-              unit={data.latest_rainfall?.unit_symbol}
+              value={data.latest_rainfall_intensity?.numeric_value}
+              unit={data.latest_rainfall_intensity?.unit_symbol}
             />
           }
           note={
-            data.latest_rainfall
-              ? `Observed ${formatDateTime(data.latest_rainfall.measured_at)}`
+            data.latest_rainfall_intensity
+              ? `Synthetic demo reading · ${formatDateTime(data.latest_rainfall_intensity.measured_at)}`
               : 'No valid rainfall observation'
           }
         />
@@ -99,7 +100,9 @@ export function OverviewPage() {
               <p className="eyebrow">Latest valid observations</p>
               <h2>Soil-moisture spread</h2>
             </div>
-            {soil ? <span className="unit-chip">Unit · {soil.unit_symbol}</span> : null}
+            {soil ? (
+              <span className="unit-chip">Unit · {soil.unit_symbol ?? 'mapping pending'}</span>
+            ) : null}
           </div>
           {soil ? (
             <>
@@ -107,22 +110,23 @@ export function OverviewPage() {
                 <div>
                   <span>Minimum</span>
                   <strong>
-                    {formatNumber(soil.minimum)} <small>{soil.unit_symbol}</small>
+                    {formatNumber(soil.minimum)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
                   </strong>
                 </div>
                 <div>
                   <span>Median</span>
                   <strong>
-                    {formatNumber(soil.median)} <small>{soil.unit_symbol}</small>
+                    {formatNumber(soil.median)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
                   </strong>
                 </div>
                 <div>
                   <span>Maximum</span>
                   <strong>
-                    {formatNumber(soil.maximum)} <small>{soil.unit_symbol}</small>
+                    {formatNumber(soil.maximum)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
                   </strong>
                 </div>
               </div>
+              <UnitStatusNote status={soil.unit_confirmation_status} />
               <p className="comparability-note">{soil.comparability_note}</p>
               <div className="channel-list">
                 {soil.contributing_channels.map((channel) => (
@@ -130,9 +134,9 @@ export function OverviewPage() {
                     <div>
                       <strong>{channel.channel_name}</strong>
                       <span>
-                        {channel.depth_cm === null
+                        {channel.installation_depth_cm === null
                           ? 'Depth not supplied'
-                          : `${String(channel.depth_cm)} cm`}
+                          : `${String(channel.installation_depth_cm)} cm`}
                         {channel.position_label ? ` · ${channel.position_label}` : ''}
                       </span>
                     </div>
