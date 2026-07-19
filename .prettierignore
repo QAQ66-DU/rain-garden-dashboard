@@ -3,5 +3,6 @@ docs/data-dictionary.md
 frontend/dist/
 frontend/coverage/
 frontend/playwright-report/
+frontend/test-results/
 frontend/src/api/generated.d.ts
 frontend/openapi.json

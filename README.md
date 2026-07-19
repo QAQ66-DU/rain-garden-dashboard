@@ -112,9 +112,11 @@ The one-hour synthetic generator cadence is a test setting, not a confirmed sens
 
 ## Quality commands
 
-Backend commands run from `backend/` after `uv sync --frozen`:
+Backend commands run from `backend/` after recreating the ignored local environment from the
+committed lockfile. `uv sync --frozen` replaces a stale or broken `.venv` without committing it:
 
 ```bash
+uv sync --frozen
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy .
@@ -137,6 +139,11 @@ npx playwright install chromium
 npm run test:e2e
 npm audit --audit-level=high
 ```
+
+Playwright writes generated results under `frontend/test-results/` and reports under
+`frontend/playwright-report/`. Both directories are ignored by Git and Prettier, so rerunning the
+documented format gate after browser tests still checks every tracked source and documentation
+file without inspecting generated test output.
 
 Repository-level portability check:
 
