@@ -8,8 +8,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.repositories.ttn_replay import (
+    OFFLINE_REPLAY_CONTEXT,
     ensure_ttn_testbed_inventory,
-    persist_ttn_uplink,
     quarantine_event,
 )
 from app.db.sync_catalog import sync_metric_catalog
@@ -18,6 +18,7 @@ from app.ingestion.ttn_console import (
     TTNReplayParseError,
     parse_console_export_event,
 )
+from app.services.ttn_ingestion import ingest_normalised_ttn_uplink
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +62,7 @@ def replay_ttn_export(session: Session, path: Path) -> ReplaySummary:
                 event,
                 failure_code=exc.failure_code,
                 failure_detail=exc.detail,
+                source=OFFLINE_REPLAY_CONTEXT.source,
             )
             quarantined += int(created)
             duplicate_quarantine += int(not created)
@@ -74,7 +76,12 @@ def replay_ttn_export(session: Session, path: Path) -> ReplaySummary:
     invalid_preserved = 0
     status_processed = 0
     for uplink in sorted(parsed, key=lambda item: (item.received_at, item.f_cnt)):
-        result = persist_ttn_uplink(session, uplink, device=device)
+        result = ingest_normalised_ttn_uplink(
+            session,
+            uplink,
+            device=device,
+            context=OFFLINE_REPLAY_CONTEXT,
+        )
         if result.outcome in {"inserted", "inserted_invalid"}:
             raw_inserted += 1
             measurements_created += result.measurements_created

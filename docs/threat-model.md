@@ -2,7 +2,7 @@
 
 ## Assets
 
-- Webhook secret and database credentials.
+- MQTT API key, webhook secret, and database credentials.
 - Private raw uplinks, external device identifiers, DevEUIs, and exact coordinates.
 - Normalized measurements, quality metadata, research reproducibility, and service availability.
 - OpenAPI contract, metric catalog, migrations, and synthetic provenance.
@@ -10,16 +10,20 @@
 ## Trust boundaries
 
 1. Public browser to read-only API.
-2. Future TTN service to webhook endpoint.
-3. Backend to PostgreSQL.
-4. Build and CI systems to dependency registries and container images.
-5. Authenticated future users to private identifiers/coordinates, which is outside Phase 1.
+2. TTN MQTT broker to the profile-gated worker.
+3. Future TTN service to webhook endpoint.
+4. Backend and worker to PostgreSQL.
+5. Build and CI systems to dependency registries and container images.
+6. Authenticated future users to private identifiers/coordinates, which is outside Phase 1.
 
 ## Threats and mitigations
 
 | Threat                         | Phase 0/1 mitigation                                                                                                  | Residual risk                                                     |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Forged webhook                 | Required secret, constant-time comparison, disabled adapter, TLS requirement                                          | Secret rotation and signed TTN scheme await confirmed integration |
+| MQTT credential disclosure     | Ignored local environment, blank example value, dedicated worker, no credential logging                               | Operator-controlled key rotation and least privilege              |
+| MQTT interception              | CA-validated TLS on port 8883; insecure TLS is disabled                                                               | Production network controls remain future work                    |
+| Malformed MQTT message         | Per-message JSON validation, controlled logging without payload content, worker continues                             | Broker-side abuse monitoring remains future work                  |
 | Replay/duplicate uplink        | Unique source/idempotency key and transactional get-or-create                                                         | Real TTN identifier selection awaits fixtures                     |
 | Oversized/malformed input      | Configurable 256 KiB default, JSON content-type check, Pydantic canonical contract                                    | Distributed body controls require reverse proxy                   |
 | Injection                      | Pydantic validation and SQLAlchemy parameters; no arbitrary filters                                                   | Dependency defects remain possible                                |
@@ -40,7 +44,9 @@
 
 - Public read access is suitable only for synthetic or approved non-sensitive data.
 - In-memory rate limiting does not coordinate multiple processes.
-- TTN payload compatibility, secret rotation, and network-level controls are unimplemented.
+- TTN key rotation and production network-level controls remain operator/deployment responsibilities.
+- The MQTT worker is prepared only for the reviewed Outflow A ApplicationUp shape and is disabled
+  outside the explicit Compose `live` profile.
 - There is no user authentication, private-coordinate endpoint, backup automation, or formal audit log.
 - Confirmed coordinates remain visible to database administrators; browser/OpenAPI contract tests only protect the public application boundary.
 - Offline replay is approved only for the local testbed. It does not authorize live ingress or

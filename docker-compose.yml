@@ -63,6 +63,29 @@ services:
       retries: 12
     restart: unless-stopped
 
+  ttn-mqtt-worker:
+    profiles: ['live']
+    build:
+      context: ./backend
+      target: development
+    command: ['uv', 'run', 'python', '-m', 'app.scripts.run_ttn_mqtt_worker']
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      APP_ENV: ${APP_ENV:-development}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TTN_MQTT_HOST: ${TTN_MQTT_HOST:-eu1.cloud.thethings.network}
+      TTN_MQTT_PORT: ${TTN_MQTT_PORT:-8883}
+      TTN_MQTT_USERNAME: ${TTN_MQTT_USERNAME:-rain-garden@ttn}
+      TTN_MQTT_TOPIC: ${TTN_MQTT_TOPIC:-v3/rain-garden@ttn/devices/outflow-a/up}
+      TTN_MQTT_API_KEY: ${TTN_MQTT_API_KEY:-}
+    volumes:
+      - ./backend:/app
+      - backend-venv:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend

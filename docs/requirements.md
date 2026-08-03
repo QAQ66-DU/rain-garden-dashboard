@@ -18,6 +18,8 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Expose versioned read-only REST endpoints and an authenticated but disabled TTN scaffold.
 - Support an isolated, local-only offline replay of the reviewed `outflow-a` console export under a
   separate TTN Testbed site, while keeping physical meanings and units explicitly unverified.
+- Provide an explicitly started, TLS-only MQTT development worker for the single approved Outflow A
+  topic, with its password absent by default and normal Compose startup unaffected.
 
 ## Measurement query contract
 
@@ -56,7 +58,8 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 
 ## Explicit non-goals
 
-Live TTN webhook/MQTT ingestion, confirmed `outflow-a` physical payload mapping, threshold editing,
+Default-enabled live TTN ingestion, live webhook handling, MQTT subscriptions beyond Outflow A,
+confirmed `outflow-a` physical payload mapping, threshold editing,
 shared distributed rate limiting, authentication/user management, maps, public coordinates, CSV
 export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
 machine learning, camera data, image recognition, and deployment to a vendor-specific platform are
@@ -64,4 +67,6 @@ not implemented.
 
 ## Future scope
 
-Real TTN integration, richer quality monitoring, safe CSV export, scientifically approved rainfall-event analytics, authenticated production deployment, backups, and stakeholder evaluation require separate approval.
+Controlled MQTT activation on an inventory-only database, confirmed physical payload mapping,
+richer quality monitoring, safe CSV export, scientifically approved rainfall-event analytics,
+authenticated production deployment, backups, and stakeholder evaluation require separate approval.

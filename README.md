@@ -24,6 +24,7 @@ not calculate hydrological performance scores.
 - Generated TypeScript API types from FastAPI OpenAPI.
 - Unit, integration, contract, migration, responsive, and browser smoke tests.
 - An isolated, idempotent offline replay command for the local `outflow-a` TTN console export.
+- An opt-in, profile-gated TTN MQTT development worker prepared for the single Outflow A device.
 
 The outdoor LoRaWAN gateway is infrastructure and is not counted as a monitored sensor device. Numeric demo values and charts display both a unit and its `synthetic_demo_only` provenance; this does not confirm the deployed payload or physical-unit mapping. Missing records remain missing and are never converted to zero.
 
@@ -109,6 +110,11 @@ devices, payload formatter, downlinks, MQTT configuration, or Google Sheets webh
 and Measurement 2 intentionally retain null units and unverified scientific meanings. See the
 [offline replay design and privacy notes](docs/offline-ttn-replay.md).
 
+The separately started live MQTT preparation is documented in the
+[live TTN MQTT development guide](docs/live-ttn-mqtt.md). Normal Compose startup remains independent
+of its API key; do not start the `live` profile until a clean inventory-only database and a new
+read-only key have been prepared.
+
 ## Environment variables
 
 | Variable                                                        | Purpose                                     | Phase 1 behavior                                       |
@@ -121,6 +127,9 @@ and Measurement 2 intentionally retain null units and unverified scientific mean
 | `CORS_ALLOWED_ORIGINS`                                          | Comma-separated browser-origin allowlist    | No wildcard credentials configuration                  |
 | `WEBHOOK_BODY_LIMIT_BYTES`                                      | TTN request ceiling                         | Defaults to 262,144 bytes (256 KiB)                    |
 | `TTN_WEBHOOK_ENABLED`, `TTN_WEBHOOK_SECRET`                     | Authenticated future ingestion boundary     | Endpoint remains disabled after valid authentication   |
+| `TTN_MQTT_HOST`, `TTN_MQTT_PORT`                                | Opt-in worker broker connection             | `eu1.cloud.thethings.network`, TLS port `8883`         |
+| `TTN_MQTT_USERNAME`, `TTN_MQTT_TOPIC`                           | Single-device TTN subscription              | Restricted to `rain-garden@ttn` / Outflow A            |
+| `TTN_MQTT_API_KEY`                                              | MQTT password for the opt-in worker         | Blank by default; local ignored `.env` only            |
 | `PUBLIC_RATE_LIMIT_*`, `INGESTION_RATE_LIMIT_*`                 | Per-process request windows                 | In-memory, single-process only                         |
 | `DEVICE_STALE_AFTER_MINUTES`, `DEVICE_OFFLINE_AFTER_MINUTES`    | Freshness thresholds                        | Calculated against the explicit dataset reference time |
 | `DEFAULT_MEASUREMENT_RANGE_DAYS`                                | Default raw query window                    | 7 days                                                 |
@@ -206,7 +215,9 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 
 ## Known limitations
 
-- No live TTN webhook or MQTT ingestion. The implemented TTN-specific path is local file replay only.
+- No default-enabled TTN ingestion, live webhook adapter, downlinks, or multi-device MQTT
+  subscriptions. The opt-in MQTT worker is restricted to Outflow A and remains inactive unless the
+  `live` profile is explicitly started with a local key.
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
 - No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.

@@ -7,7 +7,9 @@ The browser reads normalized, public sensor data from a versioned FastAPI servic
 ```mermaid
 flowchart LR
     Browser[Browser: React and Vite] -->|HTTPS JSON /api/v1| API[FastAPI]
-    TTN[The Things Network: future] -.->|authenticated webhook| API
+    TTN[The Things Network] -.->|TLS MQTT: explicit live profile| Worker[TTN MQTT worker]
+    Worker --> Services
+    TTN -.->|future authenticated webhook| API
     API --> Services[Application services]
     Services --> Domain[Pure status and quality logic]
     Services --> Repositories[SQLAlchemy repositories]
@@ -45,6 +47,14 @@ passes `event.data` to an ApplicationUp normaliser that has no file, network, or
 Known `outflow-a` events reuse `UplinkEvent` and `Measurement`; unmappable or structurally unsafe
 selected events go to private `TTNReplayQuarantine`. This separation permits future reuse but does
 not enable the existing webhook or create a live connection.
+
+The separately started MQTT path adds a thin transport adapter before the same ApplicationUp
+normaliser. A dedicated worker container is excluded from normal Compose startup by the `live`
+profile, subscribes only to Outflow A, and creates one database transaction per message. TLS,
+credential loading, bounded reconnect, malformed-message containment, and clean shutdown remain in
+the transport layer; mapping, raw preservation, quarantine, idempotency, and measurement creation
+remain in shared services and repositories. The API key is read only from the ignored local
+environment and is never part of the FastAPI process.
 
 ## Data model
 
@@ -95,3 +105,5 @@ Public endpoints return public IDs, monitoring-feature labels, calculated freshn
 ## Deployment
 
 Docker Compose runs PostgreSQL, backend, and frontend. Development targets provide reload behavior; production targets use a non-root backend process and Nginx static hosting/proxying. Migrations are an explicit deployment step rather than an automatic multi-replica startup side effect. Seed data is an explicit demo-only command.
+
+The development-only `live` profile adds the TTN MQTT worker and is never selected implicitly.

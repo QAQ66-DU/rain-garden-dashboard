@@ -26,6 +26,39 @@ TTN_TESTBED_SITE_NAME = "TTN Testbed"
 TTN_TESTBED_FEATURE_SLUG = "ttn-testbed"
 REPLAY_SOURCE = "ttn_offline_replay"
 REPLAY_PROVENANCE = "exported_live_data"
+LIVE_MQTT_SOURCE = "ttn_mqtt"
+LIVE_MQTT_PROVENANCE = "live_ttn_mqtt"
+
+
+@dataclass(frozen=True, slots=True)
+class TTNIngestionContext:
+    source: str
+    ingestion_mode: str
+    provenance: str
+    quality_notes: str
+    gateway_alias: str
+
+
+OFFLINE_REPLAY_CONTEXT = TTNIngestionContext(
+    source=REPLAY_SOURCE,
+    ingestion_mode="offline_replay",
+    provenance=REPLAY_PROVENANCE,
+    quality_notes=(
+        "Offline replay decoder output; physical interpretation and unit are unverified. "
+        "Timestamp basis is TTN received_at."
+    ),
+    gateway_alias="Replay gateway (identifier withheld)",
+)
+LIVE_MQTT_CONTEXT = TTNIngestionContext(
+    source=LIVE_MQTT_SOURCE,
+    ingestion_mode="live_mqtt",
+    provenance=LIVE_MQTT_PROVENANCE,
+    quality_notes=(
+        "Live TTN MQTT decoder output; physical interpretation and unit are unverified. "
+        "Timestamp basis is TTN received_at."
+    ),
+    gateway_alias="TTN gateway (identifier withheld)",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,13 +90,18 @@ def _raw_hash(raw_event: dict[str, object]) -> str:
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
-def ensure_ttn_testbed_inventory(session: Session) -> Device:
+def ensure_ttn_testbed_inventory(
+    session: Session, *, context: TTNIngestionContext = OFFLINE_REPLAY_CONTEXT
+) -> Device:
     site = session.scalar(select(Site).where(Site.name == TTN_TESTBED_SITE_NAME))
     if site is None:
         site = Site(
             id=_stable_uuid("site:ttn-testbed"),
             name=TTN_TESTBED_SITE_NAME,
-            description="Isolated local testbed for offline replay of an exported TTN dataset.",
+            description=(
+                "Isolated TTN Testbed for offline replay and explicitly enabled live MQTT "
+                "development."
+            ),
             public_location_label="Local replay testbed; location withheld",
             location_disclosure="withheld",
             private_latitude=None,
@@ -109,8 +147,8 @@ def ensure_ttn_testbed_inventory(session: Session) -> Device:
             location_disclosure="withheld",
             environment="test",
             source_system="ttn",
-            ingestion_mode="offline_replay",
-            provenance=REPLAY_PROVENANCE,
+            ingestion_mode=context.ingestion_mode,
+            provenance=context.provenance,
             is_test_device=True,
         )
         session.add(device)
@@ -126,8 +164,8 @@ def ensure_ttn_testbed_inventory(session: Session) -> Device:
         device.sensor_configuration_status = "pending"
         device.environment = "test"
         device.source_system = "ttn"
-        device.ingestion_mode = "offline_replay"
-        device.provenance = REPLAY_PROVENANCE
+        device.ingestion_mode = context.ingestion_mode
+        device.provenance = context.provenance
 
     existing = {
         channel.channel_code: channel
@@ -174,11 +212,12 @@ def quarantine_event(
     failure_code: str,
     failure_detail: str | None,
     received_at: datetime | None = None,
+    source: str = REPLAY_SOURCE,
 ) -> bool:
     key = _raw_hash(raw_event)
     existing = session.scalar(
         select(TTNReplayQuarantine).where(
-            TTNReplayQuarantine.source == REPLAY_SOURCE,
+            TTNReplayQuarantine.source == source,
             TTNReplayQuarantine.idempotency_key == key,
         )
     )
@@ -186,8 +225,8 @@ def quarantine_event(
         return False
     session.add(
         TTNReplayQuarantine(
-            id=_stable_uuid(f"quarantine:{key}"),
-            source=REPLAY_SOURCE,
+            id=_stable_uuid(f"quarantine:{source}:{key}"),
+            source=source,
             idempotency_key=key,
             event_name=(str(raw_event.get("name")) if raw_event.get("name") is not None else None),
             received_at=received_at,
@@ -200,7 +239,13 @@ def quarantine_event(
     return True
 
 
-def _update_telemetry(session: Session, device: Device, uplink: NormalisedTTNUplink) -> bool:
+def _update_telemetry(
+    session: Session,
+    device: Device,
+    uplink: NormalisedTTNUplink,
+    *,
+    context: TTNIngestionContext,
+) -> bool:
     telemetry = session.get(DeviceTelemetry, device.id)
     if telemetry is not None and uplink.received_at < telemetry.observed_at:
         return False
@@ -210,11 +255,7 @@ def _update_telemetry(session: Session, device: Device, uplink: NormalisedTTNUpl
     telemetry.observed_at = uplink.received_at
     telemetry.latest_rssi_dbm = uplink.network.rssi_dbm
     telemetry.latest_snr_db = uplink.network.snr_db
-    telemetry.gateway_alias = (
-        "Replay gateway (identifier withheld)"
-        if uplink.network.gateway_identifier is not None
-        else None
-    )
+    telemetry.gateway_alias = context.gateway_alias if uplink.network.gateway_identifier else None
     if uplink.status is not None:
         telemetry.battery_percent = uplink.status.battery_percent
         telemetry.firmware_version = uplink.status.firmware_version
@@ -229,7 +270,11 @@ def _update_telemetry(session: Session, device: Device, uplink: NormalisedTTNUpl
 
 
 def persist_ttn_uplink(
-    session: Session, uplink: NormalisedTTNUplink, *, device: Device
+    session: Session,
+    uplink: NormalisedTTNUplink,
+    *,
+    device: Device,
+    context: TTNIngestionContext = OFFLINE_REPLAY_CONTEXT,
 ) -> PersistResult:
     if uplink.application_id != TTN_APPLICATION_ID or uplink.device_id != TTN_DEVICE_ID:
         created = quarantine_event(
@@ -238,13 +283,14 @@ def persist_ttn_uplink(
             failure_code="unknown_ttn_device",
             failure_detail="No approved internal device mapping exists for this TTN identity",
             received_at=uplink.received_at,
+            source=context.source,
         )
         return PersistResult("quarantined" if created else "duplicate_quarantine")
 
     idempotency_key = _identity_hash(uplink)
     existing = session.scalar(
         select(UplinkEvent).where(
-            UplinkEvent.source == REPLAY_SOURCE,
+            UplinkEvent.source == context.source,
             UplinkEvent.idempotency_key == idempotency_key,
         )
     )
@@ -252,9 +298,9 @@ def persist_ttn_uplink(
         return PersistResult("duplicate")
 
     event = UplinkEvent(
-        id=_stable_uuid(f"uplink:{idempotency_key}"),
+        id=_stable_uuid(f"uplink:{context.source}:{idempotency_key}"),
         device_id=device.id,
-        source=REPLAY_SOURCE,
+        source=context.source,
         idempotency_key=idempotency_key,
         external_event_identifier=uplink.external_event_identifier,
         received_at=uplink.received_at,
@@ -264,8 +310,8 @@ def persist_ttn_uplink(
         payload_schema_version=uplink.parser_version,
         ingestion_status="accepted" if uplink.decoded_valid else "rejected",
         ingestion_error=uplink.invalid_reason,
-        ingestion_mode="offline_replay",
-        provenance=REPLAY_PROVENANCE,
+        ingestion_mode=context.ingestion_mode,
+        provenance=context.provenance,
     )
     try:
         with session.begin_nested():
@@ -282,24 +328,23 @@ def persist_ttn_uplink(
                 channel = channels[item.measurement_id]
                 session.add(
                     Measurement(
-                        id=_stable_uuid(f"measurement:{idempotency_key}:{item.measurement_id}"),
+                        id=_stable_uuid(
+                            f"measurement:{context.source}:{idempotency_key}:{item.measurement_id}"
+                        ),
                         uplink_event_id=event.id,
                         device_id=device.id,
                         sensor_channel_id=channel.id,
                         numeric_value=item.value,
                         measured_at=uplink.received_at,
                         quality_flag="suspect",
-                        quality_notes=(
-                            "Offline replay decoder output; physical interpretation and unit "
-                            "are unverified. Timestamp basis is TTN received_at."
-                        ),
+                        quality_notes=context.quality_notes,
                     )
                 )
             session.flush()
     except IntegrityError:
         existing = session.scalar(
             select(UplinkEvent).where(
-                UplinkEvent.source == REPLAY_SOURCE,
+                UplinkEvent.source == context.source,
                 UplinkEvent.idempotency_key == idempotency_key,
             )
         )
@@ -307,7 +352,7 @@ def persist_ttn_uplink(
             raise
         return PersistResult("duplicate")
 
-    status_processed = _update_telemetry(session, device, uplink)
+    status_processed = _update_telemetry(session, device, uplink, context=context)
     if device.last_seen_at is None or uplink.received_at > device.last_seen_at:
         device.last_seen_at = uplink.received_at
     return PersistResult(

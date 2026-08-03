@@ -86,8 +86,8 @@ forwarded uplink.
 
 ## What remains unimplemented
 
-There is no live webhook or MQTT adapter, production authentication, retention policy, or confirmed
-scientific payload mapping. Live integration requires reviewed device identifiers, representative
-payload cases, confirmed fields, quantities, units, scaling and signedness, timestamp rules,
-reporting schedules, sensor specifications, preserve-first ingress, authentication, and a clean
-inventory-only database.
+The offline command never starts a live connection. A separate profile-gated MQTT development
+worker is now prepared only for Outflow A, while the live webhook, production authentication,
+retention policy, and confirmed scientific payload mapping remain unimplemented. Controlled live
+use still requires confirmed fields, quantities, units, scaling and signedness, timestamp rules,
+reporting schedules, sensor specifications, key rotation, and a clean inventory-only database.

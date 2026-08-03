@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     webhook_body_limit_bytes: int = Field(default=262_144, ge=1_024, le=1_048_576)
     ttn_webhook_enabled: bool = False
     ttn_webhook_secret: SecretStr | None = None
+    ttn_mqtt_host: str = "eu1.cloud.thethings.network"
+    ttn_mqtt_port: int = Field(default=8883, ge=1, le=65_535)
+    ttn_mqtt_username: str = "rain-garden@ttn"
+    ttn_mqtt_topic: str = "v3/rain-garden@ttn/devices/outflow-a/up"
+    ttn_mqtt_api_key: SecretStr | None = None
 
     public_rate_limit_requests: int = Field(default=120, ge=1, le=10_000)
     public_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3_600)
