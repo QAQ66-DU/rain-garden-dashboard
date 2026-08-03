@@ -11,7 +11,7 @@ class MonitoringFeature(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("site_id", "public_slug", name="uq_monitoring_features_site_slug"),
         UniqueConstraint("id", "site_id", name="uq_monitoring_features_id_site_id"),
-        CheckConstraint("feature_type IN ('swale', 'tree_pit')", name="feature_type"),
+        CheckConstraint("feature_type IN ('swale', 'tree_pit', 'testbed')", name="feature_type"),
     )
 
     site_id: Mapped[UUID] = mapped_column(ForeignKey("sites.id", ondelete="RESTRICT"), index=True)

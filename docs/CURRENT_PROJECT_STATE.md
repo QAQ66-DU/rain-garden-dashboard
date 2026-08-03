@@ -3,6 +3,10 @@
 > **Dated snapshot, not a live source of truth.** This handoff records the verified state on
 > 2026-07-19. Recheck Git, migrations, configuration, and the running environment before relying on
 > it later.
+>
+> A later local-only TTN replay implementation is documented in
+> [offline-ttn-replay.md](offline-ttn-replay.md). The historical snapshot below intentionally remains
+> tied to its original commit and therefore does not describe migration `0004` or the TTN Testbed.
 
 ## Snapshot identity
 

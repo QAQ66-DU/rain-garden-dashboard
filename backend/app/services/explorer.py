@@ -13,8 +13,9 @@ from app.analytics.explorer import (
 )
 from app.core.config import Settings
 from app.db.repositories import explorer as explorer_repository
+from app.db.repositories import overview as overview_repository
 from app.db.repositories import sites as site_repository
-from app.db.repositories.measurements import current_reference_time
+from app.db.repositories.measurements import current_site_reference_time
 from app.models.enums import MetricGroup
 from app.schemas.explorer import (
     ExploreChannel,
@@ -111,7 +112,8 @@ def get_explorer(
     if site is None:
         raise ServiceError(404, "Site not found", "No matching site exists.", "not_found")
 
-    reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
+    is_replay_site = overview_repository.has_test_device(session, site.id)
+    reference_time = current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
     device_records = explorer_repository.list_devices(
         session, site_id=site.id, feature_slug=feature
     )
@@ -308,5 +310,5 @@ def get_explorer(
             for item in warning_records
         ],
         reference_time=reference_time,
-        synthetic=settings.demo_mode,
+        synthetic=settings.demo_mode and not is_replay_site,
     )

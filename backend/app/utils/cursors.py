@@ -48,6 +48,19 @@ def decode_name_cursor(cursor: str) -> tuple[str, UUID]:
     return name, identifier
 
 
+def decode_device_cursor(cursor: str) -> tuple[int, str, UUID]:
+    payload = decode_cursor(cursor)
+    try:
+        test_rank = int(payload.get("test_rank", 0))
+        name = str(payload["name"])
+        identifier = UUID(str(payload["id"]))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _invalid_cursor() from exc
+    if test_rank not in {0, 1} or not name:
+        raise _invalid_cursor()
+    return test_rank, name, identifier
+
+
 def _invalid_cursor() -> ServiceError:
     return ServiceError(
         status_code=422,

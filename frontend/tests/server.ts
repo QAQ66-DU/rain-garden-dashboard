@@ -10,6 +10,9 @@ import {
   sitesFixture,
   treeDetailFixture,
   treeProbeId,
+  replayDeviceDetailFixture,
+  replayDeviceId,
+  replayMeasurementsFixture,
 } from './fixtures/api';
 
 export const handlers = [
@@ -50,20 +53,28 @@ export const handlers = [
     const search = params.get('search')?.toLowerCase();
     const feature = params.get('feature');
     const deviceType = params.get('device_type');
+    const siteId = params.get('site_id');
     const status = params.get('status');
     const items = devicesFixture.items.filter(
       (device) =>
         (!search || device.display_name.toLowerCase().includes(search)) &&
         (!feature || device.monitoring_feature?.public_slug === feature) &&
         (!deviceType || device.device_type === deviceType) &&
+        (!siteId || device.site_id === siteId) &&
         (!status || device.freshness.calculated_status === status),
     );
     return HttpResponse.json({ ...devicesFixture, items });
   }),
-  http.get('*/api/v1/devices/:deviceId', ({ params }) =>
-    HttpResponse.json(params['deviceId'] === treeProbeId ? treeDetailFixture : deviceDetailFixture),
+  http.get('*/api/v1/devices/:deviceId', ({ params }) => {
+    if (params['deviceId'] === treeProbeId) return HttpResponse.json(treeDetailFixture);
+    if (params['deviceId'] === replayDeviceId) return HttpResponse.json(replayDeviceDetailFixture);
+    return HttpResponse.json(deviceDetailFixture);
+  }),
+  http.get('*/api/v1/devices/:deviceId/measurements', ({ params }) =>
+    HttpResponse.json(
+      params['deviceId'] === replayDeviceId ? replayMeasurementsFixture : measurementsFixture,
+    ),
   ),
-  http.get('*/api/v1/devices/:deviceId/measurements', () => HttpResponse.json(measurementsFixture)),
 ];
 
 export const server = setupServer(...handlers);

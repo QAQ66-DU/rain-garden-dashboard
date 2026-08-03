@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -35,7 +36,7 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         CheckConstraint(
             "device_type IN ('weather_station', 'soil_moisture_sensor', "
-            "'water_level_sensor', 'multi_depth_soil_probe')",
+            "'water_level_sensor', 'multi_depth_soil_probe', 'test_telemetry_device')",
             name="device_type",
         ),
         CheckConstraint(
@@ -69,3 +70,8 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=LocationDisclosure.WITHHELD.value,
     )
+    environment: Mapped[str | None] = mapped_column(String(30))
+    source_system: Mapped[str | None] = mapped_column(String(30))
+    ingestion_mode: Mapped[str | None] = mapped_column(String(30))
+    provenance: Mapped[str | None] = mapped_column(String(50))
+    is_test_device: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

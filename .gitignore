@@ -22,3 +22,6 @@ dist/
 playwright-report/
 test-results/
 
+# Private, exact TTN console artifacts retained only for local offline replay.
+backend/tests/fixtures/ttn/outflow-a-live-data.json
+backend/tests/fixtures/ttn/outflow-a-decoder.js

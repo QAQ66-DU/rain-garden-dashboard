@@ -40,6 +40,8 @@ class UplinkEvent(UUIDPrimaryKeyMixin, Base):
     payload_schema_version: Mapped[str | None] = mapped_column(String(100))
     ingestion_status: Mapped[str] = mapped_column(String(20), nullable=False)
     ingestion_error: Mapped[str | None] = mapped_column(Text)
+    ingestion_mode: Mapped[str | None] = mapped_column(String(30))
+    provenance: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )

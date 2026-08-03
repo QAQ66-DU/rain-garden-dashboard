@@ -15,6 +15,9 @@ export const treeFeatureId = '00000000-0000-4000-8000-000000000003';
 export const weatherDeviceId = '00000000-0000-4000-8000-000000000011';
 export const treeProbeId = '00000000-0000-4000-8000-000000000018';
 export const rainfallChannelId = '00000000-0000-4000-8000-000000000021';
+export const replayDeviceId = '00000000-0000-4000-8000-000000000019';
+export const replayChannelOneId = '00000000-0000-4000-8000-000000000091';
+export const replayChannelTwoId = '00000000-0000-4000-8000-000000000092';
 
 const referenceTime = '2026-06-01T12:00:00Z';
 const demoUnitStatus = 'synthetic_demo_only';
@@ -30,6 +33,12 @@ const treeFeature = {
   display_name: 'Tree pit',
   feature_type: 'tree_pit',
 };
+const replayFeature = {
+  id: '00000000-0000-4000-8000-000000000009',
+  public_slug: 'ttn-testbed',
+  display_name: 'TTN Testbed',
+  feature_type: 'testbed',
+};
 
 export const rainfallMeasurement: MeasurementValue = {
   channel_id: rainfallChannelId,
@@ -41,6 +50,8 @@ export const rainfallMeasurement: MeasurementValue = {
   unit_code: 'mm_h',
   unit_symbol: 'mm/h',
   unit_confirmation_status: demoUnitStatus,
+  verification_status: 'catalogued',
+  timestamp_basis: null,
   measured_at: referenceTime,
   quality_flag: 'valid',
   quality_notes: null,
@@ -59,6 +70,8 @@ const soilObservation = (index: number, value: number): MeasurementValue => ({
   unit_code: 'vwc_pct',
   unit_symbol: '% VWC',
   unit_confirmation_status: demoUnitStatus,
+  verification_status: 'catalogued',
+  timestamp_basis: null,
   measured_at: '2026-06-01T10:00:00Z',
   quality_flag: 'valid',
   quality_notes: null,
@@ -130,6 +143,11 @@ function device(
     operational_override: null,
     last_seen_at: status === 'unknown' ? null : referenceTime,
     location_disclosure: 'private',
+    environment: null,
+    source_system: null,
+    ingestion_mode: null,
+    provenance: null,
+    is_test_device: false,
     freshness: {
       ...baseFreshness,
       calculated_status: status,
@@ -141,7 +159,8 @@ function device(
 }
 
 export const devicesFixture: DeviceList = {
-  synthetic: true,
+  synthetic: false,
+  contains_replay_data: true,
   reference_time: referenceTime,
   next_cursor: null,
   items: [
@@ -153,6 +172,25 @@ export const devicesFixture: DeviceList = {
     device(16, 'Swale water-level sensor 2', 'water_level_sensor', 'offline'),
     device(17, 'Swale water-level sensor 3', 'water_level_sensor', 'offline'),
     device(18, 'Tree-pit multi-depth probe', 'multi_depth_soil_probe', 'unknown', treeFeature),
+    {
+      ...device(19, 'Outflow A', 'test_telemetry_device', 'online', replayFeature),
+      site_id: '00000000-0000-4000-8000-000000000099',
+      site_name: 'TTN Testbed',
+      sensor_configuration_status: 'pending',
+      environment: 'test',
+      source_system: 'ttn',
+      ingestion_mode: 'offline_replay',
+      provenance: 'exported_live_data',
+      is_test_device: true,
+      last_seen_at: '2026-08-03T16:11:01Z',
+      freshness: {
+        ...baseFreshness,
+        calculated_status: 'online',
+        age_seconds: 0,
+        reference_time: '2026-08-03T16:11:01Z',
+        status_basis: 'replay_dataset_reference_time',
+      },
+    },
   ],
 };
 
@@ -166,6 +204,15 @@ export const sitesFixture: SiteList = {
         'Confirmed monitoring inventory with deterministic synthetic demonstration data.',
       public_location_label: 'Orchard Park, Edinburgh; exact sensor locations withheld.',
       location_disclosure: 'private',
+      display_timezone: 'Europe/London',
+      active: true,
+    },
+    {
+      id: '00000000-0000-4000-8000-000000000099',
+      name: 'TTN Testbed',
+      description: 'Isolated local replay testbed.',
+      public_location_label: 'Local replay testbed; location withheld',
+      location_disclosure: 'withheld',
       display_timezone: 'Europe/London',
       active: true,
     },
@@ -197,16 +244,124 @@ export const deviceDetailFixture: DeviceDetail = {
       reporting_schedule_anchor_at: '2026-05-25T12:00:00Z',
       reporting_jitter_tolerance_seconds: 300,
       water_level_reference_or_datum: null,
+      scientific_meaning: 'Rainfall intensity measurement.',
+      verification_status: 'catalogued',
+      timestamp_basis: null,
       active: true,
     },
   ],
   latest_measurements: [rainfallMeasurement],
+  telemetry: null,
 };
 
 export const treeDetailFixture: DeviceDetail = {
   ...treeDevice,
   channels: [],
   latest_measurements: [],
+  telemetry: null,
+};
+
+const replayMeasurement: MeasurementValue = {
+  channel_id: replayChannelOneId,
+  channel_code: 'outflow_measurement_1',
+  channel_name: 'Measurement 1',
+  metric_code: 'unverified_numeric_output',
+  metric_name: 'Unverified numeric output',
+  numeric_value: 840,
+  unit_code: null,
+  unit_symbol: null,
+  unit_confirmation_status: 'pending',
+  verification_status: 'unverified',
+  timestamp_basis: 'ttn_received_at',
+  measured_at: '2026-08-03T16:10:00Z',
+  quality_flag: 'suspect',
+  quality_notes: 'Physical interpretation and unit are unverified.',
+  installation_depth_cm: null,
+  depth_cm: null,
+  position_label: null,
+};
+
+const replayMeasurementTwo: MeasurementValue = {
+  ...replayMeasurement,
+  channel_id: replayChannelTwoId,
+  channel_code: 'outflow_measurement_2',
+  channel_name: 'Measurement 2',
+  numeric_value: 200,
+};
+
+const replayDevice = devicesFixture.items[8];
+if (!replayDevice) throw new Error('Replay device fixture is required');
+
+export const replayDeviceDetailFixture: DeviceDetail = {
+  ...replayDevice,
+  channels: [
+    {
+      id: replayChannelOneId,
+      channel_code: 'outflow_measurement_1',
+      display_name: 'Measurement 1',
+      metric_code: 'unverified_numeric_output',
+      metric_name: 'Unverified numeric output',
+      unit_code: null,
+      unit_symbol: null,
+      unit_confirmation_status: 'pending',
+      installation_depth_cm: null,
+      depth_cm: null,
+      position_label: null,
+      expected_reporting_interval_seconds: null,
+      reporting_schedule_anchor_at: null,
+      reporting_jitter_tolerance_seconds: null,
+      water_level_reference_or_datum: null,
+      scientific_meaning: null,
+      verification_status: 'unverified',
+      timestamp_basis: 'ttn_received_at',
+      active: true,
+    },
+    {
+      id: replayChannelTwoId,
+      channel_code: 'outflow_measurement_2',
+      display_name: 'Measurement 2',
+      metric_code: 'unverified_numeric_output',
+      metric_name: 'Unverified numeric output',
+      unit_code: null,
+      unit_symbol: null,
+      unit_confirmation_status: 'pending',
+      installation_depth_cm: null,
+      depth_cm: null,
+      position_label: null,
+      expected_reporting_interval_seconds: null,
+      reporting_schedule_anchor_at: null,
+      reporting_jitter_tolerance_seconds: null,
+      water_level_reference_or_datum: null,
+      scientific_meaning: null,
+      verification_status: 'unverified',
+      timestamp_basis: 'ttn_received_at',
+      active: true,
+    },
+  ],
+  latest_measurements: [replayMeasurement, replayMeasurementTwo],
+  telemetry: {
+    observed_at: '2026-08-03T16:11:01Z',
+    battery_percent: 100,
+    firmware_version: '3.0',
+    hardware_version: '1.1',
+    measurement_interval_value: 60,
+    measurement_interval_unit: null,
+    latest_rssi_dbm: -81,
+    latest_snr_db: 8.5,
+    gateway: 'Replay gateway (identifier withheld)',
+  },
+};
+
+export const replayMeasurementsFixture: MeasurementPage = {
+  items: [replayMeasurement, replayMeasurementTwo],
+  next_cursor: null,
+  total_matching: 2,
+  start: '2026-07-27T16:11:01Z',
+  end: '2026-08-03T16:11:01Z',
+  reference_time: '2026-08-03T16:11:01Z',
+  default_range_applied: true,
+  synthetic: false,
+  provenance: 'exported_live_data',
 };
 
 export const measurementsFixture: MeasurementPage = {
@@ -222,6 +377,7 @@ export const measurementsFixture: MeasurementPage = {
   reference_time: referenceTime,
   default_range_applied: true,
   synthetic: true,
+  provenance: null,
 };
 
 const waterExploreChannel: ExploreResponse['available_channels'][number] = {

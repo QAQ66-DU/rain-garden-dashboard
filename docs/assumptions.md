@@ -13,6 +13,9 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 - In-memory rate limiting is acceptable only for a single process; a reverse proxy/shared limiter is required for horizontal scaling.
 - TTN authentication is secret-based and constant-time, but real payload mapping is disabled.
 - No software licence is added until university and partner intellectual-property ownership is confirmed.
+- The reviewed `outflow-a` console export is approved only for an isolated local replay testbed. Its
+  decoder establishes numeric extraction, not physical quantity, unit, scale interpretation, or
+  scientific timestamp semantics.
 
 ## Scientific limits
 
@@ -28,7 +31,9 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 
 ## Unresolved questions for later phases
 
-- Exact device models, firmware, TTN identifiers, payload schemas, frame-counter behavior, and deployed unit declarations.
+- Exact device model/specification, confirmed field meanings, scale interpretation, frame-counter
+  reset behavior, reporting schedule, and deployed unit declarations for `outflow-a` and the Orchard
+  devices.
 - The tree-pit probe's number of depth channels, installation depths/spacing, payload mapping, and which channels may be compared scientifically.
 - Water-level reference/datum, confirmed reporting schedules, configurable jitter tolerances for real devices, data retention, backup, and deletion policy.
 - Scientifically justified validity, stale/offline, rainfall-event, response, and recovery thresholds.

@@ -2,7 +2,12 @@
 
 A portable browser dashboard for an MSc Data Science project investigating LoRaWAN monitoring of rain gardens and related urban green infrastructure.
 
-Phase 0 and Phase 1 are complete. The inventory reflects the confirmed Orchard Park monitoring layout, and a site-wide Time Explorer supports bounded historical inspection. Every observation remains deterministic synthetic demonstration data. The application does not claim real The Things Network (TTN) compatibility or calculate hydrological performance scores.
+Phase 0 and Phase 1 are complete. The inventory reflects the confirmed Orchard Park monitoring
+layout, and a site-wide Time Explorer supports bounded historical inspection. Orchard Park
+observations remain deterministic synthetic demonstration data. A separate `TTN Testbed` can replay
+one local TTN console export for parser and UI verification; it is not live ingestion, does not
+confirm physical meanings or units, and is excluded from Orchard Park outputs. The application does
+not calculate hydrological performance scores.
 
 ## Screenshots
 
@@ -18,6 +23,7 @@ Phase 0 and Phase 1 are complete. The inventory reflects the confirmed Orchard P
 - A deterministic, idempotent seed for eight confirmed sensor/end-device records: seven configured swale devices with 20 channels and one tree-pit probe whose depth/channel configuration remains pending.
 - Generated TypeScript API types from FastAPI OpenAPI.
 - Unit, integration, contract, migration, responsive, and browser smoke tests.
+- An isolated, idempotent offline replay command for the local `outflow-a` TTN console export.
 
 The outdoor LoRaWAN gateway is infrastructure and is not counted as a monitored sensor device. Numeric demo values and charts display both a unit and its `synthetic_demo_only` provenance; this does not confirm the deployed payload or physical-unit mapping. Missing records remain missing and are never converted to zero.
 
@@ -83,6 +89,26 @@ The reset refuses production, non-demo mode, unknown device identifiers, and non
 docker compose down -v
 ```
 
+## Offline TTN console replay
+
+After migration and the normal Orchard Park seed, a developer who holds the ignored local source
+fixture can replay it without any TTN network access:
+
+```bash
+docker compose run --rm backend uv run python -m app.scripts.replay_ttn_export \
+  tests/fixtures/ttn/outflow-a-live-data.json
+```
+
+The command selects only `as.up.data.forward`, preserves each selected raw event privately, and
+upserts `Outflow A` under the separate `TTN Testbed` site. Run it again to verify that every selected
+uplink is reported as a skipped duplicate. Open the Devices page, then filter Site to `TTN Testbed`
+or select `View device details` on `Outflow A`.
+
+This workflow needs no TTN API key and makes no TTN request. It did not alter the TTN application,
+devices, payload formatter, downlinks, MQTT configuration, or Google Sheets webhook. Measurement 1
+and Measurement 2 intentionally retain null units and unverified scientific meanings. See the
+[offline replay design and privacy notes](docs/offline-ttn-replay.md).
+
 ## Environment variables
 
 | Variable                                                        | Purpose                                     | Phase 1 behavior                                       |
@@ -113,7 +139,16 @@ docker compose run --rm backend uv run alembic check
 docker compose run --rm backend uv run python -m app.db.seed
 ```
 
-The initial migration is `backend/migrations/versions/0001_initial_schema.py`. Migration `0002_confirmed_orchard_inventory.py` adds normalized monitoring features, the confirmed device type, explicit configuration/schedule metadata, and a separate physical-unit catalogue. Migration `0003_time_explorer_metric_groups.py` adds the controlled metric grouping used by Time Explorer. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or `synthetic_demo_only`; “unknown” is never stored as a physical unit. `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the database catalog plus generated `docs/data-dictionary.md` are checked against it.
+The initial migration is `backend/migrations/versions/0001_initial_schema.py`. Migration
+`0002_confirmed_orchard_inventory.py` adds normalized monitoring features, the confirmed device type,
+explicit configuration/schedule metadata, and a separate physical-unit catalogue. Migration
+`0003_time_explorer_metric_groups.py` adds the controlled metric grouping used by Time Explorer.
+Migration `0004_offline_ttn_replay.py` adds the isolated testbed vocabulary, explicit replay
+provenance, unverified-channel metadata, latest operational telemetry, and a private preserve-first
+quarantine. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`,
+or `synthetic_demo_only`; “unknown” is never stored as a physical unit.
+`backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the
+database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
 The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Real ingestion remains disabled and will require explicit payload, metric, and physical-unit mapping before a channel can become `confirmed`.
 
@@ -171,7 +206,7 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 
 ## Known limitations
 
-- No real TTN payload adapter or live ingestion.
+- No live TTN webhook or MQTT ingestion. The implemented TTN-specific path is local file replay only.
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
 - No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.
@@ -182,4 +217,8 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 
 ## Scope boundary
 
-The remaining later roadmap work is not implemented. In particular, the repository contains no fabricated TTN payload schema, rainfall-event analysis, hydrological formula, machine-learning result, or performance score. The legacy Replit prototype remains requirements-only and is not a package, service, build input, or runtime dependency.
+The remaining later roadmap work is not implemented. The fixture-driven `outflow-a` decoder adapter
+does not establish physical quantity or unit mappings and cannot be promoted to live ingestion
+without a separate review. The repository contains no rainfall-event analysis, hydrological formula,
+machine-learning result, or performance score. The legacy Replit prototype remains requirements-only
+and is not a package, service, build input, or runtime dependency.

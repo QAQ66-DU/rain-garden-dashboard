@@ -1,0 +1,429 @@
+{
+  "events": [
+    {
+      "context": {
+        "tenant-id": "synthetic-tenant"
+      },
+      "correlation_ids": [
+        "synthetic:correlation-id"
+      ],
+      "data": {
+        "@type": "type.googleapis.com/ttn.lorawan.v3.ApplicationUp",
+        "correlation_ids": [
+          "synthetic:correlation-id"
+        ],
+        "end_device_ids": {
+          "application_ids": {
+            "application_id": "synthetic-rain-garden"
+          },
+          "dev_addr": "00000000",
+          "dev_eui": "0000000000000000",
+          "device_id": "synthetic-outflow-a",
+          "join_eui": "0000000000000000"
+        },
+        "received_at": "2026-08-03T16:11:01.170711591Z",
+        "uplink_message": {
+          "confirmed": true,
+          "consumed_airtime": "0.061696s",
+          "decoded_payload": {
+            "err": 0,
+            "messages": [
+              [
+                {
+                  "measurementId": 1,
+                  "measurementValue": 840,
+                  "type": "Measurement"
+                },
+                {
+                  "measurementId": 2,
+                  "measurementValue": 200,
+                  "type": "Measurement"
+                }
+              ]
+            ],
+            "payload": "311201000CD14000030D40",
+            "valid": true
+          },
+          "f_cnt": 32859,
+          "f_port": 3,
+          "frm_payload": "MRIBAAzRQAADDUA=",
+          "last_battery_percentage": {
+            "f_cnt": 32767,
+            "received_at": "2026-08-03T14:38:53.455486186Z",
+            "value": 100
+          },
+          "network_ids": {
+            "cluster_address": "eu1.cloud.thethings.network",
+            "cluster_id": "eu1",
+            "net_id": "000013",
+            "ns_id": "EC656E0000000181",
+            "tenant_id": "synthetic-tenant"
+          },
+          "received_at": "2026-08-03T16:11:00.963527356Z",
+          "rx_metadata": [
+            {
+              "channel_index": 1,
+              "channel_rssi": -56,
+              "frequency_offset": "286",
+              "gateway_ids": {
+                "eui": "0000000000000000",
+                "gateway_id": "synthetic-gateway"
+              },
+              "received_at": "2026-08-03T16:11:00.934226225Z",
+              "rssi": -56,
+              "snr": 13.8,
+              "time": "2026-08-03T16:11:00.857691954Z",
+              "timestamp": 3742359139,
+              "uplink_token": "synthetic-uplink-token"
+            }
+          ],
+          "session_key_id": "synthetic-session-key-id",
+          "settings": {
+            "data_rate": {
+              "lora": {
+                "bandwidth": 125000,
+                "coding_rate": "4/5",
+                "spreading_factor": 7
+              }
+            },
+            "frequency": "868300000",
+            "time": "2026-08-03T16:11:00.857691954Z",
+            "timestamp": 3742359139
+          }
+        }
+      },
+      "identifiers": [
+        {
+          "device_ids": {
+            "application_ids": {
+              "application_id": "synthetic-rain-garden"
+            },
+            "dev_addr": "00000000",
+            "dev_eui": "0000000000000000",
+            "device_id": "synthetic-outflow-a",
+            "join_eui": "0000000000000000"
+          }
+        }
+      ],
+      "name": "as.up.data.forward",
+      "origin": "synthetic.example.invalid",
+      "time": "2026-08-03T16:11:01.178731630Z",
+      "unique_id": "synthetic-console-event",
+      "visibility": {
+        "rights": [
+          "RIGHT_APPLICATION_TRAFFIC_READ"
+        ]
+      }
+    },
+    {
+      "context": {
+        "tenant-id": "synthetic-tenant"
+      },
+      "correlation_ids": [
+        "synthetic:correlation-id"
+      ],
+      "data": {
+        "@type": "type.googleapis.com/ttn.lorawan.v3.ApplicationUp",
+        "correlation_ids": [
+          "synthetic:correlation-id"
+        ],
+        "end_device_ids": {
+          "application_ids": {
+            "application_id": "synthetic-rain-garden"
+          },
+          "dev_addr": "00000000",
+          "dev_eui": "0000000000000000",
+          "device_id": "synthetic-outflow-a",
+          "join_eui": "0000000000000000"
+        },
+        "received_at": "2026-08-03T16:04:01.241602589Z",
+        "uplink_message": {
+          "confirmed": true,
+          "consumed_airtime": "0.077056s",
+          "decoded_payload": {
+            "err": 0,
+            "messages": [
+              [
+                {
+                  "measurementId": 1,
+                  "measurementValue": 840,
+                  "type": "Measurement"
+                },
+                {
+                  "measurementId": 2,
+                  "measurementValue": 200,
+                  "type": "Measurement"
+                }
+              ],
+              [
+                {
+                  "Battery(%)": 100,
+                  "Firmware Version": "3.0",
+                  "Hardware Version": "1.1",
+                  "measureInterval": 60,
+                  "thresholdMeasureInterval": 0
+                }
+              ]
+            ],
+            "payload": "311201000CD14000030D4039640101030000010000",
+            "valid": true
+          },
+          "f_cnt": 32852,
+          "f_port": 3,
+          "frm_payload": "MRIBAAzRQAADDUA5ZAEBAwAAAQAA",
+          "last_battery_percentage": {
+            "f_cnt": 32767,
+            "received_at": "2026-08-03T14:38:53.455486186Z",
+            "value": 100
+          },
+          "network_ids": {
+            "cluster_address": "eu1.cloud.thethings.network",
+            "cluster_id": "eu1",
+            "net_id": "000013",
+            "ns_id": "EC656E0000000181",
+            "tenant_id": "synthetic-tenant"
+          },
+          "received_at": "2026-08-03T16:04:01.034534061Z",
+          "rx_metadata": [
+            {
+              "channel_index": 2,
+              "channel_rssi": -56,
+              "frequency_offset": "289",
+              "gateway_ids": {
+                "eui": "0000000000000000",
+                "gateway_id": "synthetic-gateway"
+              },
+              "received_at": "2026-08-03T16:04:01.005342223Z",
+              "rssi": -56,
+              "snr": 9,
+              "time": "2026-08-03T16:04:00.936396547Z",
+              "timestamp": 3322448704,
+              "uplink_token": "synthetic-uplink-token"
+            }
+          ],
+          "session_key_id": "synthetic-session-key-id",
+          "settings": {
+            "data_rate": {
+              "lora": {
+                "bandwidth": 125000,
+                "coding_rate": "4/5",
+                "spreading_factor": 7
+              }
+            },
+            "frequency": "868500000",
+            "time": "2026-08-03T16:04:00.936396547Z",
+            "timestamp": 3322448704
+          }
+        }
+      },
+      "identifiers": [
+        {
+          "device_ids": {
+            "application_ids": {
+              "application_id": "synthetic-rain-garden"
+            },
+            "dev_addr": "00000000",
+            "dev_eui": "0000000000000000",
+            "device_id": "synthetic-outflow-a",
+            "join_eui": "0000000000000000"
+          }
+        }
+      ],
+      "name": "as.up.data.forward",
+      "origin": "synthetic.example.invalid",
+      "time": "2026-08-03T16:04:01.244918839Z",
+      "unique_id": "synthetic-console-event",
+      "visibility": {
+        "rights": [
+          "RIGHT_APPLICATION_TRAFFIC_READ"
+        ]
+      }
+    },
+    {
+      "context": {
+        "tenant-id": "synthetic-tenant"
+      },
+      "correlation_ids": [
+        "synthetic:correlation-id"
+      ],
+      "data": {
+        "@type": "type.googleapis.com/ttn.lorawan.v3.ApplicationUp",
+        "correlation_ids": [
+          "synthetic:correlation-id"
+        ],
+        "end_device_ids": {
+          "application_ids": {
+            "application_id": "synthetic-rain-garden"
+          },
+          "dev_addr": "00000000",
+          "dev_eui": "0000000000000000",
+          "device_id": "synthetic-outflow-a",
+          "join_eui": "0000000000000000"
+        },
+        "received_at": "2026-08-03T12:00:00Z",
+        "uplink_message": {
+          "confirmed": true,
+          "consumed_airtime": "0.061696s",
+          "decoded_payload": {
+            "err": 1,
+            "messages": [],
+            "valid": false
+          },
+          "f_cnt": 999001,
+          "f_port": 3,
+          "frm_payload": "MRIBAAzRQAADDUA=",
+          "last_battery_percentage": {
+            "f_cnt": 32767,
+            "received_at": "2026-08-03T14:38:53.455486186Z",
+            "value": 100
+          },
+          "network_ids": {
+            "cluster_address": "eu1.cloud.thethings.network",
+            "cluster_id": "eu1",
+            "net_id": "000013",
+            "ns_id": "EC656E0000000181",
+            "tenant_id": "synthetic-tenant"
+          },
+          "received_at": "2026-08-03T12:00:00Z",
+          "rx_metadata": [
+            {
+              "channel_index": 1,
+              "channel_rssi": -56,
+              "frequency_offset": "286",
+              "gateway_ids": {
+                "eui": "0000000000000000",
+                "gateway_id": "synthetic-gateway"
+              },
+              "received_at": "2026-08-03T16:11:00.934226225Z",
+              "rssi": -56,
+              "snr": 13.8,
+              "time": "2026-08-03T16:11:00.857691954Z",
+              "timestamp": 3742359139,
+              "uplink_token": "synthetic-uplink-token"
+            }
+          ],
+          "session_key_id": "synthetic-session-key-id",
+          "settings": {
+            "data_rate": {
+              "lora": {
+                "bandwidth": 125000,
+                "coding_rate": "4/5",
+                "spreading_factor": 7
+              }
+            },
+            "frequency": "868300000",
+            "time": "2026-08-03T16:11:00.857691954Z",
+            "timestamp": 3742359139
+          }
+        }
+      },
+      "identifiers": [
+        {
+          "device_ids": {
+            "application_ids": {
+              "application_id": "synthetic-rain-garden"
+            },
+            "dev_addr": "00000000",
+            "dev_eui": "0000000000000000",
+            "device_id": "synthetic-outflow-a",
+            "join_eui": "0000000000000000"
+          }
+        }
+      ],
+      "name": "as.up.data.forward",
+      "origin": "synthetic.example.invalid",
+      "time": "2026-08-03T12:00:00Z",
+      "unique_id": "synthetic-invalid-console-event",
+      "visibility": {
+        "rights": [
+          "RIGHT_APPLICATION_TRAFFIC_READ"
+        ]
+      }
+    },
+    {
+      "context": {
+        "tenant-id": "synthetic-tenant"
+      },
+      "correlation_ids": [
+        "synthetic:correlation-id"
+      ],
+      "data": {
+        "@type": "type.googleapis.com/ttn.lorawan.v3.DownlinkMessage",
+        "correlation_ids": [
+          "synthetic:correlation-id"
+        ],
+        "payload": {
+          "m_hdr": {
+            "m_type": "UNCONFIRMED_DOWN"
+          },
+          "mac_payload": {
+            "f_hdr": {
+              "dev_addr": "00000000",
+              "f_cnt": 32732,
+              "f_ctrl": {
+                "ack": true,
+                "adr": true
+              }
+            },
+            "full_f_cnt": 32732
+          },
+          "mic": "lHHLBg=="
+        },
+        "raw_payload": "YDcfCyag3H+UccsG",
+        "request": {
+          "downlink_paths": [
+            {
+              "uplink_token": "synthetic-uplink-token"
+            }
+          ],
+          "frequency_plan_id": "EU_868_1",
+          "priority": "HIGHEST",
+          "rx1_data_rate": {
+            "lora": {
+              "bandwidth": 125000,
+              "coding_rate": "4/5",
+              "spreading_factor": 7
+            }
+          },
+          "rx1_delay": 5,
+          "rx1_frequency": "868300000",
+          "rx2_data_rate": {
+            "lora": {
+              "bandwidth": 125000,
+              "coding_rate": "4/5",
+              "spreading_factor": 12
+            }
+          },
+          "rx2_frequency": "869525000"
+        }
+      },
+      "identifiers": [
+        {
+          "device_ids": {
+            "application_ids": {
+              "application_id": "synthetic-rain-garden"
+            },
+            "dev_addr": "00000000",
+            "dev_eui": "0000000000000000",
+            "device_id": "synthetic-outflow-a",
+            "join_eui": "0000000000000000"
+          }
+        }
+      ],
+      "name": "ns.down.data.schedule.attempt",
+      "origin": "synthetic.example.invalid",
+      "time": "2026-08-03T16:11:01.374615063Z",
+      "unique_id": "synthetic-console-event",
+      "visibility": {
+        "rights": [
+          "RIGHT_APPLICATION_TRAFFIC_READ"
+        ]
+      }
+    }
+  ],
+  "fixture_metadata": {
+    "invalid_case": "explicit test mutation because the source export contains no invalid as.up.data.forward event",
+    "source": "privacy-redacted derivative of a local TTN Live Data console export",
+    "synthetic_identifiers": true
+  }
+}

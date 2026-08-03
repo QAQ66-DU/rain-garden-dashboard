@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.models.device import Device
 from app.models.measurement import Measurement
 from app.models.metric_definition import MetricDefinition
 from app.models.sensor_channel import SensorChannel
@@ -26,6 +27,8 @@ class MeasurementRecord:
     unit_code: str | None
     unit_symbol: str | None
     unit_confirmation_status: str
+    verification_status: str
+    timestamp_basis: str | None
     depth_cm: float | None
     position_label: str | None
     value: Decimal
@@ -36,6 +39,20 @@ class MeasurementRecord:
 
 def dataset_reference_time(session: Session) -> datetime | None:
     return session.scalar(select(func.max(UplinkEvent.received_at)))
+
+
+def device_reference_time(session: Session, device_id: UUID) -> datetime | None:
+    return session.scalar(
+        select(func.max(UplinkEvent.received_at)).where(UplinkEvent.device_id == device_id)
+    )
+
+
+def site_reference_time(session: Session, site_id: UUID) -> datetime | None:
+    return session.scalar(
+        select(func.max(UplinkEvent.received_at))
+        .join(Device, Device.id == UplinkEvent.device_id)
+        .where(Device.site_id == site_id)
+    )
 
 
 def _conditions(
@@ -106,6 +123,8 @@ def list_measurements(
             SensorChannel.unit_code,
             UnitDefinition.unit_symbol,
             SensorChannel.unit_confirmation_status,
+            SensorChannel.verification_status,
+            SensorChannel.timestamp_basis,
             SensorChannel.depth_cm,
             SensorChannel.position_label,
             Measurement.numeric_value,
@@ -131,12 +150,14 @@ def list_measurements(
             unit_code=cast(str | None, row[6]),
             unit_symbol=cast(str | None, row[7]),
             unit_confirmation_status=cast(str, row[8]),
-            depth_cm=cast(float | None, row[9]),
-            position_label=cast(str | None, row[10]),
-            value=cast(Decimal, row[11]),
-            measured_at=cast(datetime, row[12]),
-            quality_flag=cast(str, row[13]),
-            quality_notes=cast(str | None, row[14]),
+            verification_status=cast(str, row[9]),
+            timestamp_basis=cast(str | None, row[10]),
+            depth_cm=cast(float | None, row[11]),
+            position_label=cast(str | None, row[12]),
+            value=cast(Decimal, row[13]),
+            measured_at=cast(datetime, row[14]),
+            quality_flag=cast(str, row[15]),
+            quality_notes=cast(str | None, row[16]),
         )
         for row in rows
     ]
@@ -145,6 +166,24 @@ def list_measurements(
 def current_reference_time(session: Session, *, demo_mode: bool) -> datetime:
     if demo_mode:
         reference = dataset_reference_time(session)
+        if reference is not None:
+            return reference
+    return datetime.now(UTC)
+
+
+def current_device_reference_time(
+    session: Session, device_id: UUID, *, demo_mode: bool
+) -> datetime:
+    if demo_mode:
+        reference = device_reference_time(session, device_id)
+        if reference is not None:
+            return reference
+    return datetime.now(UTC)
+
+
+def current_site_reference_time(session: Session, site_id: UUID, *, demo_mode: bool) -> datetime:
+    if demo_mode:
+        reference = site_reference_time(session, site_id)
         if reference is not None:
             return reference
     return datetime.now(UTC)

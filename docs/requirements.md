@@ -16,6 +16,8 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Represent the confirmed Orchard Park inventory as eight sensor/end devices grouped under Swale and Tree pit; exclude the outdoor gateway from monitored-device counts.
 - Seed at least seven deterministic days for the seven configured swale devices. Keep the tree-pit probe at zero channels and observations until its depth/channel configuration is confirmed.
 - Expose versioned read-only REST endpoints and an authenticated but disabled TTN scaffold.
+- Support an isolated, local-only offline replay of the reviewed `outflow-a` console export under a
+  separate TTN Testbed site, while keeping physical meanings and units explicitly unverified.
 
 ## Measurement query contract
 
@@ -54,7 +56,11 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 
 ## Explicit non-goals
 
-Real TTN payload mapping, threshold editing, shared distributed rate limiting, authentication/user management, maps, public coordinates, CSV export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection, machine learning, camera data, image recognition, and deployment to a vendor-specific platform are not implemented.
+Live TTN webhook/MQTT ingestion, confirmed `outflow-a` physical payload mapping, threshold editing,
+shared distributed rate limiting, authentication/user management, maps, public coordinates, CSV
+export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
+machine learning, camera data, image recognition, and deployment to a vendor-specific platform are
+not implemented.
 
 ## Future scope
 

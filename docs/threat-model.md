@@ -17,23 +17,24 @@
 
 ## Threats and mitigations
 
-| Threat                         | Phase 0/1 mitigation                                                                                                 | Residual risk                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Forged webhook                 | Required secret, constant-time comparison, disabled adapter, TLS requirement                                         | Secret rotation and signed TTN scheme await confirmed integration |
-| Replay/duplicate uplink        | Unique source/idempotency key and transactional get-or-create                                                        | Real TTN identifier selection awaits fixtures                     |
-| Oversized/malformed input      | Configurable 256 KiB default, JSON content-type check, Pydantic canonical contract                                   | Distributed body controls require reverse proxy                   |
-| Injection                      | Pydantic validation and SQLAlchemy parameters; no arbitrary filters                                                  | Dependency defects remain possible                                |
-| Secret leakage                 | Ignored environment files, redacted logs/errors, secret scan, no frontend secrets                                    | Operator misconfiguration remains possible                        |
-| Raw data/identifier disclosure | Separate private models and allowlisted public schemas                                                               | Future endpoints require new privacy review                       |
-| Exact coordinate disclosure    | Nullable private fields excluded from public schemas; disclosure classification                                      | Database administrators can access private data                   |
-| Denial via broad queries       | 7-day default, 31-day maximum, observation and warning-count preflights, cursor pages, rate limiting                 | In-memory limiting is per process only                            |
-| Silent truncation              | Explicit oversize error before result delivery                                                                       | Aggregation is unavailable in Phase 1                             |
-| Spreadsheet formula injection  | CSV is not implemented; future export must neutralize `= + - @` prefixes                                             | No export path exists yet                                         |
-| Scientific misinterpretation   | Synthetic labels, explicit unit-confirmation status, channel identity, no performance scores, documented assumptions | Users may still export screenshots without context                |
-| Misleading historical coverage | Explicit schedule inputs, half-open windows, unavailable state when schedule is unknown, separate current freshness  | Real schedule and jitter settings remain unconfirmed              |
-| Quality-detail disclosure      | Allowlisted warning schema and controlled safe explanations; raw notes and payloads remain private                   | Future quality rules require renewed field-level review           |
-| Supply-chain compromise        | Lockfiles, pinned CI actions/images, audits, secret scanning                                                         | Registries and upstream releases remain external dependencies     |
-| Stack trace/database leakage   | Standard problem responses and production exception middleware                                                       | Development logs are more verbose and must not hold secrets       |
+| Threat                         | Phase 0/1 mitigation                                                                                                  | Residual risk                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Forged webhook                 | Required secret, constant-time comparison, disabled adapter, TLS requirement                                          | Secret rotation and signed TTN scheme await confirmed integration |
+| Replay/duplicate uplink        | Unique source/idempotency key and transactional get-or-create                                                         | Real TTN identifier selection awaits fixtures                     |
+| Oversized/malformed input      | Configurable 256 KiB default, JSON content-type check, Pydantic canonical contract                                    | Distributed body controls require reverse proxy                   |
+| Injection                      | Pydantic validation and SQLAlchemy parameters; no arbitrary filters                                                   | Dependency defects remain possible                                |
+| Secret leakage                 | Ignored environment files, redacted logs/errors, secret scan, no frontend secrets                                     | Operator misconfiguration remains possible                        |
+| Raw data/identifier disclosure | Separate private models and allowlisted public schemas                                                                | Future endpoints require new privacy review                       |
+| Offline fixture disclosure     | Exact ignored source paths, small redacted CI derivative, aggregate-only replay output, private raw/quarantine tables | Local operators can still mishandle the source export             |
+| Exact coordinate disclosure    | Nullable private fields excluded from public schemas; disclosure classification                                       | Database administrators can access private data                   |
+| Denial via broad queries       | 7-day default, 31-day maximum, observation and warning-count preflights, cursor pages, rate limiting                  | In-memory limiting is per process only                            |
+| Silent truncation              | Explicit oversize error before result delivery                                                                        | Aggregation is unavailable in Phase 1                             |
+| Spreadsheet formula injection  | CSV is not implemented; future export must neutralize `= + - @` prefixes                                              | No export path exists yet                                         |
+| Scientific misinterpretation   | Synthetic labels, explicit unit-confirmation status, channel identity, no performance scores, documented assumptions  | Users may still export screenshots without context                |
+| Misleading historical coverage | Explicit schedule inputs, half-open windows, unavailable state when schedule is unknown, separate current freshness   | Real schedule and jitter settings remain unconfirmed              |
+| Quality-detail disclosure      | Allowlisted warning schema and controlled safe explanations; raw notes and payloads remain private                    | Future quality rules require renewed field-level review           |
+| Supply-chain compromise        | Lockfiles, pinned CI actions/images, audits, secret scanning                                                          | Registries and upstream releases remain external dependencies     |
+| Stack trace/database leakage   | Standard problem responses and production exception middleware                                                        | Development logs are more verbose and must not hold secrets       |
 
 ## Accepted Phase 1 risks
 
@@ -42,3 +43,5 @@
 - TTN payload compatibility, secret rotation, and network-level controls are unimplemented.
 - There is no user authentication, private-coordinate endpoint, backup automation, or formal audit log.
 - Confirmed coordinates remain visible to database administrators; browser/OpenAPI contract tests only protect the public application boundary.
+- Offline replay is approved only for the local testbed. It does not authorize live ingress or
+  public exposure of exact TTN or gateway identifiers.

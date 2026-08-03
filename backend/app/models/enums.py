@@ -12,11 +12,13 @@ class DeviceType(StrEnum):
     SOIL_MOISTURE_SENSOR = "soil_moisture_sensor"
     WATER_LEVEL_SENSOR = "water_level_sensor"
     MULTI_DEPTH_SOIL_PROBE = "multi_depth_soil_probe"
+    TEST_TELEMETRY_DEVICE = "test_telemetry_device"
 
 
 class MonitoringFeatureType(StrEnum):
     SWALE = "swale"
     TREE_PIT = "tree_pit"
+    TESTBED = "testbed"
 
 
 class SensorConfigurationStatus(StrEnum):

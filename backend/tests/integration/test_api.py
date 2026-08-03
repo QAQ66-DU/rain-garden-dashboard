@@ -3,7 +3,7 @@ from uuid import UUID
 
 import pytest
 from app.core.config import Settings
-from app.db.seed import SITE_ID
+from app.db.seed import SITE_ID, seed_session
 from app.db.synthetic import stable_uuid
 from app.models.sensor_channel import SensorChannel
 from app.services.errors import ServiceError
@@ -98,6 +98,7 @@ def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
 
 
 def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
+    seed_session(db_session)
     settings = Settings(
         database_url="postgresql+psycopg://test:test@localhost/test",
         max_measurement_result_rows=10,

@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -40,6 +41,10 @@ class SensorChannel(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "unit_confirmation_status = 'pending' OR unit_code IS NOT NULL",
             name="confirmed_unit_requires_code",
         ),
+        CheckConstraint(
+            "verification_status IN ('catalogued', 'unverified')",
+            name="verification_status",
+        ),
     )
 
     device_id: Mapped[UUID] = mapped_column(
@@ -62,6 +67,11 @@ class SensorChannel(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reporting_schedule_anchor_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reporting_jitter_tolerance_seconds: Mapped[int | None] = mapped_column(Integer)
     water_level_reference_or_datum: Mapped[str | None] = mapped_column(String(200))
+    scientific_meaning: Mapped[str | None] = mapped_column(Text)
+    verification_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="catalogued"
+    )
+    timestamp_basis: Mapped[str | None] = mapped_column(String(50))
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     channel_metadata: Mapped[dict[str, Any]] = mapped_column(
         "metadata", JSONB, nullable=False, default=dict

@@ -698,6 +698,30 @@ h2 {
   white-space: nowrap;
 }
 
+.provenance-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+  gap: 0.35rem;
+}
+
+.provenance-tag {
+  display: inline-flex;
+  padding: 0.22rem 0.42rem;
+  border-radius: 100px;
+  color: var(--blue-dark);
+  background: var(--blue-soft);
+  font-size: 0.56rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.provenance-tag--warning {
+  color: #734d16;
+  background: var(--amber-soft);
+}
+
 .device-card__status {
   display: flex;
   min-height: 28px;
@@ -906,6 +930,33 @@ h2 {
   font-size: 0.74rem;
   font-weight: 650;
   line-height: 1.4;
+}
+
+.telemetry-grid {
+  display: grid;
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.telemetry-grid > div {
+  min-width: 0;
+  padding: 0.9rem;
+  border-left: 2px solid var(--blue);
+  background: var(--surface-soft);
+}
+
+.telemetry-grid dt {
+  margin-bottom: 0.25rem;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.telemetry-grid dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 650;
 }
 
 .freshness-warning {
@@ -1311,6 +1362,10 @@ h2 {
   .hero-facts {
     grid-template-columns: 1fr;
   }
+
+  .telemetry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -1388,6 +1443,10 @@ h2 {
   .explore-controls,
   .custom-time-fields,
   .channel-options {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-grid {
     grid-template-columns: 1fr;
   }
 

@@ -26,6 +26,8 @@ def measurement_value(record: LatestMeasurement) -> MeasurementValue:
         unit_code=record.unit_code,
         unit_symbol=record.unit_symbol,
         unit_confirmation_status=record.unit_confirmation_status,
+        verification_status=record.verification_status,
+        timestamp_basis=record.timestamp_basis,
         measured_at=record.measured_at,
         quality_flag=record.quality_flag,
         quality_notes=record.quality_notes,

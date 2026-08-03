@@ -4,7 +4,13 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { MeasurementDisplay } from '../src/components/MeasurementDisplay';
-import { exploreFixture, treeProbeId, weatherDeviceId } from './fixtures/api';
+import {
+  exploreFixture,
+  replayDeviceId,
+  siteId,
+  treeProbeId,
+  weatherDeviceId,
+} from './fixtures/api';
 import { renderRoute, renderWithQueryClient } from './render';
 import { server } from './server';
 
@@ -44,7 +50,31 @@ describe('monitoring dashboard', () => {
     expect(
       screen.queryByRole('heading', { name: 'Swale weather station' }),
     ).not.toBeInTheDocument();
-    expect(document.body).not.toHaveTextContent('DevEUI');
+    expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
+  });
+
+  it('keeps the eight Orchard devices isolated from the ninth TTN Testbed card', async () => {
+    const user = userEvent.setup();
+    renderRoute('/devices');
+
+    expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(9);
+    expect(screen.getByText('Testbed')).toBeInTheDocument();
+    expect(screen.getByText('Replay data')).toBeInTheDocument();
+    expect(screen.getByText('Unit unverified')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Site' }), siteId);
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Outflow A' })).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('article')).toHaveLength(8);
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Site' }),
+      '00000000-0000-4000-8000-000000000099',
+    );
+    expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
   });
 
   it('renders one explicitly selected sensor channel as a raw seven-day series', async () => {
@@ -74,6 +104,23 @@ describe('monitoring dashboard', () => {
       screen.getByRole('heading', { name: 'Sensor configuration pending' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Chart controls' })).not.toBeInTheDocument();
+  });
+
+  it('labels the isolated TTN replay device without inventing units or exposing raw IDs', async () => {
+    renderRoute(`/devices/${replayDeviceId}`);
+
+    expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
+    expect(screen.getByText('Offline TTN replay data')).toBeInTheDocument();
+    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThan(0);
+    expect(screen.getByText('Replay dataset reference time')).toBeInTheDocument();
+    expect(screen.getByText('TTN console export')).toBeInTheDocument();
+    expect(screen.getByText('Replay gateway (identifier withheld)')).toBeInTheDocument();
+    expect(screen.getByText('840')).toBeInTheDocument();
+    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.getByText('Measurement 2')).toBeInTheDocument();
+    expect(screen.getAllByText('Scientific meaning not verified')).toHaveLength(2);
+    expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
+    expect(document.body).not.toHaveTextContent('session_key_id');
   });
 
   it('renders unit-separated, synchronised channel small multiples with historical coverage', async () => {
@@ -216,5 +263,12 @@ describe('measurement semantics', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('mm')).toBeInTheDocument();
     expect(screen.getByText('Not available')).toBeInTheDocument();
+  });
+
+  it('shows an unverified numeric decoder output without assigning a unit', () => {
+    renderWithQueryClient(<MeasurementDisplay value={840} unit={null} />);
+
+    expect(screen.getByText('840')).toBeInTheDocument();
+    expect(screen.getByLabelText('Unit not verified')).toHaveTextContent('—');
   });
 });

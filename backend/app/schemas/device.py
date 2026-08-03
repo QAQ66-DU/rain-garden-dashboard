@@ -29,7 +29,22 @@ class SensorChannelPublic(ApiModel):
     reporting_schedule_anchor_at: datetime | None
     reporting_jitter_tolerance_seconds: int | None
     water_level_reference_or_datum: str | None
+    scientific_meaning: str | None
+    verification_status: str
+    timestamp_basis: str | None
     active: bool
+
+
+class DeviceTelemetryPublic(ApiModel):
+    observed_at: datetime
+    battery_percent: float | None
+    firmware_version: str | None
+    hardware_version: str | None
+    measurement_interval_value: float | None
+    measurement_interval_unit: str | None
+    latest_rssi_dbm: float | None
+    latest_snr_db: float | None
+    gateway: str | None
 
 
 class DevicePublic(ApiModel):
@@ -43,6 +58,11 @@ class DevicePublic(ApiModel):
     operational_override: str | None
     last_seen_at: datetime | None
     location_disclosure: str
+    environment: str | None
+    source_system: str | None
+    ingestion_mode: str | None
+    provenance: str | None
+    is_test_device: bool
     freshness: Freshness
     latest_battery: MeasurementValue | None
 
@@ -50,6 +70,7 @@ class DevicePublic(ApiModel):
 class DeviceDetail(DevicePublic):
     channels: list[SensorChannelPublic]
     latest_measurements: list[MeasurementValue]
+    telemetry: DeviceTelemetryPublic | None
 
 
 class DeviceList(ApiModel):
@@ -57,3 +78,4 @@ class DeviceList(ApiModel):
     next_cursor: str | None
     reference_time: datetime
     synthetic: bool
+    contains_replay_data: bool

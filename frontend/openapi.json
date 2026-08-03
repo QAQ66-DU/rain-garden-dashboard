@@ -28,6 +28,17 @@
             "title": "Display Name",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
           "freshness": {
             "$ref": "#/components/schemas/Freshness"
           },
@@ -35,6 +46,21 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "ingestion_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Mode"
+          },
+          "is_test_device": {
+            "title": "Is Test Device",
+            "type": "boolean"
           },
           "last_seen_at": {
             "anyOf": [
@@ -90,6 +116,17 @@
             ],
             "title": "Operational Override"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
           "sensor_configuration_status": {
             "title": "Sensor Configuration Status",
             "type": "string"
@@ -102,6 +139,27 @@
           "site_name": {
             "title": "Site Name",
             "type": "string"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceTelemetryPublic"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -115,16 +173,26 @@
           "operational_override",
           "last_seen_at",
           "location_disclosure",
+          "environment",
+          "source_system",
+          "ingestion_mode",
+          "provenance",
+          "is_test_device",
           "freshness",
           "latest_battery",
           "channels",
-          "latest_measurements"
+          "latest_measurements",
+          "telemetry"
         ],
         "title": "DeviceDetail",
         "type": "object"
       },
       "DeviceList": {
         "properties": {
+          "contains_replay_data": {
+            "title": "Contains Replay Data",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/DevicePublic"
@@ -157,7 +225,8 @@
           "items",
           "next_cursor",
           "reference_time",
-          "synthetic"
+          "synthetic",
+          "contains_replay_data"
         ],
         "title": "DeviceList",
         "type": "object"
@@ -172,6 +241,17 @@
             "title": "Display Name",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
           "freshness": {
             "$ref": "#/components/schemas/Freshness"
           },
@@ -179,6 +259,21 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "ingestion_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Mode"
+          },
+          "is_test_device": {
+            "title": "Is Test Device",
+            "type": "boolean"
           },
           "last_seen_at": {
             "anyOf": [
@@ -227,6 +322,17 @@
             ],
             "title": "Operational Override"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
           "sensor_configuration_status": {
             "title": "Sensor Configuration Status",
             "type": "string"
@@ -239,6 +345,17 @@
           "site_name": {
             "title": "Site Name",
             "type": "string"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
           }
         },
         "required": [
@@ -252,6 +369,11 @@
           "operational_override",
           "last_seen_at",
           "location_disclosure",
+          "environment",
+          "source_system",
+          "ingestion_mode",
+          "provenance",
+          "is_test_device",
           "freshness",
           "latest_battery"
         ],
@@ -289,6 +411,116 @@
           "unknown"
         ],
         "title": "DeviceStatusCounts",
+        "type": "object"
+      },
+      "DeviceTelemetryPublic": {
+        "properties": {
+          "battery_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery Percent"
+          },
+          "firmware_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firmware Version"
+          },
+          "gateway": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway"
+          },
+          "hardware_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hardware Version"
+          },
+          "latest_rssi_dbm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Rssi Dbm"
+          },
+          "latest_snr_db": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Snr Db"
+          },
+          "measurement_interval_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measurement Interval Unit"
+          },
+          "measurement_interval_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measurement Interval Value"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observed_at",
+          "battery_percent",
+          "firmware_version",
+          "hardware_version",
+          "measurement_interval_value",
+          "measurement_interval_unit",
+          "latest_rssi_dbm",
+          "latest_snr_db",
+          "gateway"
+        ],
+        "title": "DeviceTelemetryPublic",
         "type": "object"
       },
       "ExploreChannel": {
@@ -1021,6 +1253,17 @@
             ],
             "title": "Next Cursor"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
           "reference_time": {
             "format": "date-time",
             "title": "Reference Time",
@@ -1048,7 +1291,8 @@
           "end",
           "reference_time",
           "default_range_applied",
-          "synthetic"
+          "synthetic",
+          "provenance"
         ],
         "title": "MeasurementPage",
         "type": "object"
@@ -1133,6 +1377,17 @@
             ],
             "title": "Quality Notes"
           },
+          "timestamp_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Basis"
+          },
           "unit_code": {
             "anyOf": [
               {
@@ -1158,6 +1413,10 @@
               }
             ],
             "title": "Unit Symbol"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
           }
         },
         "required": [
@@ -1170,6 +1429,8 @@
           "unit_code",
           "unit_symbol",
           "unit_confirmation_status",
+          "verification_status",
+          "timestamp_basis",
           "measured_at",
           "quality_flag",
           "quality_notes",
@@ -1498,6 +1759,28 @@
             ],
             "title": "Reporting Schedule Anchor At"
           },
+          "scientific_meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scientific Meaning"
+          },
+          "timestamp_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Basis"
+          },
           "unit_code": {
             "anyOf": [
               {
@@ -1523,6 +1806,10 @@
               }
             ],
             "title": "Unit Symbol"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
           },
           "water_level_reference_or_datum": {
             "anyOf": [
@@ -1552,6 +1839,9 @@
           "reporting_schedule_anchor_at",
           "reporting_jitter_tolerance_seconds",
           "water_level_reference_or_datum",
+          "scientific_meaning",
+          "verification_status",
+          "timestamp_basis",
           "active"
         ],
         "title": "SensorChannelPublic",
@@ -1716,6 +2006,17 @@
             ],
             "title": "Quality Notes"
           },
+          "timestamp_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Basis"
+          },
           "unit_code": {
             "anyOf": [
               {
@@ -1741,6 +2042,10 @@
               }
             ],
             "title": "Unit Symbol"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
           }
         },
         "required": [
@@ -1753,6 +2058,8 @@
           "unit_code",
           "unit_symbol",
           "unit_confirmation_status",
+          "verification_status",
+          "timestamp_basis",
           "measured_at",
           "quality_flag",
           "quality_notes",

@@ -2,7 +2,7 @@
 
 ## Context
 
-The browser reads normalized, public sensor data from a versioned FastAPI service. FastAPI coordinates services, pure quality/status functions, and SQLAlchemy repositories. PostgreSQL stores the original private uplink separately from long-format measurements. A future TTN webhook crosses a server-to-server trust boundary but remains disabled in Phase 1.
+The browser reads normalized, public sensor data from a versioned FastAPI service. FastAPI coordinates services, pure quality/status functions, and SQLAlchemy repositories. PostgreSQL stores the original private uplink separately from long-format measurements. A future TTN webhook crosses a server-to-server trust boundary but remains disabled. A local offline file replay exercises one fixture-driven TTN ApplicationUp normaliser without crossing that network boundary.
 
 ```mermaid
 flowchart LR
@@ -40,6 +40,12 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 6. Services apply explicit reference times, quality exclusions, comparability rules, and freshness thresholds.
 7. Pydantic response schemas exclude private coordinates, external identifiers, and raw payloads.
 
+The offline TTN path adds a file adapter before step 1. It selects only `as.up.data.forward`, then
+passes `event.data` to an ApplicationUp normaliser that has no file, network, or database dependency.
+Known `outflow-a` events reuse `UplinkEvent` and `Measurement`; unmappable or structurally unsafe
+selected events go to private `TTNReplayQuarantine`. This separation permits future reuse but does
+not enable the existing webhook or create a live connection.
+
 ## Data model
 
 - **Site:** UUID, name, description, public location label, disclosure classification, nullable private latitude/longitude, IANA display timezone, active flag, audit timestamps.
@@ -50,6 +56,10 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 - **UnitDefinition:** physical-unit code, name, symbol, and meaning synchronized separately from the same catalogue.
 - **UplinkEvent:** UUID, device FK, source/idempotency identity, event timestamps, optional frame counter/schema version, private raw JSONB, ingestion status/error, audit timestamp.
 - **Measurement:** UUID, uplink/device/channel FKs, numeric value, measured time, quality flag/notes, audit timestamp.
+- **DeviceTelemetry:** Latest replay-derived operational status and radio context, kept separate from
+  scientific channels; exact gateway identity remains private and only an allowlisted alias is public.
+- **TTNReplayQuarantine:** Private raw selected events that cannot be parsed or mapped safely,
+  deduplicated by a deterministic content identity and never exposed by public routes.
 
 Installation depth and position never alter the controlled metric code. Channels at different confirmed depths would both use `soil_moisture` and remain separately identifiable. No tree-pit depths or depth channel count are currently configured.
 
@@ -73,6 +83,10 @@ Device connectivity status is calculated, never stored as unquestioned truth:
 - `offline`: age is above the offline threshold.
 
 Phase 1 demo defaults are 90 and 180 minutes. They are operational presentation settings based on the one-hour synthetic generator, not scientific or manufacturer thresholds. The response includes thresholds, age, reference time, and status basis. In demo mode, the reference time is the maximum dataset receipt time, not wall-clock time. Maintenance/disabled overrides are stored and reported separately.
+
+The isolated TTN test device uses the maximum receipt time for its own replay site and reports
+`replay_dataset_reference_time`. Orchard Park keeps its own site-scoped synthetic reference, so
+replaying later-dated testbed events cannot change Orchard device status.
 
 ## API and privacy boundaries
 

@@ -35,7 +35,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       </header>
       <main className="page-shell">{children}</main>
       <footer className="site-footer">
-        Synthetic research interface · UTC storage · Europe/London display
+        Research interface · synthetic Orchard Park + isolated replay testbed · UTC storage ·
+        Europe/London display
       </footer>
     </div>
   );

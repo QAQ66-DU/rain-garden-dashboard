@@ -14,6 +14,8 @@ class MeasurementValue(ApiModel):
     unit_code: str | None
     unit_symbol: str | None
     unit_confirmation_status: str
+    verification_status: str
+    timestamp_basis: str | None
     measured_at: datetime
     quality_flag: str
     quality_notes: str | None
@@ -32,3 +34,4 @@ class MeasurementPage(ApiModel):
     reference_time: datetime
     default_range_applied: bool
     synthetic: bool
+    provenance: str | None

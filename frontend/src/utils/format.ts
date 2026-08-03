@@ -36,6 +36,13 @@ export function humanizeCode(value: string): string {
   return value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
 }
 
+export function formatStatusBasis(value: string): string {
+  if (value === 'replay_dataset_reference_time') return 'Replay dataset reference time';
+  if (value === 'dataset_reference_time') return 'Dataset reference time';
+  if (value === 'current_utc_time') return 'Current UTC time';
+  return humanizeCode(value);
+}
+
 interface DateTimeParts {
   year: number;
   month: number;

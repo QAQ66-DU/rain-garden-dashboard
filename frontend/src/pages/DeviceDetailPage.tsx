@@ -8,7 +8,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { TimeSeriesChart, type ChartPoint } from '../components/TimeSeriesChart';
 import { UnitStatusNote } from '../components/UnitStatusNote';
-import { formatDateTime, humanizeCode } from '../utils/format';
+import { formatDateTime, formatNumber, formatStatusBasis, humanizeCode } from '../utils/format';
 
 export function DeviceDetailPage() {
   const { deviceId } = useParams();
@@ -43,7 +43,7 @@ export function DeviceDetailPage() {
   const hasChannels = data.channels.length > 0;
   return (
     <div className="page-stack">
-      <SyntheticBanner />
+      <SyntheticBanner mode={data.is_test_device ? 'replay' : 'synthetic'} />
       <Link className="back-link" to={{ pathname: '/devices', search: location.search }}>
         ← Back to devices
       </Link>
@@ -58,6 +58,13 @@ export function DeviceDetailPage() {
             {data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} ·{' '}
             {data.site_name}
           </p>
+          {data.is_test_device ? (
+            <div className="provenance-tags" aria-label="Replay provenance">
+              <span className="provenance-tag">Testbed</span>
+              <span className="provenance-tag">Replay data</span>
+              <span className="provenance-tag provenance-tag--warning">Unit unverified</span>
+            </div>
+          ) : null}
         </div>
         <dl className="hero-facts">
           <div>
@@ -72,8 +79,107 @@ export function DeviceDetailPage() {
             <dt>Reference time</dt>
             <dd>{formatDateTime(data.freshness.reference_time)}</dd>
           </div>
+          <div>
+            <dt>Status basis</dt>
+            <dd>{formatStatusBasis(data.freshness.status_basis)}</dd>
+          </div>
         </dl>
       </header>
+
+      {data.is_test_device ? (
+        <section className="panel" aria-labelledby="replay-provenance-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Private-source replay</p>
+              <h2 id="replay-provenance-heading">Replay provenance</h2>
+              <p>
+                Raw events are preserved privately. Public views expose only selected normalised
+                fields and never expose network identifiers, session material, tokens, or raw JSON.
+              </p>
+            </div>
+          </div>
+          <dl className="telemetry-grid">
+            <div>
+              <dt>Source</dt>
+              <dd>TTN console export</dd>
+            </div>
+            <div>
+              <dt>Ingestion</dt>
+              <dd>{humanizeCode(data.ingestion_mode ?? 'offline_replay')}</dd>
+            </div>
+            <div>
+              <dt>Environment</dt>
+              <dd>{humanizeCode(data.environment ?? 'test')}</dd>
+            </div>
+            <div>
+              <dt>Latest observation</dt>
+              <dd>{formatDateTime(data.last_seen_at)}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
+
+      {data.is_test_device && data.telemetry ? (
+        <section className="panel" aria-labelledby="operational-status-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Decoder status and network context</p>
+              <h2 id="operational-status-heading">Latest operational status</h2>
+              <p>Status values are kept separate from scientific measurement channels.</p>
+            </div>
+          </div>
+          <dl className="telemetry-grid">
+            <div>
+              <dt>Battery</dt>
+              <dd>
+                {data.telemetry.battery_percent === null
+                  ? 'Not available'
+                  : `${formatNumber(data.telemetry.battery_percent)}%`}
+              </dd>
+            </div>
+            <div>
+              <dt>Firmware</dt>
+              <dd>{data.telemetry.firmware_version ?? 'Not available'}</dd>
+            </div>
+            <div>
+              <dt>Hardware</dt>
+              <dd>{data.telemetry.hardware_version ?? 'Not available'}</dd>
+            </div>
+            <div>
+              <dt>Measurement interval</dt>
+              <dd>
+                {data.telemetry.measurement_interval_value === null
+                  ? 'Not available'
+                  : `${formatNumber(data.telemetry.measurement_interval_value)} · unit not verified`}
+              </dd>
+            </div>
+            <div>
+              <dt>Latest RSSI</dt>
+              <dd>
+                {data.telemetry.latest_rssi_dbm === null
+                  ? 'Not available'
+                  : `${formatNumber(data.telemetry.latest_rssi_dbm)} dBm`}
+              </dd>
+            </div>
+            <div>
+              <dt>Latest SNR</dt>
+              <dd>
+                {data.telemetry.latest_snr_db === null
+                  ? 'Not available'
+                  : `${formatNumber(data.telemetry.latest_snr_db)} dB`}
+              </dd>
+            </div>
+            <div>
+              <dt>Gateway</dt>
+              <dd>{data.telemetry.gateway ?? 'Not available'}</dd>
+            </div>
+            <div>
+              <dt>Status observed</dt>
+              <dd>{formatDateTime(data.telemetry.observed_at)}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       {status !== 'online' ? (
         <aside className={`freshness-warning freshness-warning--${status}`} role="status">
@@ -108,11 +214,15 @@ export function DeviceDetailPage() {
                   <p>{item.channel_name}</p>
                   <MeasurementDisplay value={item.numeric_value} unit={item.unit_symbol} />
                   <UnitStatusNote status={item.unit_confirmation_status} />
+                  {item.verification_status === 'unverified' ? (
+                    <small>Scientific meaning not verified</small>
+                  ) : null}
                   <small>
                     {item.installation_depth_cm === null
                       ? ''
                       : `${String(item.installation_depth_cm)} cm · `}
                     {formatDateTime(item.measured_at)}
+                    {item.timestamp_basis === 'ttn_received_at' ? ' · TTN received timestamp' : ''}
                   </small>
                 </article>
               ))}
@@ -134,7 +244,7 @@ export function DeviceDetailPage() {
                     {channel.installation_depth_cm === null
                       ? ''
                       : ` · ${String(channel.installation_depth_cm)} cm`}{' '}
-                    · {channel.unit_symbol ?? 'unit pending'}
+                    · {channel.unit_symbol ?? 'unit not verified'}
                   </option>
                 ))}
               </select>
@@ -162,7 +272,7 @@ export function DeviceDetailPage() {
             <TimeSeriesChart
               title={`${selectedChannel.display_name} over time`}
               subtitle={`${String(points.length)} raw observations · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
-              unit={selectedChannel.unit_symbol ?? 'unit pending'}
+              unit={selectedChannel.unit_symbol ?? 'Unit not verified'}
               points={points}
             />
           ) : null}

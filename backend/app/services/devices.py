@@ -12,13 +12,14 @@ from app.schemas.device import (
     DeviceDetail,
     DeviceList,
     DevicePublic,
+    DeviceTelemetryPublic,
     MonitoringFeaturePublic,
     SensorChannelPublic,
 )
 from app.services.errors import ServiceError
 from app.services.status import ConnectivityStatus, calculate_freshness
 from app.services.transformers import freshness_schema, measurement_value
-from app.utils.cursors import decode_name_cursor, encode_cursor
+from app.utils.cursors import decode_device_cursor, encode_cursor
 
 
 def _validate_device_type(device_type: str | None) -> str | None:
@@ -48,6 +49,7 @@ def _device_public(
         settings.device_stale_after_minutes,
         settings.device_offline_after_minutes,
         demo_mode=settings.demo_mode,
+        status_basis=("replay_dataset_reference_time" if row.device.is_test_device else None),
     )
     battery = next((record for record in latest if record.metric_code == "battery_voltage_v"), None)
     return DevicePublic(
@@ -73,6 +75,11 @@ def _device_public(
         operational_override=row.device.operational_override,
         last_seen_at=row.device.last_seen_at,
         location_disclosure=row.device.location_disclosure,
+        environment=row.device.environment,
+        source_system=row.device.source_system,
+        ingestion_mode=row.device.ingestion_mode,
+        provenance=row.device.provenance,
+        is_test_device=row.device.is_test_device,
         freshness=freshness_schema(freshness),
         latest_battery=measurement_value(battery) if battery else None,
     )
@@ -91,7 +98,7 @@ def list_devices(
     status: ConnectivityStatus | None,
 ) -> DeviceList:
     reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
-    after = decode_name_cursor(cursor) if cursor else None
+    after = decode_device_cursor(cursor) if cursor else None
     rows = device_repository.list_devices(
         session,
         page_size=page_size,
@@ -107,26 +114,35 @@ def list_devices(
     )
     has_more = len(rows) > page_size
     rows = rows[:page_size]
+    item_reference_times = [row.site_reference_time or reference_time for row in rows]
     latest = device_repository.latest_measurements_by_channel(
         session, [row.device.id for row in rows]
     )
+    contains_replay_data = any(row.device.is_test_device for row in rows)
     next_cursor = None
     if has_more and rows:
         last = rows[-1].device
-        next_cursor = encode_cursor({"name": last.display_name.lower(), "id": str(last.id)})
+        next_cursor = encode_cursor(
+            {
+                "test_rank": "1" if last.is_test_device else "0",
+                "name": last.display_name.lower(),
+                "id": str(last.id),
+            }
+        )
     return DeviceList(
         items=[
             _device_public(
                 row,
                 latest.get(row.device.id, []),
-                reference_time=reference_time,
+                reference_time=row.site_reference_time or reference_time,
                 settings=settings,
             )
             for row in rows
         ],
         next_cursor=next_cursor,
-        reference_time=reference_time,
-        synthetic=settings.demo_mode,
+        reference_time=max(item_reference_times, default=reference_time),
+        synthetic=settings.demo_mode and not contains_replay_data,
+        contains_replay_data=contains_replay_data,
     )
 
 
@@ -136,7 +152,8 @@ def get_device(session: Session, settings: Settings, device_id: UUID) -> DeviceD
         raise ServiceError(
             404, "Device not found", "The requested device does not exist.", "not_found"
         )
-    reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
+    fallback_reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
+    reference_time = row.site_reference_time or fallback_reference_time
     latest = device_repository.latest_measurements_by_channel(session, [device_id]).get(
         device_id, []
     )
@@ -158,14 +175,47 @@ def get_device(session: Session, settings: Settings, device_id: UUID) -> DeviceD
             reporting_schedule_anchor_at=channel.reporting_schedule_anchor_at,
             reporting_jitter_tolerance_seconds=channel.reporting_jitter_tolerance_seconds,
             water_level_reference_or_datum=channel.water_level_reference_or_datum,
+            scientific_meaning=channel.scientific_meaning,
+            verification_status=channel.verification_status,
+            timestamp_basis=channel.timestamp_basis,
             active=channel.active,
         )
         for channel, definition in device_repository.list_channels(session, device_id)
     ]
+    telemetry = device_repository.get_telemetry(session, device_id)
     return DeviceDetail(
         **base.model_dump(),
         channels=channels,
         latest_measurements=[measurement_value(item) for item in latest],
+        telemetry=(
+            DeviceTelemetryPublic(
+                observed_at=telemetry.observed_at,
+                battery_percent=(
+                    float(telemetry.battery_percent)
+                    if telemetry.battery_percent is not None
+                    else None
+                ),
+                firmware_version=telemetry.firmware_version,
+                hardware_version=telemetry.hardware_version,
+                measurement_interval_value=(
+                    float(telemetry.measurement_interval_value)
+                    if telemetry.measurement_interval_value is not None
+                    else None
+                ),
+                measurement_interval_unit=telemetry.measurement_interval_unit,
+                latest_rssi_dbm=(
+                    float(telemetry.latest_rssi_dbm)
+                    if telemetry.latest_rssi_dbm is not None
+                    else None
+                ),
+                latest_snr_db=(
+                    float(telemetry.latest_snr_db) if telemetry.latest_snr_db is not None else None
+                ),
+                gateway=telemetry.gateway_alias,
+            )
+            if telemetry is not None
+            else None
+        ),
     )
 
 

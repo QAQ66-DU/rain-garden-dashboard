@@ -7,13 +7,15 @@ interface MeasurementDisplayProps {
 }
 
 export function MeasurementDisplay({ value, unit, compact = false }: MeasurementDisplayProps) {
-  if (value === null || value === undefined || !unit) {
+  if (value === null || value === undefined) {
     return <span className="missing-value">Not available</span>;
   }
   return (
     <span className={compact ? 'measurement measurement--compact' : 'measurement'}>
-      <strong>{formatNumber(value)}</strong>
-      <span>{unit}</span>
+      <strong className="measurement__value">{formatNumber(value)}</strong>
+      <span className="measurement__unit" aria-label={unit ? undefined : 'Unit not verified'}>
+        {unit ?? '—'}
+      </span>
     </span>
   );
 }

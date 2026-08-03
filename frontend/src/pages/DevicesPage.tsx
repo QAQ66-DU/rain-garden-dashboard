@@ -6,7 +6,7 @@ import type { ConnectivityStatus } from '../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
-import { formatDateTime, humanizeCode } from '../utils/format';
+import { formatDateTime, formatStatusBasis, humanizeCode } from '../utils/format';
 
 export function DevicesPage() {
   const location = useLocation();
@@ -31,7 +31,7 @@ export function DevicesPage() {
   };
   return (
     <div className="page-stack">
-      <SyntheticBanner />
+      <SyntheticBanner mode={devices.data?.contains_replay_data ? 'mixed' : 'synthetic'} />
       <header className="page-hero">
         <div>
           <p className="eyebrow">Technical inventory</p>
@@ -68,6 +68,7 @@ export function DevicesPage() {
             <option value="">All features</option>
             <option value="swale">Swale</option>
             <option value="tree-pit">Tree pit</option>
+            <option value="ttn-testbed">TTN Testbed</option>
           </select>
         </label>
         <label className="filter-field">
@@ -101,6 +102,7 @@ export function DevicesPage() {
             <option value="soil_moisture_sensor">Soil-moisture sensor</option>
             <option value="water_level_sensor">Water-level sensor</option>
             <option value="multi_depth_soil_probe">Multi-depth soil probe</option>
+            <option value="test_telemetry_device">Test telemetry device</option>
           </select>
         </label>
         <label className="filter-field">
@@ -142,7 +144,9 @@ export function DevicesPage() {
                         ? 'SM'
                         : device.device_type === 'water_level_sensor'
                           ? 'WL'
-                          : 'MD'}
+                          : device.device_type === 'multi_depth_soil_probe'
+                            ? 'MD'
+                            : 'TT'}
                   </div>
                   <div>
                     <p>{humanizeCode(device.device_type)}</p>
@@ -151,6 +155,15 @@ export function DevicesPage() {
                       {device.monitoring_feature?.display_name ?? 'Feature not assigned'} ·{' '}
                       {device.site_name}
                     </span>
+                    {device.is_test_device ? (
+                      <div className="provenance-tags" aria-label="Replay provenance">
+                        <span className="provenance-tag">Testbed</span>
+                        <span className="provenance-tag">Replay data</span>
+                        <span className="provenance-tag provenance-tag--warning">
+                          Unit unverified
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="device-card__status">
@@ -168,7 +181,7 @@ export function DevicesPage() {
                   </div>
                   <div>
                     <dt>Status basis</dt>
-                    <dd>{humanizeCode(device.freshness.status_basis)}</dd>
+                    <dd>{formatStatusBasis(device.freshness.status_basis)}</dd>
                   </div>
                 </dl>
                 <Link

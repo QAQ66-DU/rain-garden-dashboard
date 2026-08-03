@@ -263,6 +263,16 @@ METRICS: tuple[MetricSpec, ...] = (
         "db",
         source="Phase 1 operational vocabulary",
     ),
+    _metric(
+        "unverified_numeric_output",
+        "Unverified numeric output",
+        (
+            "Numeric decoder output retained for isolated replay inspection; its physical "
+            "quantity and unit have not been established."
+        ),
+        None,
+        source="Offline TTN replay testbed vocabulary",
+    ),
 )
 
 METRICS_BY_CODE = {metric.metric_code: metric for metric in METRICS}

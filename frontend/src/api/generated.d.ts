@@ -174,12 +174,18 @@ export interface components {
             device_type: string;
             /** Display Name */
             display_name: string;
+            /** Environment */
+            environment: string | null;
             freshness: components["schemas"]["Freshness"];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Ingestion Mode */
+            ingestion_mode: string | null;
+            /** Is Test Device */
+            is_test_device: boolean;
             /** Last Seen At */
             last_seen_at: string | null;
             latest_battery: components["schemas"]["MeasurementValue"] | null;
@@ -190,6 +196,8 @@ export interface components {
             monitoring_feature: components["schemas"]["MonitoringFeaturePublic"] | null;
             /** Operational Override */
             operational_override: string | null;
+            /** Provenance */
+            provenance: string | null;
             /** Sensor Configuration Status */
             sensor_configuration_status: string;
             /**
@@ -199,9 +207,14 @@ export interface components {
             site_id: string;
             /** Site Name */
             site_name: string;
+            /** Source System */
+            source_system: string | null;
+            telemetry: components["schemas"]["DeviceTelemetryPublic"] | null;
         };
         /** DeviceList */
         DeviceList: {
+            /** Contains Replay Data */
+            contains_replay_data: boolean;
             /** Items */
             items: components["schemas"]["DevicePublic"][];
             /** Next Cursor */
@@ -220,12 +233,18 @@ export interface components {
             device_type: string;
             /** Display Name */
             display_name: string;
+            /** Environment */
+            environment: string | null;
             freshness: components["schemas"]["Freshness"];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Ingestion Mode */
+            ingestion_mode: string | null;
+            /** Is Test Device */
+            is_test_device: boolean;
             /** Last Seen At */
             last_seen_at: string | null;
             latest_battery: components["schemas"]["MeasurementValue"] | null;
@@ -234,6 +253,8 @@ export interface components {
             monitoring_feature: components["schemas"]["MonitoringFeaturePublic"] | null;
             /** Operational Override */
             operational_override: string | null;
+            /** Provenance */
+            provenance: string | null;
             /** Sensor Configuration Status */
             sensor_configuration_status: string;
             /**
@@ -243,6 +264,8 @@ export interface components {
             site_id: string;
             /** Site Name */
             site_name: string;
+            /** Source System */
+            source_system: string | null;
         };
         /** DeviceStatusCounts */
         DeviceStatusCounts: {
@@ -256,6 +279,30 @@ export interface components {
             total: number;
             /** Unknown */
             unknown: number;
+        };
+        /** DeviceTelemetryPublic */
+        DeviceTelemetryPublic: {
+            /** Battery Percent */
+            battery_percent: number | null;
+            /** Firmware Version */
+            firmware_version: string | null;
+            /** Gateway */
+            gateway: string | null;
+            /** Hardware Version */
+            hardware_version: string | null;
+            /** Latest Rssi Dbm */
+            latest_rssi_dbm: number | null;
+            /** Latest Snr Db */
+            latest_snr_db: number | null;
+            /** Measurement Interval Unit */
+            measurement_interval_unit: string | null;
+            /** Measurement Interval Value */
+            measurement_interval_value: number | null;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
         };
         /** ExploreChannel */
         ExploreChannel: {
@@ -525,6 +572,8 @@ export interface components {
             items: components["schemas"]["MeasurementValue"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Provenance */
+            provenance: string | null;
             /**
              * Reference Time
              * Format: date-time
@@ -572,12 +621,16 @@ export interface components {
             quality_flag: string;
             /** Quality Notes */
             quality_notes: string | null;
+            /** Timestamp Basis */
+            timestamp_basis: string | null;
             /** Unit Code */
             unit_code: string | null;
             /** Unit Confirmation Status */
             unit_confirmation_status: string;
             /** Unit Symbol */
             unit_symbol: string | null;
+            /** Verification Status */
+            verification_status: string;
         };
         /**
          * MetricGroup
@@ -693,12 +746,18 @@ export interface components {
             reporting_jitter_tolerance_seconds: number | null;
             /** Reporting Schedule Anchor At */
             reporting_schedule_anchor_at: string | null;
+            /** Scientific Meaning */
+            scientific_meaning: string | null;
+            /** Timestamp Basis */
+            timestamp_basis: string | null;
             /** Unit Code */
             unit_code: string | null;
             /** Unit Confirmation Status */
             unit_confirmation_status: string;
             /** Unit Symbol */
             unit_symbol: string | null;
+            /** Verification Status */
+            verification_status: string;
             /** Water Level Reference Or Datum */
             water_level_reference_or_datum: string | null;
         };
@@ -761,12 +820,16 @@ export interface components {
             quality_flag: string;
             /** Quality Notes */
             quality_notes: string | null;
+            /** Timestamp Basis */
+            timestamp_basis: string | null;
             /** Unit Code */
             unit_code: string | null;
             /** Unit Confirmation Status */
             unit_confirmation_status: string;
             /** Unit Symbol */
             unit_symbol: string | null;
+            /** Verification Status */
+            verification_status: string;
         };
         /** SoilMoistureSummary */
         SoilMoistureSummary: {

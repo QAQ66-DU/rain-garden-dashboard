@@ -27,8 +27,9 @@ def calculate_freshness(
     offline_after_minutes: int,
     *,
     demo_mode: bool,
+    status_basis: str | None = None,
 ) -> FreshnessResult:
-    basis = "dataset_reference_time" if demo_mode else "current_utc_time"
+    basis = status_basis or ("dataset_reference_time" if demo_mode else "current_utc_time")
     if last_seen_at is None:
         return FreshnessResult(
             status=ConnectivityStatus.UNKNOWN,

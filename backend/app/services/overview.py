@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.db.repositories import overview as overview_repository
 from app.db.repositories import sites as site_repository
-from app.db.repositories.measurements import current_reference_time
+from app.db.repositories.measurements import current_site_reference_time
 from app.schemas.overview import (
     DeviceStatusCounts,
     Overview,
@@ -28,7 +28,8 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
     if site is None:
         raise ServiceError(404, "Site not found", "No matching site exists.", "not_found")
 
-    reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
+    is_replay_site = overview_repository.has_test_device(session, site.id)
+    reference_time = current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
     statuses = [
         calculate_freshness(
             last_seen,
@@ -88,9 +89,15 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
         site_name=site.name,
         public_location_label=site.public_location_label,
         display_timezone=site.display_timezone,
-        synthetic=settings.demo_mode,
+        synthetic=settings.demo_mode and not is_replay_site,
         synthetic_notice=(
-            "Synthetic demonstration data — not live observations." if settings.demo_mode else None
+            "Offline replay data — not a live TTN connection."
+            if is_replay_site
+            else (
+                "Synthetic demonstration data — not live observations."
+                if settings.demo_mode
+                else None
+            )
         ),
         reference_time=reference_time,
         last_data_update=updated_at,

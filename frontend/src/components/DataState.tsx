@@ -8,12 +8,15 @@ interface OptionalStateProps {
   message?: string | undefined;
 }
 
-export function LoadingState({ title = 'Loading dashboard data' }: OptionalStateProps) {
+export function LoadingState({
+  title = 'Loading dashboard data',
+  message = 'Reading the bounded local dataset…',
+}: OptionalStateProps) {
   return (
     <section className="state-panel" aria-live="polite">
       <span className="loading-pulse" aria-hidden="true" />
       <h2>{title}</h2>
-      <p>Reading the bounded synthetic dataset…</p>
+      <p>{message}</p>
     </section>
   );
 }

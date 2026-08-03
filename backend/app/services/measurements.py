@@ -25,13 +25,14 @@ def list_measurements(
     page_size: int,
     cursor: str | None,
 ) -> MeasurementPage:
-    if get_device(session, device_id) is None:
+    device_row = get_device(session, device_id)
+    if device_row is None:
         raise ServiceError(
             404, "Device not found", "The requested device does not exist.", "not_found"
         )
     metric_code = validate_metric_code(metric_code)
-    reference_time = measurement_repository.current_reference_time(
-        session, demo_mode=settings.demo_mode
+    reference_time = measurement_repository.current_device_reference_time(
+        session, device_id, demo_mode=settings.demo_mode
     )
     start, end, default_applied = resolve_measurement_window(
         start,
@@ -90,6 +91,8 @@ def list_measurements(
                 unit_code=item.unit_code,
                 unit_symbol=item.unit_symbol,
                 unit_confirmation_status=item.unit_confirmation_status,
+                verification_status=item.verification_status,
+                timestamp_basis=item.timestamp_basis,
                 measured_at=item.measured_at,
                 quality_flag=item.quality_flag,
                 quality_notes=item.quality_notes,
@@ -105,5 +108,6 @@ def list_measurements(
         end=end,
         reference_time=reference_time,
         default_range_applied=default_applied,
-        synthetic=settings.demo_mode,
+        synthetic=settings.demo_mode and not device_row.device.is_test_device,
+        provenance=device_row.device.provenance,
     )

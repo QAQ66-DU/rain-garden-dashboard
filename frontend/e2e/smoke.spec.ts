@@ -1,11 +1,25 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+function collectBrowserAndApiErrors(page: Page) {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('requestfailed', (request) => {
+    errors.push(`Request failed: ${request.url()}`);
+  });
+  page.on('response', (response) => {
+    const resourceType = response.request().resourceType();
+    if (['fetch', 'xhr'].includes(resourceType) && response.status() >= 400) {
+      errors.push(`API ${String(response.status())}: ${response.url()}`);
+    }
+  });
+  return errors;
+}
 
 test('overview to device time series smoke path has no browser errors', async ({ page }) => {
-  const browserErrors: string[] = [];
-  page.on('pageerror', (error) => browserErrors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error') browserErrors.push(message.text());
-  });
+  const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Orchard Park monitoring site' })).toBeVisible();
@@ -14,7 +28,7 @@ test('overview to device time series smoke path has no browser errors', async ({
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(8);
+  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
 
   await page
     .getByRole('article')
@@ -32,11 +46,7 @@ test('overview to device time series smoke path has no browser errors', async ({
 });
 
 test('quality drill-down and site-wide explorer preserve a shareable period', async ({ page }) => {
-  const browserErrors: string[] = [];
-  page.on('pageerror', (error) => browserErrors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error') browserErrors.push(message.text());
-  });
+  const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/');
   await page.getByRole('link', { name: /Review quality warnings in Time Explorer/ }).click();
@@ -65,6 +75,7 @@ test('quality drill-down and site-wide explorer preserve a shareable period', as
 });
 
 test('mobile overview and device inventory avoid horizontal overflow', async ({ page }) => {
+  const browserErrors = collectBrowserAndApiErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
@@ -76,7 +87,7 @@ test('mobile overview and device inventory avoid horizontal overflow', async ({ 
   ).toBe(true);
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
-  await expect(page.getByRole('article')).toHaveCount(8);
+  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -93,4 +104,47 @@ test('mobile overview and device inventory avoid horizontal overflow', async ({ 
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBe(true);
+  expect(browserErrors).toEqual([]);
+});
+
+test('offline replay card, filters, detail, and mobile layout remain isolated', async ({
+  page,
+}) => {
+  const browserErrors = collectBrowserAndApiErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/devices');
+  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
+
+  const outflow = page.getByRole('article').filter({ hasText: 'Outflow A' });
+  test.skip(
+    (await outflow.count()) === 0,
+    'The local stack has not replayed the optional TTN fixture',
+  );
+  await expect(page.getByRole('article')).toHaveCount(9);
+  await expect(outflow.getByText('Testbed', { exact: true })).toBeVisible();
+  await expect(outflow.getByText('Replay data', { exact: true })).toBeVisible();
+  await expect(outflow.getByText('Unit unverified', { exact: true })).toBeVisible();
+
+  await page
+    .getByRole('combobox', { name: 'Site' })
+    .selectOption({ label: 'Orchard Park monitoring site' });
+  await expect(page.getByRole('article')).toHaveCount(8);
+  await expect(page.getByRole('heading', { name: 'Outflow A' })).toHaveCount(0);
+
+  await page.getByRole('combobox', { name: 'Site' }).selectOption({ label: 'TTN Testbed' });
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await outflow.getByRole('link', { name: /View device details/ }).click();
+  await expect(page.getByRole('heading', { name: 'Outflow A' })).toBeVisible();
+  await expect(page.getByText('Replay dataset reference time')).toBeVisible();
+  await expect(page.getByText('Measurement 1', { exact: true })).toBeVisible();
+  await expect(page.getByText('Measurement 2', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scientific meaning not verified')).toHaveCount(2);
+  await expect(page.getByText('Replay gateway (identifier withheld)')).toBeVisible();
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+  expect(browserErrors).toEqual([]);
 });

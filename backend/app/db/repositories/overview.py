@@ -23,6 +23,15 @@ def device_last_seen_values(session: Session, site_id: UUID) -> list[datetime | 
     )
 
 
+def has_test_device(session: Session, site_id: UUID) -> bool:
+    value = session.scalar(
+        select(func.count())
+        .select_from(Device)
+        .where(Device.site_id == site_id, Device.is_test_device.is_(True))
+    )
+    return bool(value)
+
+
 def last_data_update(session: Session, site_id: UUID) -> datetime | None:
     return session.scalar(
         select(func.max(UplinkEvent.received_at))
@@ -44,6 +53,8 @@ def latest_valid_metric(
             SensorChannel.unit_code,
             UnitDefinition.unit_symbol,
             SensorChannel.unit_confirmation_status,
+            SensorChannel.verification_status,
+            SensorChannel.timestamp_basis,
             SensorChannel.depth_cm,
             SensorChannel.position_label,
             Measurement.numeric_value,
@@ -74,12 +85,14 @@ def latest_valid_metric(
         unit_code=cast(str | None, row[5]),
         unit_symbol=cast(str | None, row[6]),
         unit_confirmation_status=cast(str, row[7]),
-        depth_cm=cast(float | None, row[8]),
-        position_label=cast(str | None, row[9]),
-        value=cast(Decimal, row[10]),
-        measured_at=cast(datetime, row[11]),
-        quality_flag=cast(str, row[12]),
-        quality_notes=cast(str | None, row[13]),
+        verification_status=cast(str, row[8]),
+        timestamp_basis=cast(str | None, row[9]),
+        depth_cm=cast(float | None, row[10]),
+        position_label=cast(str | None, row[11]),
+        value=cast(Decimal, row[12]),
+        measured_at=cast(datetime, row[13]),
+        quality_flag=cast(str, row[14]),
+        quality_notes=cast(str | None, row[15]),
     )
 
 
@@ -102,6 +115,8 @@ def latest_valid_soil_channels(session: Session, site_id: UUID) -> list[LatestMe
             SensorChannel.unit_code.label("unit_code"),
             UnitDefinition.unit_symbol.label("unit_symbol"),
             SensorChannel.unit_confirmation_status.label("unit_confirmation_status"),
+            SensorChannel.verification_status.label("verification_status"),
+            SensorChannel.timestamp_basis.label("timestamp_basis"),
             SensorChannel.depth_cm.label("depth_cm"),
             SensorChannel.position_label.label("position_label"),
             Measurement.numeric_value.label("value"),
@@ -132,6 +147,8 @@ def latest_valid_soil_channels(session: Session, site_id: UUID) -> list[LatestMe
             unit_code=cast(str | None, row.unit_code),
             unit_symbol=cast(str | None, row.unit_symbol),
             unit_confirmation_status=cast(str, row.unit_confirmation_status),
+            verification_status=cast(str, row.verification_status),
+            timestamp_basis=cast(str | None, row.timestamp_basis),
             depth_cm=cast(float | None, row.depth_cm),
             position_label=cast(str | None, row.position_label),
             value=cast(Decimal, row.value),
