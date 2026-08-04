@@ -107,9 +107,7 @@ test('mobile overview and device inventory avoid horizontal overflow', async ({ 
   expect(browserErrors).toEqual([]);
 });
 
-test('offline replay card, filters, detail, and mobile layout remain isolated', async ({
-  page,
-}) => {
+test('TTN testbed card, filters, detail, and mobile layout remain isolated', async ({ page }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/devices');
@@ -122,7 +120,10 @@ test('offline replay card, filters, detail, and mobile layout remain isolated', 
   );
   await expect(page.getByRole('article')).toHaveCount(9);
   await expect(outflow.getByText('Testbed', { exact: true })).toBeVisible();
-  await expect(outflow.getByText('Replay data', { exact: true })).toBeVisible();
+  const isLiveMqtt = (await outflow.getByText('Live MQTT', { exact: true }).count()) === 1;
+  await expect(
+    outflow.getByText(isLiveMqtt ? 'Live MQTT' : 'Replay data', { exact: true }),
+  ).toBeVisible();
   await expect(outflow.getByText('Unit unverified', { exact: true })).toBeVisible();
 
   await page
@@ -135,11 +136,17 @@ test('offline replay card, filters, detail, and mobile layout remain isolated', 
   await expect(page.getByRole('article')).toHaveCount(1);
   await outflow.getByRole('link', { name: /View device details/ }).click();
   await expect(page.getByRole('heading', { name: 'Outflow A' })).toBeVisible();
-  await expect(page.getByText('Replay dataset reference time')).toBeVisible();
+  await expect(
+    page.getByText(isLiveMqtt ? 'Live MQTT reference time' : 'Replay dataset reference time'),
+  ).toBeVisible();
   await expect(page.getByText('Measurement 1', { exact: true })).toBeVisible();
   await expect(page.getByText('Measurement 2', { exact: true })).toBeVisible();
   await expect(page.getByText('Scientific meaning not verified')).toHaveCount(2);
-  await expect(page.getByText('Replay gateway (identifier withheld)')).toBeVisible();
+  await expect(
+    page.getByText(
+      isLiveMqtt ? 'TTN gateway (identifier withheld)' : 'Replay gateway (identifier withheld)',
+    ),
+  ).toBeVisible();
 
   expect(
     await page.evaluate(

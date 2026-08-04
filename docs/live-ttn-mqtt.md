@@ -18,8 +18,14 @@ Park inventory.
    deterministic idempotency rule. Unsafe mapped JSON is retained in private quarantine; malformed
    non-JSON messages are discarded without terminating the worker or logging their content.
 
+The scientific query axis is UTC `measured_at`. The reviewed Outflow A payload has no separate,
+verified device observation timestamp, so the adapter currently uses the TTN ApplicationUp
+`received_at` timestamp. A future verified device/application observation field would take
+precedence only through an explicitly reviewed payload mapping; otherwise this fallback remains.
+
 The worker uses bounded MQTT reconnect delays from 1 to 30 seconds and handles `SIGINT`/`SIGTERM`
-for a clean disconnect. It never logs the MQTT password or complete connection credentials.
+for a clean disconnect. Compose restarts it unless it is explicitly stopped. It never logs the MQTT
+password or complete connection credentials.
 
 ## Local configuration
 
@@ -44,8 +50,12 @@ After manually adding the read-only key to `.env`, start only the profile-gated 
 database dependency:
 
 ```bash
-docker compose --profile live up --build ttn-mqtt-worker
+docker compose --profile live up --build -d ttn-mqtt-worker
 ```
+
+The Outflow A Device Detail page polls its device and selected-channel queries every 30 seconds while
+the page is open and visible. Background refreshes preserve the current chart if one request fails;
+the browser does not reload the page or change the selected channel.
 
 Stop it cleanly from another terminal:
 

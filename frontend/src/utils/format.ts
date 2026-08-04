@@ -37,6 +37,7 @@ export function humanizeCode(value: string): string {
 }
 
 export function formatStatusBasis(value: string): string {
+  if (value === 'live_mqtt_reference_time') return 'Live MQTT reference time';
   if (value === 'replay_dataset_reference_time') return 'Replay dataset reference time';
   if (value === 'dataset_reference_time') return 'Dataset reference time';
   if (value === 'current_utc_time') return 'Current UTC time';

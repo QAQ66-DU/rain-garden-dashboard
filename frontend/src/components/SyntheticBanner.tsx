@@ -1,5 +1,5 @@
 interface SyntheticBannerProps {
-  mode?: 'synthetic' | 'mixed' | 'replay';
+  mode?: 'synthetic' | 'mixed' | 'replay' | 'live' | 'live-mixed';
 }
 
 export function SyntheticBanner({ mode = 'synthetic' }: SyntheticBannerProps) {
@@ -17,6 +17,16 @@ export function SyntheticBanner({ mode = 'synthetic' }: SyntheticBannerProps) {
       label: 'Offline TTN replay data',
       message:
         'Exported testbed observations only — not a live TTN feed and not Orchard Park monitoring evidence.',
+    },
+    live: {
+      label: 'Live TTN testbed data',
+      message:
+        'Live Outflow A application uplinks — isolated from Orchard Park monitoring evidence; physical meaning and units remain unverified.',
+    },
+    'live-mixed': {
+      label: 'Mixed local data',
+      message:
+        'Orchard Park remains synthetic. TTN Testbed includes live Outflow A MQTT data with unverified physical meaning and units.',
     },
   }[mode];
   return (

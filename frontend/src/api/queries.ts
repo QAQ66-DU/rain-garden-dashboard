@@ -11,6 +11,8 @@ import {
   type ExplorerFilters,
 } from './client';
 
+const DEVICE_DETAIL_POLL_INTERVAL_MS = 30_000;
+
 export function useOverview(siteId?: string) {
   return useQuery({
     queryKey: ['overview', siteId ?? 'default'],
@@ -42,6 +44,8 @@ export function useDevice(deviceId: string | undefined) {
     queryKey: ['device', deviceId],
     queryFn: () => fetchDevice(deviceId ?? ''),
     enabled: Boolean(deviceId),
+    refetchInterval: DEVICE_DETAIL_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -55,5 +59,7 @@ export function useMeasurements(
     queryKey: ['measurements', deviceId, channelId, start, end],
     queryFn: () => fetchMeasurements(deviceId ?? '', channelId ?? '', start, end),
     enabled: Boolean(deviceId && channelId),
+    refetchInterval: DEVICE_DETAIL_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 }

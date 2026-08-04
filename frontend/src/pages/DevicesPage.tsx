@@ -25,13 +25,24 @@ export function DevicesPage() {
     ...(status ? { status } : {}),
     ...(cursor ? { cursor } : {}),
   });
+  const containsLiveMqtt = devices.data?.items.some(
+    (device) => device.is_test_device && device.ingestion_mode === 'live_mqtt',
+  );
 
   const resetCursor = () => {
     setCursor(undefined);
   };
   return (
     <div className="page-stack">
-      <SyntheticBanner mode={devices.data?.contains_replay_data ? 'mixed' : 'synthetic'} />
+      <SyntheticBanner
+        mode={
+          containsLiveMqtt
+            ? 'live-mixed'
+            : devices.data?.contains_replay_data
+              ? 'mixed'
+              : 'synthetic'
+        }
+      />
       <header className="page-hero">
         <div>
           <p className="eyebrow">Technical inventory</p>
@@ -156,9 +167,11 @@ export function DevicesPage() {
                       {device.site_name}
                     </span>
                     {device.is_test_device ? (
-                      <div className="provenance-tags" aria-label="Replay provenance">
+                      <div className="provenance-tags" aria-label="Data provenance">
                         <span className="provenance-tag">Testbed</span>
-                        <span className="provenance-tag">Replay data</span>
+                        <span className="provenance-tag">
+                          {device.ingestion_mode === 'live_mqtt' ? 'Live MQTT' : 'Replay data'}
+                        </span>
                         <span className="provenance-tag provenance-tag--warning">
                           Unit unverified
                         </span>

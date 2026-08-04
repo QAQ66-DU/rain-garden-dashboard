@@ -53,7 +53,10 @@ def resolve_measurement_window(
         )
     default_applied = start is None
     if start is None or end is None:
-        end = reference_time
+        # Query windows remain half-open. Advance the exclusive default end by the
+        # smallest stored timestamp unit so an observation at the dataset watermark
+        # is included without changing explicit [start, end) requests.
+        end = reference_time + timedelta(microseconds=1)
         start = end - timedelta(days=default_range_days)
     normalized_start, normalized_end = validate_time_window(
         start, end, max_range_days=max_range_days

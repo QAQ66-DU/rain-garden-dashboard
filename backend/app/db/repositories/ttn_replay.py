@@ -164,8 +164,6 @@ def ensure_ttn_testbed_inventory(
         device.sensor_configuration_status = "pending"
         device.environment = "test"
         device.source_system = "ttn"
-        device.ingestion_mode = context.ingestion_mode
-        device.provenance = context.provenance
 
     existing = {
         channel.channel_code: channel
@@ -353,8 +351,10 @@ def persist_ttn_uplink(
         return PersistResult("duplicate")
 
     status_processed = _update_telemetry(session, device, uplink, context=context)
-    if device.last_seen_at is None or uplink.received_at > device.last_seen_at:
+    if device.last_seen_at is None or uplink.received_at >= device.last_seen_at:
         device.last_seen_at = uplink.received_at
+        device.ingestion_mode = context.ingestion_mode
+        device.provenance = context.provenance
     return PersistResult(
         "inserted_invalid" if not uplink.decoded_valid else "inserted",
         measurements_created=len(uplink.measurements),

@@ -34,16 +34,19 @@ export function DeviceDetailPage() {
   if (device.isLoading) {
     return <LoadingState title="Loading device detail" />;
   }
-  if (device.isError || !device.data) {
+  if (!device.data) {
     return <ErrorState message={device.error?.message} />;
   }
 
   const data = device.data;
+  const isLiveMqtt = data.ingestion_mode === 'live_mqtt';
   const status = data.freshness.calculated_status;
   const hasChannels = data.channels.length > 0;
   return (
     <div className="page-stack">
-      <SyntheticBanner mode={data.is_test_device ? 'replay' : 'synthetic'} />
+      <SyntheticBanner
+        mode={data.is_test_device ? (isLiveMqtt ? 'live' : 'replay') : 'synthetic'}
+      />
       <Link className="back-link" to={{ pathname: '/devices', search: location.search }}>
         ← Back to devices
       </Link>
@@ -59,9 +62,9 @@ export function DeviceDetailPage() {
             {data.site_name}
           </p>
           {data.is_test_device ? (
-            <div className="provenance-tags" aria-label="Replay provenance">
+            <div className="provenance-tags" aria-label="Data provenance">
               <span className="provenance-tag">Testbed</span>
-              <span className="provenance-tag">Replay data</span>
+              <span className="provenance-tag">{isLiveMqtt ? 'Live MQTT' : 'Replay data'}</span>
               <span className="provenance-tag provenance-tag--warning">Unit unverified</span>
             </div>
           ) : null}
@@ -87,11 +90,15 @@ export function DeviceDetailPage() {
       </header>
 
       {data.is_test_device ? (
-        <section className="panel" aria-labelledby="replay-provenance-heading">
+        <section className="panel" aria-labelledby="ingestion-provenance-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Private-source replay</p>
-              <h2 id="replay-provenance-heading">Replay provenance</h2>
+              <p className="eyebrow">
+                {isLiveMqtt ? 'Private-source live ingestion' : 'Private-source replay'}
+              </p>
+              <h2 id="ingestion-provenance-heading">
+                {isLiveMqtt ? 'Live ingestion provenance' : 'Replay provenance'}
+              </h2>
               <p>
                 Raw events are preserved privately. Public views expose only selected normalised
                 fields and never expose network identifiers, session material, tokens, or raw JSON.
@@ -101,7 +108,7 @@ export function DeviceDetailPage() {
           <dl className="telemetry-grid">
             <div>
               <dt>Source</dt>
-              <dd>TTN console export</dd>
+              <dd>{isLiveMqtt ? 'TTN application uplink' : 'TTN console export'}</dd>
             </div>
             <div>
               <dt>Ingestion</dt>
@@ -261,7 +268,9 @@ export function DeviceDetailPage() {
           </section>
 
           {measurements.isLoading ? <LoadingState title="Loading time series" /> : null}
-          {measurements.isError ? <ErrorState message={measurements.error.message} /> : null}
+          {measurements.isError && !measurements.data ? (
+            <ErrorState message={measurements.error.message} />
+          ) : null}
           {measurements.data && measurements.data.items.length === 0 ? (
             <EmptyState
               title="No measurements in this range"

@@ -49,7 +49,13 @@ def _device_public(
         settings.device_stale_after_minutes,
         settings.device_offline_after_minutes,
         demo_mode=settings.demo_mode,
-        status_basis=("replay_dataset_reference_time" if row.device.is_test_device else None),
+        status_basis=(
+            "live_mqtt_reference_time"
+            if row.device.is_test_device and row.device.ingestion_mode == "live_mqtt"
+            else "replay_dataset_reference_time"
+            if row.device.is_test_device
+            else None
+        ),
     )
     battery = next((record for record in latest if record.metric_code == "battery_voltage_v"), None)
     return DevicePublic(
