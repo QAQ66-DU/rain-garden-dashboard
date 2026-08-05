@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { useDevice, useMeasurements } from '../api/queries';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
+import { MetadataStatusNote } from '../components/MetadataStatusNote';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
@@ -68,6 +69,7 @@ export function DeviceDetailPage() {
             <div className="provenance-tags" aria-label="Data provenance">
               <span className="provenance-tag">{isProxy ? 'Proxy sensor' : 'Testbed'}</span>
               <span className="provenance-tag">{isLiveMqtt ? 'Live MQTT' : 'Replay data'}</span>
+              <span className="provenance-tag provenance-tag--warning">Metadata pending</span>
               <span className="provenance-tag provenance-tag--warning">Unit unverified</span>
             </div>
           ) : null}
@@ -231,10 +233,8 @@ export function DeviceDetailPage() {
                 <article key={item.channel_id} className="latest-card">
                   <p>{item.channel_name}</p>
                   <MeasurementDisplay value={item.numeric_value} unit={item.unit_symbol} />
+                  <MetadataStatusNote status={item.verification_status} />
                   <UnitStatusNote status={item.unit_confirmation_status} />
-                  {item.verification_status === 'unverified' ? (
-                    <small>Scientific meaning not verified</small>
-                  ) : null}
                   <small>
                     {item.installation_depth_cm === null
                       ? ''
@@ -273,7 +273,10 @@ export function DeviceDetailPage() {
                 comparable.
               </p>
               {selectedChannel ? (
-                <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
+                <>
+                  <MetadataStatusNote status={selectedChannel.verification_status} />
+                  <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
+                </>
               ) : null}
             </div>
           </section>

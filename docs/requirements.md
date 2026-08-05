@@ -38,12 +38,15 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Provide 24-hour, 7-day, 30-day, and custom periods using half-open UTC windows `[start, end)`; reject `start >= end` and periods longer than 31 days.
 - Preserve `start`, `end`, feature, metric group, and explicit channel selection in the URL across relevant navigation.
 - Display timestamps in the site `Europe/London` timezone while keeping `measured_at` as the scientific axis and `received_at` as separate transmission context, including daylight-saving transitions.
-- Filter available devices, channels, charts, summaries, and warnings by monitoring feature; group channel availability by controlled hydrology, soil, and weather metric groups.
+- Filter available devices, channels, charts, summaries, and warnings by monitoring feature; group channel availability by controlled hydrology, soil, weather, and operational/unverified metric groups.
 - Keep metrics, units, depths, positions, and unit-confirmation provenance channel-specific. Never combine incompatible series; show compatible channels as synchronized small multiples with units on every panel.
 - Calculate expected coverage from explicit reporting interval, schedule anchor, and configurable jitter tolerance. Count schedule-aligned slots inside the requested window rather than applying a rounded duration formula.
 - Deduplicate observations by expected slot for coverage, allow one accepted observation per slot, count flagged accepted observations as received but not valid, label late/out-of-tolerance records, and preserve missing as distinct from zero.
 - Return coverage as unavailable when interval, anchor, or jitter tolerance is unknown; do not infer a deployed reporting schedule from observations.
-- Use metric-specific summaries and exclude flagged values. Do not average wind direction. Report rainfall-intensity duration above zero only when cadence and complete valid coverage are sufficient.
+- Use metric-specific summaries and exclude flagged values. For mapped unverified numeric outputs,
+  provide only count, latest, minimum, median, and maximum while retaining explicit metadata/unit
+  warnings. Do not average wind direction or infer hydrological meaning. Report rainfall-intensity
+  duration above zero only when cadence and complete valid coverage are sufficient.
 - Keep current device freshness separate from selected-period coverage and provide a bounded privacy-reviewed quality-warning drill-down from Overview and Explore.
 
 ## Soil-moisture summary
@@ -57,7 +60,10 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 - Safe configuration, bounded requests, public-data minimization, stable API errors, and no secret/payload leakage.
 - OpenAPI is the API contract source; generated frontend types must be current.
 - The metric catalog, database catalog, and generated data dictionary must reconcile automatically.
-- Metric and physical-unit catalogues are separate. A nullable `unit_code` is interpreted only through `unit_confirmation_status`; real numeric ingestion requires an explicitly confirmed mapping.
+- Metric and physical-unit catalogues are separate. A nullable `unit_code` is interpreted only
+  through `unit_confirmation_status`. Real numeric ingestion requires an explicitly approved
+  device/channel mapping, but pending scientific metadata or units do not by themselves make a
+  successfully decoded finite observation suspect.
 
 ## Explicit non-goals
 

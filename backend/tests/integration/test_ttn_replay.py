@@ -152,6 +152,8 @@ def test_replay_is_deterministic_idempotent_and_isolated(
         measurement.measured_at == event_times[measurement.uplink_event_id]
         for measurement in stored_measurements
     )
+    assert all(measurement.quality_flag == "valid" for measurement in stored_measurements)
+    assert all(measurement.quality_notes is None for measurement in stored_measurements)
     assert (
         db_session.scalar(
             select(func.count())
@@ -212,7 +214,8 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
     assert measurement_body["total_matching"] == 2
     assert all(item["unit_code"] is None for item in measurement_body["items"])
     assert all(item["verification_status"] == "unverified" for item in measurement_body["items"])
-    assert all(item["quality_flag"] == "suspect" for item in measurement_body["items"])
+    assert all(item["quality_flag"] == "valid" for item in measurement_body["items"])
+    assert all(item["quality_notes"] is None for item in measurement_body["items"])
 
     orchard = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
     assert orchard.status_code == 200

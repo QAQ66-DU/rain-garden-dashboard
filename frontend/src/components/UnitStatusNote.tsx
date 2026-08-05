@@ -13,5 +13,5 @@ export function UnitStatusNote({ status }: UnitStatusNoteProps) {
   if (status === 'confirmed') {
     return <span className="unit-status unit-status--confirmed">Deployment unit confirmed</span>;
   }
-  return <span className="unit-status unit-status--pending">Unit not verified</span>;
+  return <span className="unit-status unit-status--pending">Unit unverified</span>;
 }

@@ -5,6 +5,7 @@ import { useExplorer, useOverview } from '../api/queries';
 import type { ExploreResponse } from '../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { ExploreSeriesChart } from '../components/ExploreSeriesChart';
+import { MetadataStatusNote } from '../components/MetadataStatusNote';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { UnitStatusNote } from '../components/UnitStatusNote';
@@ -17,18 +18,23 @@ import {
   toDateTimeLocalInput,
 } from '../utils/format';
 
-type MetricGroup = 'hydrology' | 'soil' | 'weather';
+type MetricGroup = 'hydrology' | 'soil' | 'weather' | 'operational';
 type ExploreSeries = ExploreResponse['series'][number];
 
 const PRESET_HOURS = { '24h': 24, '7d': 7 * 24, '30d': 30 * 24 } as const;
 
 function isMetricGroup(value: string | null): value is MetricGroup {
-  return value === 'hydrology' || value === 'soil' || value === 'weather';
+  return (
+    value === 'hydrology' || value === 'soil' || value === 'weather' || value === 'operational'
+  );
 }
 
 function statisticValue(statistic: ExploreSeries['summary']['statistics'][number], unit: string) {
   if (statistic.code === 'duration_above_zero_seconds') {
     return formatDurationSeconds(statistic.value);
+  }
+  if (statistic.code === 'count') {
+    return formatNumber(statistic.value);
   }
   return `${formatNumber(statistic.value)} ${unit}`;
 }
@@ -217,6 +223,7 @@ export function ExplorePage() {
             <option value="hydrology">Hydrology</option>
             <option value="soil">Soil</option>
             <option value="weather">Weather</option>
+            <option value="operational">Operational / unverified</option>
           </select>
         </label>
         <div className="custom-time-fields">
@@ -341,6 +348,7 @@ export function ExplorePage() {
                       </span>
                     </div>
                     <UnitStatusNote status={first.channel.unit_confirmation_status} />
+                    <MetadataStatusNote status={first.channel.verification_status} />
                     <div className="small-multiples">
                       {group.map((series) => {
                         const current = freshnessByDevice.get(series.channel.device_id);

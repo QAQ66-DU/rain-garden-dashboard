@@ -128,6 +128,25 @@ def test_each_supplied_formatter_shape_persists_idempotently(
         )
         == measurements_before + measurement_count
     )
+    inserted_event = db_session.scalar(
+        select(UplinkEvent).where(
+            UplinkEvent.device_id == device.id,
+            UplinkEvent.source == LIVE_MQTT_SOURCE,
+            UplinkEvent.frame_counter == application_up["uplink_message"]["f_cnt"],
+        )
+    )
+    assert inserted_event is not None
+    inserted_measurements = list(
+        db_session.scalars(
+            select(Measurement).where(
+                Measurement.device_id == device.id,
+                Measurement.uplink_event_id == inserted_event.id,
+            )
+        )
+    )
+    assert len(inserted_measurements) == measurement_count
+    assert all(item.quality_flag == "valid" for item in inserted_measurements)
+    assert all(item.quality_notes is None for item in inserted_measurements)
 
 
 def test_default_api_exposes_exactly_the_eight_proxy_devices(
@@ -210,6 +229,7 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
     db_session: Session,
 ) -> None:
     application_up = _approved_application_up()
+    application_up["received_at"] = "2098-08-03T16:11:01Z"
     application_up["uplink_message"]["session_key_id"] = "integration-mqtt-idempotency"
     application_up["uplink_message"]["f_cnt"] = 900_001
     message = SimpleNamespace(payload=json.dumps(application_up).encode())
@@ -238,6 +258,15 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
         if existing_outflow is not None
         else 0
     ) or 0
+    warnings_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(Measurement)
+            .join(Device, Device.id == Measurement.device_id)
+            .where(Device.environment == "proxy", Measurement.quality_flag != "valid")
+        )
+        or 0
+    )
 
     @contextmanager
     def session_scope() -> Generator[Session]:
@@ -297,8 +326,46 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
         )
     )
     assert stored is not None
+    new_measurements = list(
+        db_session.scalars(select(Measurement).where(Measurement.uplink_event_id == stored.id))
+    )
+    assert len(new_measurements) == 2
+    assert all(item.quality_flag == "valid" for item in new_measurements)
+    assert all(item.quality_notes is None for item in new_measurements)
+    assert (
+        db_session.scalar(
+            select(func.count())
+            .select_from(Measurement)
+            .join(Device, Device.id == Measurement.device_id)
+            .where(Device.environment == "proxy", Measurement.quality_flag != "valid")
+        )
+        == warnings_before
+    )
     assert stored.raw_payload == application_up
     assert "name" not in stored.raw_payload
+
+    explorer = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2098-08-03T16:00:00Z",
+            "end": "2098-08-03T17:00:00Z",
+            "metric_group": "operational",
+        },
+    )
+    assert explorer.status_code == 200
+    explorer_body = explorer.json()
+    assert explorer_body["quality_warnings"] == []
+    outflow_series = [
+        item for item in explorer_body["series"] if item["channel"]["device_name"] == "outflow-a"
+    ]
+    assert len(outflow_series) == 2
+    assert all(item["channel"]["verification_status"] == "unverified" for item in outflow_series)
+    assert all(item["channel"]["unit_confirmation_status"] == "pending" for item in outflow_series)
+    assert all(
+        [statistic["code"] for statistic in item["summary"]["statistics"]]
+        == ["latest", "count", "minimum", "median", "maximum"]
+        for item in outflow_series
+    )
 
     orchard = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
     assert orchard.status_code == 200

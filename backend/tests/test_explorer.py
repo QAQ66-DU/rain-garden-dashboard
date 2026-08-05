@@ -181,3 +181,35 @@ def test_wind_direction_uses_latest_value_without_arithmetic_mean() -> None:
     )
 
     assert [(item.code, item.value) for item in summary.statistics] == [("latest", 1.0)]
+
+
+def test_unverified_numeric_summary_returns_only_basic_descriptive_statistics() -> None:
+    observations = [
+        observation(1, 0, 0, "10"),
+        observation(2, 1, 0, "30"),
+        observation(3, 2, 0, "20"),
+    ]
+    coverage = calculate_coverage(
+        observations,
+        start=ANCHOR,
+        end=ANCHOR + timedelta(hours=3),
+        interval_seconds=None,
+        anchor_at=None,
+        jitter_tolerance_seconds=None,
+    )
+
+    summary = calculate_period_summary(
+        "unverified_numeric_output",
+        observations,
+        coverage,
+        interval_seconds=None,
+    )
+
+    assert summary.status == "available"
+    assert [(item.code, item.value) for item in summary.statistics] == [
+        ("latest", 20.0),
+        ("count", 3.0),
+        ("minimum", 10.0),
+        ("median", 20.0),
+        ("maximum", 30.0),
+    ]

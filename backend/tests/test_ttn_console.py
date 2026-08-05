@@ -60,6 +60,23 @@ def test_supported_outflow_identity_uses_the_same_redacted_payload_shape() -> No
     ]
 
 
+@pytest.mark.parametrize("invalid_value", ["not-numeric", "NaN", "Infinity"])
+def test_non_finite_or_non_numeric_measurements_are_rejected(invalid_value: str) -> None:
+    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    application_up = copy.deepcopy(fixture["events"][0]["data"])
+    application_up["end_device_ids"]["device_id"] = "outflow-a"
+    application_up["end_device_ids"]["application_ids"]["application_id"] = "rain-garden"
+    application_up["uplink_message"]["decoded_payload"]["messages"][0][0]["measurementValue"] = (
+        invalid_value
+    )
+
+    uplink = normalise_application_up(application_up, raw_event=application_up)
+
+    assert uplink.decoded_valid is False
+    assert uplink.invalid_reason == "malformed_measurement"
+    assert uplink.measurements == ()
+
+
 def test_redacted_fixture_contains_no_local_private_fixture_or_credential_markers() -> None:
     serialized = FIXTURE.read_text(encoding="utf-8")
 

@@ -351,6 +351,8 @@ export interface components {
             unit_confirmation_status: string;
             /** Unit Symbol */
             unit_symbol: string | null;
+            /** Verification Status */
+            verification_status: string;
             /** Water Level Reference Or Datum */
             water_level_reference_or_datum: string | null;
         };

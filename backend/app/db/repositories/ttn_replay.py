@@ -42,7 +42,6 @@ class TTNIngestionContext:
     source: str
     ingestion_mode: str
     provenance: str
-    quality_notes: str
     gateway_alias: str
 
 
@@ -50,20 +49,12 @@ OFFLINE_REPLAY_CONTEXT = TTNIngestionContext(
     source=REPLAY_SOURCE,
     ingestion_mode="offline_replay",
     provenance=REPLAY_PROVENANCE,
-    quality_notes=(
-        "Offline replay decoder output; physical interpretation and unit are unverified. "
-        "Timestamp basis is TTN received_at."
-    ),
     gateway_alias="Replay gateway (identifier withheld)",
 )
 LIVE_MQTT_CONTEXT = TTNIngestionContext(
     source=LIVE_MQTT_SOURCE,
     ingestion_mode="live_mqtt",
     provenance=LIVE_MQTT_PROVENANCE,
-    quality_notes=(
-        "Live TTN MQTT proxy decoder output; physical units remain unverified. "
-        "The sensor is not deployed at Orchard Park. Timestamp basis is TTN received_at."
-    ),
     gateway_alias="TTN gateway (identifier withheld)",
 )
 
@@ -401,8 +392,8 @@ def persist_ttn_uplink(
                         sensor_channel_id=channel.id,
                         numeric_value=item.value,
                         measured_at=uplink.received_at,
-                        quality_flag="suspect",
-                        quality_notes=context.quality_notes,
+                        quality_flag="valid",
+                        quality_notes=None,
                     )
                 )
             session.flush()

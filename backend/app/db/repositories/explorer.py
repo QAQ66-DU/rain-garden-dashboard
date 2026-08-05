@@ -46,6 +46,7 @@ class ExploreChannelRecord:
     unit_code: str | None
     unit_symbol: str | None
     unit_confirmation_status: str
+    verification_status: str
     installation_depth_cm: float | None
     position_label: str | None
     expected_reporting_interval_seconds: int | None
@@ -132,6 +133,7 @@ def list_channels(
             SensorChannel.unit_code,
             UnitDefinition.unit_symbol,
             SensorChannel.unit_confirmation_status,
+            SensorChannel.verification_status,
             SensorChannel.depth_cm,
             SensorChannel.position_label,
             SensorChannel.expected_reporting_interval_seconds,
@@ -166,12 +168,13 @@ def list_channels(
             unit_code=cast(str | None, row[10]),
             unit_symbol=cast(str | None, row[11]),
             unit_confirmation_status=cast(str, row[12]),
-            installation_depth_cm=cast(float | None, row[13]),
-            position_label=cast(str | None, row[14]),
-            expected_reporting_interval_seconds=cast(int | None, row[15]),
-            reporting_schedule_anchor_at=cast(datetime | None, row[16]),
-            reporting_jitter_tolerance_seconds=cast(int | None, row[17]),
-            water_level_reference_or_datum=cast(str | None, row[18]),
+            verification_status=cast(str, row[13]),
+            installation_depth_cm=cast(float | None, row[14]),
+            position_label=cast(str | None, row[15]),
+            expected_reporting_interval_seconds=cast(int | None, row[16]),
+            reporting_schedule_anchor_at=cast(datetime | None, row[17]),
+            reporting_jitter_tolerance_seconds=cast(int | None, row[18]),
+            water_level_reference_or_datum=cast(str | None, row[19]),
         )
         for row in session.execute(
             statement.order_by(

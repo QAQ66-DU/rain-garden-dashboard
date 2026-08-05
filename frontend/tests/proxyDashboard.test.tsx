@@ -7,6 +7,7 @@ import {
   exploreFixture,
   overviewFixture,
   replayDeviceDetailFixture,
+  replayMeasurementsFixture,
 } from './fixtures/api';
 import { renderRoute } from './render';
 import { server } from './server';
@@ -157,5 +158,109 @@ describe('proxy TTN dashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Explore' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Proxy sensors' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Swale' })).not.toBeInTheDocument();
+  });
+
+  it('separates valid observations from pending channel metadata', async () => {
+    const outflow = proxyDevices[0];
+    if (!outflow) throw new Error('outflow-a fixture is required');
+    server.use(
+      http.get('*/api/v1/devices/:deviceId', () =>
+        HttpResponse.json({
+          ...replayDeviceDetailFixture,
+          ...outflow,
+          ingestion_mode: 'live_mqtt',
+          provenance: 'proxy',
+        }),
+      ),
+      http.get('*/api/v1/devices/:deviceId/measurements', () =>
+        HttpResponse.json({
+          ...replayMeasurementsFixture,
+          provenance: 'proxy',
+        }),
+      ),
+    );
+
+    renderRoute(`/devices/${outflow.id}`);
+
+    expect(await screen.findByRole('heading', { name: 'outflow-a' })).toBeInTheDocument();
+    expect(screen.getAllByText('Metadata pending').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/flagged observations/iu)).not.toBeInTheDocument();
+  });
+
+  it('shows basic unverified summaries without treating points as quality warnings', async () => {
+    const baseSeries = exploreFixture.series[0];
+    if (!baseSeries) throw new Error('explore series fixture is required');
+    const channel = {
+      ...baseSeries.channel,
+      channel_name: 'Measurement 1',
+      metric_code: 'unverified_numeric_output',
+      metric_name: 'Unverified numeric output',
+      metric_group: 'operational',
+      unit_code: null,
+      unit_symbol: null,
+      unit_confirmation_status: 'pending',
+      verification_status: 'unverified',
+      expected_reporting_interval_seconds: null,
+      reporting_schedule_anchor_at: null,
+      reporting_jitter_tolerance_seconds: null,
+    };
+    server.use(
+      http.get('*/api/v1/explore', () =>
+        HttpResponse.json({
+          ...exploreFixture,
+          site_id: proxySiteId,
+          site_name: 'TTN proxy network',
+          metric_group: 'operational',
+          available_channels: [channel],
+          selected_channel_ids: [channel.channel_id],
+          series: [
+            {
+              ...baseSeries,
+              channel,
+              points: baseSeries.points.slice(0, 2).map((point) => ({
+                ...point,
+                quality_flag: 'valid',
+                included_in_summary: true,
+                expected_slot_at: null,
+                timing_status: 'schedule_unavailable',
+              })),
+              summary: {
+                status: 'available',
+                status_detail: 'Basic valid observations; metadata remains unverified.',
+                statistics: [
+                  { code: 'latest', label: 'Latest', value: 1.4, observed_at: null },
+                  { code: 'count', label: 'Count', value: 2, observed_at: null },
+                  { code: 'minimum', label: 'Minimum', value: 0, observed_at: null },
+                  { code: 'median', label: 'Median', value: 0.7, observed_at: null },
+                  { code: 'maximum', label: 'Maximum', value: 1.4, observed_at: null },
+                ],
+              },
+              coverage: {
+                ...baseSeries.coverage,
+                status: 'unavailable',
+                expected_observations: null,
+                received_observations: null,
+                valid_observations: null,
+                flagged_observations: null,
+                missing_observations: null,
+                coverage_percentage: null,
+              },
+            },
+          ],
+          quality_warnings: [],
+        }),
+      ),
+    );
+
+    renderRoute(
+      '/explore?start=2026-08-04T12%3A00%3A00Z&end=2026-08-05T12%3A00%3A00Z&preset=24h&feature=all&group=operational',
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Unverified numeric output' })).toBeVisible();
+    expect(screen.getByText('Metadata pending')).toBeVisible();
+    expect(screen.getByText('Unit unverified')).toBeVisible();
+    expect(screen.getByText('Count').nextElementSibling).toHaveTextContent('2');
+    expect(screen.getByText('No flagged observations in this selected period.')).toBeVisible();
   });
 });

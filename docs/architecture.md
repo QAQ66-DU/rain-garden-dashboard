@@ -38,9 +38,12 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 2. The ingestion service obtains idempotency through unique `(source, idempotency_key)` storage.
 3. The private raw JSONB event is stored once.
 4. Measurements reference both the event and a `SensorChannel` carrying separate metric, nullable unit, unit-confirmation, installation-depth, position, and schedule metadata.
-5. Public repositories select normalized fields only.
-6. Services apply explicit reference times, quality exclusions, comparability rules, and freshness thresholds.
-7. Pydantic response schemas exclude private coordinates, external identifiers, and raw payloads.
+5. Successfully decoded, mapped, finite numeric observations are valid measurements; pending
+   scientific meaning, units, calibration, and timestamp interpretation remain separate channel
+   metadata and do not create quality warnings.
+6. Public repositories select normalized fields only.
+7. Services apply explicit reference times, quality exclusions, comparability rules, and freshness thresholds.
+8. Pydantic response schemas exclude private coordinates, external identifiers, and raw payloads.
 
 The offline TTN path adds a file adapter before step 1. It selects only `as.up.data.forward`, then
 passes `event.data` to an ApplicationUp normaliser that has no file, network, or database dependency.
@@ -78,7 +81,13 @@ ignored local environment and is never part of the FastAPI process.
 
 Installation depth and position never alter the controlled metric code. Channels at different confirmed depths would both use `soil_moisture` and remain separately identifiable. No tree-pit depths or depth channel count are currently configured.
 
-`unit_confirmation_status` is independent of `unit_code`: pending channels may have no unit; real values require `confirmed`; deterministic demonstration channels use documented demo-normalised units with `synthetic_demo_only`. The status is not a physical unit code. The same separation applies to schedule metadata: coverage is unavailable unless interval and anchor are explicitly configured.
+`unit_confirmation_status` is independent of `unit_code`: pending channels may have no unit, while
+deterministic demonstration channels use documented demo-normalised units with
+`synthetic_demo_only`. A real TTN observation may be retained as a valid numeric observation when
+its device/channel structure is explicitly mapped, even while its scientific metadata remains
+pending. The UI labels that distinction as `Metadata pending` and `Unit unverified`; it does not
+perform domain interpretation. The same separation applies to schedule metadata: coverage is
+unavailable unless interval and anchor are explicitly configured.
 
 ## Time Explorer and coverage
 

@@ -1,6 +1,6 @@
 import createClient from 'openapi-fetch';
 
-import type { paths } from './generated';
+import type { components, paths } from './generated';
 import type {
   DeviceDetail,
   DeviceList,
@@ -54,7 +54,7 @@ export interface ExplorerFilters {
   end: string;
   siteId?: string;
   feature?: string;
-  metricGroup: 'hydrology' | 'soil' | 'weather';
+  metricGroup: components['schemas']['MetricGroup'];
   channels?: string;
 }
 

@@ -66,6 +66,7 @@ def _channel_schema(record: explorer_repository.ExploreChannelRecord) -> Explore
         unit_code=record.unit_code,
         unit_symbol=record.unit_symbol,
         unit_confirmation_status=record.unit_confirmation_status,
+        verification_status=record.verification_status,
         installation_depth_cm=record.installation_depth_cm,
         position_label=record.position_label,
         expected_reporting_interval_seconds=record.expected_reporting_interval_seconds,
@@ -94,13 +95,6 @@ def get_explorer(
     metric_group: MetricGroup,
     channels: str | None,
 ) -> ExploreResponse:
-    if metric_group is MetricGroup.OPERATIONAL:
-        raise ServiceError(
-            422,
-            "Invalid metric group",
-            "Time Explorer supports hydrology, soil, or weather groups.",
-            "invalid_metric_group",
-        )
     start, end = validate_time_window(
         start, end, max_range_days=settings.max_measurement_range_days
     )

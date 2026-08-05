@@ -29,6 +29,7 @@ class ExploreChannel(ApiModel):
     unit_code: str | None
     unit_symbol: str | None
     unit_confirmation_status: str
+    verification_status: str
     installation_depth_cm: float | None
     position_label: str | None
     expected_reporting_interval_seconds: int | None

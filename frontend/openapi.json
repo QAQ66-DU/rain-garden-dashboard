@@ -650,6 +650,10 @@
             ],
             "title": "Unit Symbol"
           },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          },
           "water_level_reference_or_datum": {
             "anyOf": [
               {
@@ -676,6 +680,7 @@
           "unit_code",
           "unit_symbol",
           "unit_confirmation_status",
+          "verification_status",
           "installation_depth_cm",
           "position_label",
           "expected_reporting_interval_seconds",

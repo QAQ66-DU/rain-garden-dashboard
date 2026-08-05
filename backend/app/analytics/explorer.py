@@ -274,7 +274,15 @@ def calculate_period_summary(
     included = frozenset(item.measurement_id for item in valid)
     statistics: list[SummaryStatistic]
 
-    if metric_code == "soil_moisture":
+    if metric_code == "unverified_numeric_output":
+        statistics = [
+            _statistic("latest", "Latest", latest),
+            SummaryStatistic("count", "Count", float(len(valid))),
+            _statistic("minimum", "Minimum", minimum),
+            SummaryStatistic("median", "Median", median_value),
+            _statistic("maximum", "Maximum", maximum),
+        ]
+    elif metric_code == "soil_moisture":
         statistics = [
             _statistic("first", "First valid", first),
             _statistic("latest", "Latest valid", latest),

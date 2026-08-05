@@ -183,6 +183,9 @@ export function DevicesPage() {
                           {device.ingestion_mode === 'live_mqtt' ? 'Live MQTT' : 'Replay data'}
                         </span>
                         <span className="provenance-tag provenance-tag--warning">
+                          Metadata pending
+                        </span>
+                        <span className="provenance-tag provenance-tag--warning">
                           Unit unverified
                         </span>
                       </div>

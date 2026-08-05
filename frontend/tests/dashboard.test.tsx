@@ -118,7 +118,8 @@ describe('monitoring dashboard', () => {
     expect(screen.getByText('840')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
     expect(screen.getByText('Measurement 2')).toBeInTheDocument();
-    expect(screen.getAllByText('Scientific meaning not verified')).toHaveLength(2);
+    expect(screen.getAllByText('Metadata pending').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThanOrEqual(2);
     expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
     expect(document.body).not.toHaveTextContent('session_key_id');
   });

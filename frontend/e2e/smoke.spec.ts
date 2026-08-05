@@ -62,7 +62,8 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByRole('heading', { name: 'weather-station-2', exact: true })).toBeVisible();
   await expect(page.getByText('Proxy sensor', { exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
-  await expect(page.getByText('Unit not verified').first()).toBeVisible();
+  await expect(page.getByText('Metadata pending').first()).toBeVisible();
+  await expect(page.getByText('Unit unverified').first()).toBeVisible();
 
   expect(browserErrors).toEqual([]);
 });

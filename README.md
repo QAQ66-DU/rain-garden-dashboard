@@ -167,14 +167,22 @@ explicit configuration/schedule metadata, and a separate physical-unit catalogue
 `0003_time_explorer_metric_groups.py` adds the controlled metric grouping used by Time Explorer.
 Migration `0004_offline_ttn_replay.py` adds the isolated testbed vocabulary, explicit replay
 provenance, unverified-channel metadata, latest operational telemetry, and a private preserve-first
-quarantine. `unit_code` is nullable while `unit_confirmation_status` records `pending`, `confirmed`,
-or `synthetic_demo_only`; “unknown” is never stored as a physical unit.
+quarantine. Migration `0005_reclassify_ttn_metadata_quality.py` safely reclassifies only accepted
+TTN measurements carrying the former blanket metadata-warning notes; the correction is
+intentionally one-way so a code rollback cannot make valid observations suspect again. `unit_code`
+is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or
+`synthetic_demo_only`; “unknown” is never stored as a physical unit.
 `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the
 database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
 The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Live proxy channels remain `pending` with nullable units; a channel requires explicit physical-unit evidence before it can become `confirmed`.
 
 Historical queries use half-open UTC windows `[start, end)`, with display times converted to the site's `Europe/London` timezone. Coverage counts schedule-aligned slots from the explicit interval, anchor, and jitter tolerance; it is unavailable rather than inferred when any schedule input is missing. Duplicate-slot observations do not increase received coverage, flagged slots are received but not valid, and missing never means numeric zero. Rainfall duration above zero is shown only with complete valid scheduled coverage.
+
+For explicitly mapped TTN proxy channels, successfully decoded finite numbers are valid
+observations even while their scientific metadata and unit remain pending. The UI keeps those
+states visible as `Metadata pending` and `Unit unverified`; unverified channels receive only basic
+descriptive summaries and no hydrological interpretation.
 
 ## Quality commands
 
