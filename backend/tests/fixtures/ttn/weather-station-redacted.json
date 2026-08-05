@@ -1,0 +1,39 @@
+{
+  "end_device_ids": {
+    "device_id": "weather-station",
+    "application_ids": { "application_id": "rain-garden" }
+  },
+  "correlation_ids": ["redacted-correlation-id"],
+  "received_at": "2026-08-05T12:00:00Z",
+  "uplink_message": {
+    "session_key_id": "redacted-session-key",
+    "f_port": 3,
+    "f_cnt": 1,
+    "confirmed": false,
+    "frm_payload": "cmVkYWN0ZWQ=",
+    "decoded_payload": {
+      "valid": true,
+      "err": 0,
+      "messages": [
+        [
+          { "measurementId": "4097", "type": "Air Temperature", "measurementValue": 1 },
+          { "measurementId": "4098", "type": "Air Humidity", "measurementValue": 2 },
+          { "measurementId": "4099", "type": "Light Intensity", "measurementValue": 3 },
+          { "measurementId": "4190", "type": "UV Index", "measurementValue": 4 },
+          { "measurementId": "4105", "type": "Wind Speed", "measurementValue": 5 },
+          {
+            "measurementId": "4104",
+            "type": "Wind Direction Sensor",
+            "measurementValue": 6
+          },
+          { "measurementId": "4113", "type": "Rain Gauge", "measurementValue": 7 },
+          {
+            "measurementId": "4101",
+            "type": "Barometric Pressure",
+            "measurementValue": 8
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -17,9 +17,12 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Seed at least seven deterministic days for the seven configured swale devices. Keep the tree-pit probe at zero channels and observations until its depth/channel configuration is confirmed.
 - Expose versioned read-only REST endpoints and an authenticated but disabled TTN scaffold.
 - Support an isolated, local-only offline replay of the reviewed `outflow-a` console export under a
-  separate TTN Testbed site, while keeping physical meanings and units explicitly unverified.
-- Provide an explicitly started, TLS-only MQTT development worker for the single approved Outflow A
-  topic, with its password absent by default and normal Compose startup unaffected.
+  separate proxy site, while keeping physical meanings and units explicitly unverified.
+- Provide an explicitly started, TLS-only MQTT worker for application-wide uplinks, with exactly
+  eight approved proxy device IDs, an absent-by-default password, and normal Compose startup
+  unaffected.
+- Make the eight proxy devices the normal dashboard inventory while excluding the synthetic Orchard
+  Park dataset from default live API/UI queries. Preserve the deterministic demo seed separately.
 
 ## Measurement query contract
 
@@ -58,8 +61,8 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 
 ## Explicit non-goals
 
-Default-enabled live TTN ingestion, live webhook handling, MQTT subscriptions beyond Outflow A,
-confirmed `outflow-a` physical payload mapping, threshold editing,
+Default-enabled worker startup, live webhook handling, TTN Storage API backfill, cloud deployment,
+confirmed physical-unit mapping, threshold editing,
 shared distributed rate limiting, authentication/user management, maps, public coordinates, CSV
 export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
 machine learning, camera data, image recognition, and deployment to a vendor-specific platform are

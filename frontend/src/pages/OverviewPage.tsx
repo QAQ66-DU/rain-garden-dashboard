@@ -20,6 +20,7 @@ export function OverviewPage() {
   }
 
   const data = overview.data;
+  const isProxy = !data.synthetic && data.synthetic_notice?.startsWith('Live proxy') === true;
   const soil = data.soil_moisture;
   const warningParams = new URLSearchParams(location.search);
   if (data.data_quality.start && data.data_quality.end) {
@@ -32,7 +33,7 @@ export function OverviewPage() {
   warningParams.delete('channels');
   return (
     <div className="page-stack">
-      {data.synthetic ? <SyntheticBanner /> : null}
+      {isProxy ? <SyntheticBanner mode="proxy" /> : data.synthetic ? <SyntheticBanner /> : null}
       <header className="page-hero page-hero--overview">
         <div>
           <p className="eyebrow">Site overview</p>
@@ -42,7 +43,9 @@ export function OverviewPage() {
         <div className="hero-meta">
           <span>Reference time</span>
           <strong>{formatDateTime(data.reference_time)}</strong>
-          <small>Calculated from the deterministic dataset</small>
+          <small>
+            {isProxy ? 'Current UTC time' : 'Calculated from the deterministic dataset'}
+          </small>
         </div>
       </header>
 
@@ -62,20 +65,24 @@ export function OverviewPage() {
           }
           note={
             data.latest_rainfall_intensity
-              ? `Synthetic demo reading · ${formatDateTime(data.latest_rainfall_intensity.measured_at)}`
+              ? `${isProxy ? 'Latest valid reading' : 'Synthetic demo reading'} · ${formatDateTime(data.latest_rainfall_intensity.measured_at)}`
               : 'No valid rainfall observation'
           }
         />
         <MetricCard
           label="Data-quality warnings"
           value={data.data_quality.warning_count}
-          note="Non-valid observations in the final 24 dataset hours"
+          note={
+            isProxy
+              ? 'Non-valid observations in the 24 hours before the latest uplink'
+              : 'Non-valid observations in the final 24 dataset hours'
+          }
           tone={data.data_quality.warning_count > 0 ? 'warning' : 'default'}
         />
         <MetricCard
           label="Last data update"
           value={<span className="date-value">{formatDateTime(data.last_data_update)}</span>}
-          note="Latest synthetic uplink receipt"
+          note={isProxy ? 'Latest proxy uplink receipt' : 'Latest synthetic uplink receipt'}
         />
       </section>
       <div className="overview-actions">
@@ -107,8 +114,8 @@ export function OverviewPage() {
             ))}
           </div>
           <p className="panel-note">
-            Status uses the dataset reference time. It is operational context, not a stored device
-            claim.
+            Status uses {isProxy ? 'current UTC time' : 'the dataset reference time'}. It is
+            operational context, not a stored device claim.
           </p>
         </article>
 

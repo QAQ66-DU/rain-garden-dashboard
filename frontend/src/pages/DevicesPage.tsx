@@ -28,6 +28,7 @@ export function DevicesPage() {
   const containsLiveMqtt = devices.data?.items.some(
     (device) => device.is_test_device && device.ingestion_mode === 'live_mqtt',
   );
+  const containsProxy = devices.data?.items.some((device) => device.provenance === 'proxy');
 
   const resetCursor = () => {
     setCursor(undefined);
@@ -36,11 +37,13 @@ export function DevicesPage() {
     <div className="page-stack">
       <SyntheticBanner
         mode={
-          containsLiveMqtt
-            ? 'live-mixed'
-            : devices.data?.contains_replay_data
-              ? 'mixed'
-              : 'synthetic'
+          containsProxy
+            ? 'proxy'
+            : containsLiveMqtt
+              ? 'live-mixed'
+              : devices.data?.contains_replay_data
+                ? 'mixed'
+                : 'synthetic'
         }
       />
       <header className="page-hero">
@@ -77,9 +80,14 @@ export function DevicesPage() {
             }}
           >
             <option value="">All features</option>
-            <option value="swale">Swale</option>
-            <option value="tree-pit">Tree pit</option>
-            <option value="ttn-testbed">TTN Testbed</option>
+            {containsProxy ? (
+              <option value="proxy-sensors">Proxy sensors</option>
+            ) : (
+              <>
+                <option value="swale">Swale</option>
+                <option value="tree-pit">Tree pit</option>
+              </>
+            )}
           </select>
         </label>
         <label className="filter-field">
@@ -168,7 +176,9 @@ export function DevicesPage() {
                     </span>
                     {device.is_test_device ? (
                       <div className="provenance-tags" aria-label="Data provenance">
-                        <span className="provenance-tag">Testbed</span>
+                        <span className="provenance-tag">
+                          {device.provenance === 'proxy' ? 'Proxy sensor' : 'Testbed'}
+                        </span>
                         <span className="provenance-tag">
                           {device.ingestion_mode === 'live_mqtt' ? 'Live MQTT' : 'Replay data'}
                         </span>
@@ -186,7 +196,11 @@ export function DevicesPage() {
                 <dl className="device-facts">
                   <div>
                     <dt>Last seen</dt>
-                    <dd>{formatDateTime(device.last_seen_at)}</dd>
+                    <dd>
+                      {device.last_seen_at === null
+                        ? 'Never seen / No data'
+                        : formatDateTime(device.last_seen_at)}
+                    </dd>
                   </div>
                   <div>
                     <dt>Configuration</dt>

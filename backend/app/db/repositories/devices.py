@@ -123,7 +123,10 @@ def list_devices(
     if device_type is not None:
         statement = statement.where(Device.device_type == device_type)
     if status is not None:
-        effective_reference = func.coalesce(site_reference_time, reference_time)
+        effective_reference = case(
+            (Device.environment == "proxy", reference_time),
+            else_=func.coalesce(site_reference_time, reference_time),
+        )
         statement = _apply_status_filter(
             statement, status, effective_reference, stale_minutes, offline_minutes
         )

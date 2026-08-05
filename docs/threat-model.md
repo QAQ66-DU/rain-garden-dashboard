@@ -45,8 +45,9 @@
 - Public read access is suitable only for synthetic or approved non-sensitive data.
 - In-memory rate limiting does not coordinate multiple processes.
 - TTN key rotation and production network-level controls remain operator/deployment responsibilities.
-- The MQTT worker is prepared only for the reviewed Outflow A ApplicationUp shape and is disabled
-  outside the explicit Compose `live` profile.
+- The MQTT worker is limited to eight reviewed public device IDs and their evidence-backed
+  ApplicationUp shapes, and is disabled outside the explicit Compose `live` profile. Application-wide
+  subscription does not authorize unknown-device persistence; those events are privately quarantined.
 - There is no user authentication, private-coordinate endpoint, backup automation, or formal audit log.
 - Confirmed coordinates remain visible to database administrators; browser/OpenAPI contract tests only protect the public application boundary.
 - Offline replay is approved only for the local testbed. It does not authorize live ingress or

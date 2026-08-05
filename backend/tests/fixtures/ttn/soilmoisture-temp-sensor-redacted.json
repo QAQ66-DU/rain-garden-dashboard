@@ -1,0 +1,26 @@
+{
+  "end_device_ids": {
+    "device_id": "soilmoisture-temp-sensor",
+    "application_ids": { "application_id": "rain-garden" }
+  },
+  "correlation_ids": ["redacted-correlation-id"],
+  "received_at": "2026-08-05T12:00:00Z",
+  "uplink_message": {
+    "session_key_id": "redacted-session-key",
+    "f_port": 2,
+    "f_cnt": 1,
+    "confirmed": false,
+    "frm_payload": "cmVkYWN0ZWQ=",
+    "decoded_payload": {
+      "valid": true,
+      "err": 0,
+      "messages": [
+        { "type": "upload_battery", "battery": 50 },
+        { "type": "upload_interval", "interval": 3600 },
+        { "measurementId": 4102, "type": "report_telemetry", "measurementValue": 3 },
+        { "measurementId": 4103, "type": "report_telemetry", "measurementValue": 4 },
+        { "measurementId": 4108, "type": "report_telemetry", "measurementValue": 5 }
+      ]
+    }
+  }
+}

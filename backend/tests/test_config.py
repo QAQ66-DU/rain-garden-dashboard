@@ -5,7 +5,10 @@ from pydantic import ValidationError
 
 
 def test_default_phase_one_limits_are_bounded() -> None:
-    settings = Settings(database_url="postgresql+psycopg://example:example@db/example")
+    settings = Settings(
+        database_url="postgresql+psycopg://example:example@db/example",
+        ttn_mqtt_api_key=None,
+    )
 
     assert settings.default_measurement_range_days == 7
     assert settings.max_measurement_range_days == 31
@@ -37,19 +40,26 @@ def test_non_secret_mqtt_configuration_loads_without_an_api_key(
     monkeypatch.setenv("TTN_MQTT_HOST", "mqtt.example.invalid")
     monkeypatch.setenv("TTN_MQTT_PORT", "8883")
     monkeypatch.setenv("TTN_MQTT_USERNAME", "test-application@example")
-    monkeypatch.setenv("TTN_MQTT_TOPIC", "v3/rain-garden@ttn/devices/outflow-a/up")
+    monkeypatch.setenv("TTN_MQTT_TOPIC", "v3/rain-garden@ttn/devices/+/up")
 
-    settings = Settings(database_url="postgresql+psycopg://example:example@db/example")
+    settings = Settings(
+        database_url="postgresql+psycopg://example:example@db/example",
+        ttn_mqtt_api_key=None,
+    )
 
     assert settings.ttn_mqtt_host == "mqtt.example.invalid"
     assert settings.ttn_mqtt_port == 8883
     assert settings.ttn_mqtt_username == "test-application@example"
-    assert settings.ttn_mqtt_topic == "v3/rain-garden@ttn/devices/outflow-a/up"
+    assert settings.ttn_mqtt_topic == "v3/rain-garden@ttn/devices/+/up"
     assert settings.ttn_mqtt_api_key is None
 
 
 def test_mqtt_worker_requires_the_api_key_only_at_worker_startup() -> None:
-    settings = Settings(database_url="postgresql+psycopg://example:example@db/example")
+    settings = Settings(
+        database_url="postgresql+psycopg://example:example@db/example",
+        ttn_mqtt_topic="v3/rain-garden@ttn/devices/+/up",
+        ttn_mqtt_api_key=None,
+    )
 
     with pytest.raises(MQTTConfigurationError, match="TTN_MQTT_API_KEY is required"):
         require_mqtt_api_key(settings)

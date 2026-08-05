@@ -40,12 +40,15 @@ export function DeviceDetailPage() {
 
   const data = device.data;
   const isLiveMqtt = data.ingestion_mode === 'live_mqtt';
+  const isProxy = data.provenance === 'proxy';
   const status = data.freshness.calculated_status;
   const hasChannels = data.channels.length > 0;
   return (
     <div className="page-stack">
       <SyntheticBanner
-        mode={data.is_test_device ? (isLiveMqtt ? 'live' : 'replay') : 'synthetic'}
+        mode={
+          isProxy ? 'proxy' : data.is_test_device ? (isLiveMqtt ? 'live' : 'replay') : 'synthetic'
+        }
       />
       <Link className="back-link" to={{ pathname: '/devices', search: location.search }}>
         ← Back to devices
@@ -63,7 +66,7 @@ export function DeviceDetailPage() {
           </p>
           {data.is_test_device ? (
             <div className="provenance-tags" aria-label="Data provenance">
-              <span className="provenance-tag">Testbed</span>
+              <span className="provenance-tag">{isProxy ? 'Proxy sensor' : 'Testbed'}</span>
               <span className="provenance-tag">{isLiveMqtt ? 'Live MQTT' : 'Replay data'}</span>
               <span className="provenance-tag provenance-tag--warning">Unit unverified</span>
             </div>
@@ -72,7 +75,11 @@ export function DeviceDetailPage() {
         <dl className="hero-facts">
           <div>
             <dt>Last seen</dt>
-            <dd>{formatDateTime(data.last_seen_at)}</dd>
+            <dd>
+              {data.last_seen_at === null
+                ? 'Never seen / No data'
+                : formatDateTime(data.last_seen_at)}
+            </dd>
           </div>
           <div>
             <dt>Configuration</dt>
@@ -192,7 +199,7 @@ export function DeviceDetailPage() {
         <aside className={`freshness-warning freshness-warning--${status}`} role="status">
           <strong>{humanizeCode(status)} data status</strong>
           <span>
-            Calculated against the dataset reference time using{' '}
+            Calculated against {isProxy ? 'current UTC time' : 'the dataset reference time'} using{' '}
             {String(data.freshness.stale_after_minutes)}
             -minute stale and {String(data.freshness.offline_after_minutes)}-minute offline
             thresholds.
@@ -202,8 +209,12 @@ export function DeviceDetailPage() {
 
       {!hasChannels ? (
         <EmptyState
-          title="Sensor configuration pending"
-          message="This confirmed inventory item has no configured public channels or observations yet. Metric, payload, depth, and unit mappings must be verified before real data can be accepted."
+          title={
+            isProxy && data.last_seen_at === null
+              ? 'Never seen / No data'
+              : 'Sensor configuration pending'
+          }
+          message="No observed uplink establishes public measurement channels for this device. Metric, payload, and unit mappings will not be inferred."
         />
       ) : (
         <>

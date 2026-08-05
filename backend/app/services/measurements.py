@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -31,8 +31,13 @@ def list_measurements(
             404, "Device not found", "The requested device does not exist.", "not_found"
         )
     metric_code = validate_metric_code(metric_code)
-    reference_time = measurement_repository.current_device_reference_time(
-        session, device_id, demo_mode=settings.demo_mode
+    reference_time = (
+        datetime.now(UTC)
+        if device_row.device.environment == "proxy"
+        and device_row.device.ingestion_mode != "offline_replay"
+        else measurement_repository.current_device_reference_time(
+            session, device_id, demo_mode=settings.demo_mode
+        )
     )
     start, end, default_applied = resolve_measurement_window(
         start,

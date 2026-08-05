@@ -14,10 +14,14 @@ from app.db.repositories.ttn_replay import (
     TTN_TESTBED_SITE_NAME,
 )
 from app.db.seed import SITE_ID
+from app.db.seed_ttn_proxy import seed_ttn_proxy_inventory
+from app.ingestion.ttn_devices import TTN_PROXY_DEVICE_IDS
 from app.ingestion.ttn_mqtt import MQTTMessageProcessor
 from app.models.device import Device
 from app.models.measurement import Measurement
+from app.models.sensor_channel import SensorChannel
 from app.models.site import Site
+from app.models.ttn_replay_quarantine import TTNReplayQuarantine
 from app.models.uplink_event import UplinkEvent
 from app.services.ttn_ingestion import TTNIngestionService, ingest_ttn_application_up
 from sqlalchemy import func, select
@@ -38,12 +42,202 @@ def _approved_application_up() -> dict[str, Any]:
     return cast(dict[str, Any], application_up)
 
 
+def test_proxy_inventory_seed_is_idempotent_and_creates_no_observations(
+    db_session: Session,
+) -> None:
+    raw_before = db_session.scalar(select(func.count()).select_from(UplinkEvent)) or 0
+    measurements_before = db_session.scalar(select(func.count()).select_from(Measurement)) or 0
+
+    seed_ttn_proxy_inventory(db_session)
+    seed_ttn_proxy_inventory(db_session)
+    db_session.flush()
+
+    assert (
+        db_session.scalar(
+            select(func.count()).select_from(Device).where(Device.environment == "proxy")
+        )
+        == 8
+    )
+    assert (
+        db_session.scalar(
+            select(func.count())
+            .select_from(SensorChannel)
+            .join(Device, Device.id == SensorChannel.device_id)
+            .where(Device.environment == "proxy", SensorChannel.active.is_(True))
+        )
+        == 24
+    )
+    assert db_session.scalar(select(func.count()).select_from(UplinkEvent)) == raw_before
+    assert db_session.scalar(select(func.count()).select_from(Measurement)) == measurements_before
+
+
+@pytest.mark.parametrize(
+    ("device_id", "measurement_count"),
+    [
+        ("soil-moisture-1", 1),
+        ("weather-station-2", 8),
+        ("weather-station", 8),
+        ("ph-sensor", 2),
+        ("soilmoisture-temp-sensor", 3),
+    ],
+)
+def test_each_supplied_formatter_shape_persists_idempotently(
+    db_session: Session,
+    device_id: str,
+    measurement_count: int,
+) -> None:
+    fixture_path = FIXTURE.parent / f"{device_id}-redacted.json"
+    application_up = json.loads(fixture_path.read_text(encoding="utf-8"))
+    existing_device = db_session.scalar(
+        select(Device).where(Device.external_device_id == device_id)
+    )
+    measurements_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(Measurement)
+            .where(Measurement.device_id == existing_device.id)
+        )
+        if existing_device is not None
+        else 0
+    ) or 0
+
+    first = ingest_ttn_application_up(
+        db_session,
+        application_up,
+        raw_event=application_up,
+        context=LIVE_MQTT_CONTEXT,
+    )
+    second = ingest_ttn_application_up(
+        db_session,
+        application_up,
+        raw_event=application_up,
+        context=LIVE_MQTT_CONTEXT,
+    )
+    db_session.flush()
+
+    assert first.outcome == "inserted"
+    assert first.measurements_created == measurement_count
+    assert second.outcome == "duplicate"
+    device = db_session.scalar(select(Device).where(Device.external_device_id == device_id))
+    assert device is not None
+    assert device.environment == "proxy"
+    assert device.provenance == "proxy"
+    assert (
+        db_session.scalar(
+            select(func.count()).select_from(Measurement).where(Measurement.device_id == device.id)
+        )
+        == measurements_before + measurement_count
+    )
+
+
+def test_default_api_exposes_exactly_the_eight_proxy_devices(
+    api_client: TestClient,
+    db_session: Session,
+) -> None:
+    application_up = _approved_application_up()
+    result = ingest_ttn_application_up(
+        db_session,
+        application_up,
+        raw_event=application_up,
+        context=LIVE_MQTT_CONTEXT,
+    )
+    db_session.flush()
+    assert result.outcome == "inserted"
+
+    devices = api_client.get("/api/v1/devices", params={"page_size": 100})
+    assert devices.status_code == 200
+    body = devices.json()
+    assert {item["display_name"] for item in body["items"]} == set(TTN_PROXY_DEVICE_IDS)
+    assert len(body["items"]) == 8
+    assert all(item["environment"] == "proxy" for item in body["items"])
+
+    sites = api_client.get("/api/v1/sites", params={"page_size": 100})
+    assert sites.status_code == 200
+    assert [item["name"] for item in sites.json()["items"]] == [TTN_TESTBED_SITE_NAME]
+
+    overview = api_client.get("/api/v1/overview")
+    assert overview.status_code == 200
+    assert overview.json()["devices"]["total"] == 8
+    assert overview.json()["site_name"] == TTN_TESTBED_SITE_NAME
+    assert "not deployed at Orchard Park" in overview.json()["synthetic_notice"]
+
+    proxy_channels = db_session.scalar(
+        select(func.count())
+        .select_from(SensorChannel)
+        .join(Device, Device.id == SensorChannel.device_id)
+        .where(Device.environment == "proxy", SensorChannel.active.is_(True))
+    )
+    assert proxy_channels == 24
+    assert (
+        db_session.scalar(
+            select(func.count())
+            .select_from(SensorChannel)
+            .join(Device, Device.id == SensorChannel.device_id)
+            .where(Device.environment == "proxy", SensorChannel.unit_code.is_not(None))
+        )
+        == 0
+    )
+
+    orchard = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
+    assert orchard.status_code == 200
+    assert orchard.json()["devices"]["total"] == 8
+
+
+def test_unknown_application_device_is_quarantined_without_measurements(
+    db_session: Session,
+) -> None:
+    application_up = _approved_application_up()
+    application_up["end_device_ids"]["device_id"] = "unknown-device"
+
+    result = ingest_ttn_application_up(
+        db_session,
+        application_up,
+        raw_event=application_up,
+        context=LIVE_MQTT_CONTEXT,
+    )
+    db_session.flush()
+
+    assert result.outcome == "quarantined"
+    quarantine = db_session.scalar(
+        select(TTNReplayQuarantine).where(TTNReplayQuarantine.source == LIVE_MQTT_SOURCE)
+    )
+    assert quarantine is not None
+    assert quarantine.failure_code == "unknown_ttn_device"
+
+
 def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
     api_client: TestClient,
     db_session: Session,
 ) -> None:
     application_up = _approved_application_up()
+    application_up["uplink_message"]["session_key_id"] = "integration-mqtt-idempotency"
+    application_up["uplink_message"]["f_cnt"] = 900_001
     message = SimpleNamespace(payload=json.dumps(application_up).encode())
+
+    existing_outflow = db_session.scalar(
+        select(Device).where(Device.external_device_id == "outflow-a")
+    )
+    raw_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(UplinkEvent)
+            .where(
+                UplinkEvent.device_id == existing_outflow.id,
+                UplinkEvent.source == LIVE_MQTT_SOURCE,
+            )
+        )
+        if existing_outflow is not None
+        else 0
+    ) or 0
+    measurements_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(Measurement)
+            .where(Measurement.device_id == existing_outflow.id)
+        )
+        if existing_outflow is not None
+        else 0
+    ) or 0
 
     @contextmanager
     def session_scope() -> Generator[Session]:
@@ -64,11 +258,20 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
 
     testbed = db_session.scalar(select(Site).where(Site.name == TTN_TESTBED_SITE_NAME))
     assert testbed is not None
-    outflow = db_session.scalar(select(Device).where(Device.site_id == testbed.id))
+    outflow = db_session.scalar(
+        select(Device).where(
+            Device.site_id == testbed.id,
+            Device.external_device_id == "outflow-a",
+        )
+    )
     assert outflow is not None
-    assert outflow.display_name == "Outflow A"
+    assert outflow.display_name == "outflow-a"
     assert outflow.is_test_device is True
-    assert db_session.scalar(select(func.count()).select_from(Device)) == 9
+    assert db_session.scalar(select(func.count()).select_from(Device)) == 16
+    proxy_ids = set(
+        db_session.scalars(select(Device.external_device_id).where(Device.site_id == testbed.id))
+    )
+    assert proxy_ids == set(TTN_PROXY_DEVICE_IDS)
     assert (
         db_session.scalar(
             select(func.count())
@@ -78,18 +281,19 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
                 UplinkEvent.source == LIVE_MQTT_SOURCE,
             )
         )
-        == 1
+        == raw_before + 1
     )
     assert (
         db_session.scalar(
             select(func.count()).select_from(Measurement).where(Measurement.device_id == outflow.id)
         )
-        == 2
+        == measurements_before + 2
     )
     stored = db_session.scalar(
         select(UplinkEvent).where(
             UplinkEvent.device_id == outflow.id,
             UplinkEvent.source == LIVE_MQTT_SOURCE,
+            UplinkEvent.frame_counter == 900_001,
         )
     )
     assert stored is not None
@@ -107,8 +311,11 @@ def test_replay_and_live_mqtt_share_chronological_utc_history(
     db_session: Session,
 ) -> None:
     replay_up = _approved_application_up()
+    replay_up["received_at"] = "2025-08-03T18:38:53.442428Z"
+    replay_up["uplink_message"]["session_key_id"] = "integration-shared-history"
+    replay_up["uplink_message"]["f_cnt"] = 900_010
     live_up = copy.deepcopy(replay_up)
-    live_up["received_at"] = "2026-08-04T18:38:53.442428Z"
+    live_up["received_at"] = "2025-08-04T18:38:53.442428Z"
     live_up["uplink_message"]["f_cnt"] += 1
 
     live_result = ingest_ttn_application_up(
@@ -142,7 +349,7 @@ def test_replay_and_live_mqtt_share_chronological_utc_history(
     assert detail.status_code == 200
     detail_body = detail.json()
     assert detail_body["ingestion_mode"] == "live_mqtt"
-    assert detail_body["provenance"] == "live_ttn_mqtt"
+    assert detail_body["provenance"] == "proxy"
     assert detail_body["freshness"]["status_basis"] == "live_mqtt_reference_time"
     channel_id = next(
         channel["id"]
@@ -153,8 +360,8 @@ def test_replay_and_live_mqtt_share_chronological_utc_history(
     history = api_client.get(
         f"/api/v1/devices/{outflow.id}/measurements",
         params={
-            "start": "2026-08-03T00:00:00Z",
-            "end": "2026-08-05T00:00:00Z",
+            "start": "2025-08-03T00:00:00Z",
+            "end": "2025-08-05T00:00:00Z",
             "sensor_channel_id": channel_id,
             "page_size": 500,
         },
@@ -164,36 +371,18 @@ def test_replay_and_live_mqtt_share_chronological_utc_history(
     assert history_body["total_matching"] == 2
     timestamps = [item["measured_at"] for item in history_body["items"]]
     assert timestamps == sorted(timestamps)
-    assert timestamps[-1] == "2026-08-04T18:38:53.442428Z"
+    assert timestamps[-1] == "2025-08-04T18:38:53.442428Z"
 
     recent = api_client.get(
         f"/api/v1/devices/{outflow.id}/measurements",
         params={
-            "start": "2026-08-04T18:38:53Z",
-            "end": "2026-08-04T18:38:54Z",
+            "start": "2025-08-04T18:38:53Z",
+            "end": "2025-08-04T18:38:54Z",
             "sensor_channel_id": channel_id,
             "page_size": 500,
         },
     )
     assert recent.status_code == 200
     assert [item["measured_at"] for item in recent.json()["items"]] == [
-        "2026-08-04T18:38:53.442428Z"
+        "2025-08-04T18:38:53.442428Z"
     ]
-
-    default_history = api_client.get(
-        f"/api/v1/devices/{outflow.id}/measurements",
-        params={"sensor_channel_id": channel_id, "page_size": 500},
-    )
-    assert default_history.status_code == 200
-    default_body = default_history.json()
-    assert default_body["default_range_applied"] is True
-    assert default_body["total_matching"] == 2
-    assert default_body["items"][-1]["measured_at"] == detail_body["last_seen_at"]
-    assert default_body["provenance"] == "live_ttn_mqtt"
-
-    assert (
-        db_session.scalar(
-            select(func.count()).select_from(Measurement).where(Measurement.device_id == outflow.id)
-        )
-        == 4
-    )

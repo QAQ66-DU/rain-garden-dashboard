@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -113,7 +113,12 @@ def get_explorer(
         raise ServiceError(404, "Site not found", "No matching site exists.", "not_found")
 
     is_replay_site = overview_repository.has_test_device(session, site.id)
-    reference_time = current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
+    is_proxy_site = overview_repository.has_proxy_device(session, site.id)
+    reference_time = (
+        datetime.now(UTC)
+        if is_proxy_site
+        else current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
+    )
     device_records = explorer_repository.list_devices(
         session, site_id=site.id, feature_slug=feature
     )
@@ -288,7 +293,8 @@ def get_explorer(
                         reference_time,
                         settings.device_stale_after_minutes,
                         settings.device_offline_after_minutes,
-                        demo_mode=settings.demo_mode,
+                        demo_mode=settings.demo_mode and not is_proxy_site,
+                        status_basis="current_utc_time" if is_proxy_site else None,
                     )
                 ),
             )

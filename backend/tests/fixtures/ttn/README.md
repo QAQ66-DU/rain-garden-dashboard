@@ -14,3 +14,10 @@ presented as captured device evidence.
 The full `outflow-a-live-data.json` export and the reference
 `outflow-a-decoder.js` remain exact, read-only, ignored local files. They must
 not be staged or committed.
+
+The other `*-redacted.json` files are minimal privacy-redacted structural derivatives of the seven
+supplied console exports. Values, session data, correlations, and frame counters are synthetic test
+replacements; only formatter shape, approved public device ID, measurement IDs, and decoded type
+labels are retained. `prototype-board-1-redacted.json` and `vision-ai-redacted.json` are empty arrays
+because their exports contain no uplink. No formatter was supplied for `vision-ai`, so it has no
+configured channels.

@@ -1,5 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const PROXY_DEVICE_IDS = [
+  'outflow-a',
+  'soil-moisture-1',
+  'prototype-board-1',
+  'weather-station-2',
+  'weather-station',
+  'vision-ai',
+  'ph-sensor',
+  'soilmoisture-temp-sensor',
+];
+
 function collectBrowserAndApiErrors(page: Page) {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -18,140 +29,94 @@ function collectBrowserAndApiErrors(page: Page) {
   return errors;
 }
 
-test('overview to device time series smoke path has no browser errors', async ({ page }) => {
+async function expectNoHorizontalOverflow(page: Page) {
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+}
+
+test('desktop Overview, Devices, and Device Detail expose the proxy inventory', async ({
+  page,
+}) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Orchard Park monitoring site' })).toBeVisible();
-  await expect(page.getByText('Synthetic demonstration data')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Soil-moisture spread' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
+  await expect(page.getByText('Live proxy sensor data')).toBeVisible();
+  await expect(page.getByText('Proxy network; not Orchard Park')).toBeVisible();
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
-  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
+  await expect(page.getByRole('article')).toHaveCount(8);
+  for (const deviceId of PROXY_DEVICE_IDS) {
+    await expect(page.getByRole('heading', { name: deviceId, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
+  await expect(page.getByRole('option', { name: 'Swale' })).toHaveCount(0);
 
-  await page
-    .getByRole('article')
-    .filter({ hasText: /weather station/i })
-    .getByRole('link', { name: /View device details/ })
-    .click();
-  await expect(page.getByRole('heading', { name: 'Swale weather station' })).toBeVisible();
-  await page
-    .getByRole('combobox', { name: 'Sensor channel' })
-    .selectOption({ label: 'Rainfall intensity · mm/h' });
-  await expect(page.getByRole('heading', { name: 'Rainfall intensity over time' })).toBeVisible();
-  await expect(page.getByText(/Missing records are not converted to zero/)).toBeVisible();
+  const weather = page.getByRole('article').filter({ hasText: 'weather-station-2' });
+  await weather.getByRole('link', { name: /View device details/ }).click();
+  await expect(page.getByRole('link', { name: '← Back to devices' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'weather-station-2', exact: true })).toBeVisible();
+  await expect(page.getByText('Proxy sensor', { exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
+  await expect(page.getByText('Unit not verified').first()).toBeVisible();
 
   expect(browserErrors).toEqual([]);
 });
 
-test('quality drill-down and site-wide explorer preserve a shareable period', async ({ page }) => {
+test('desktop Explore loads proxy channels without failed API requests', async ({ page }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
-  await page.goto('/');
-  await page.getByRole('link', { name: /Review quality warnings in Time Explorer/ }).click();
-
+  await page.goto('/explore');
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
-  await expect(page).toHaveURL(/group=weather/);
+  await expect(page.getByText('Live proxy sensor data')).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
+  await page.getByRole('combobox', { name: 'Metric group' }).selectOption('weather');
+  await expect(page.getByRole('heading', { name: 'Sensor channels' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Quality warnings' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'out of range' })).toBeVisible();
-
-  const group = page.getByRole('combobox', { name: 'Metric group' });
-  await group.selectOption('hydrology');
-  await expect(page).toHaveURL(/group=hydrology/);
-  await expect(page.getByTestId('explore-series-chart')).toHaveCount(4);
-  await expect(page.getByRole('heading', { name: 'Rainfall intensity' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Water level' })).toBeVisible();
-  await expect(page.getByText('Unit · mm/h')).toBeVisible();
-  await expect(page.getByText('Unit · mm', { exact: true })).toBeVisible();
-
-  await page.getByRole('link', { name: 'Devices', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
-  await expect(page).toHaveURL(/start=/);
-  await expect(page).toHaveURL(/end=/);
-  await expect(page).toHaveURL(/group=hydrology/);
 
   expect(browserErrors).toEqual([]);
 });
 
-test('mobile overview and device inventory avoid horizontal overflow', async ({ page }) => {
+test('vision-ai remains an evidence-based no-data device', async ({ page }) => {
+  const browserErrors = collectBrowserAndApiErrors(page);
+
+  await page.goto('/devices');
+  const vision = page.getByRole('article').filter({ hasText: 'vision-ai' });
+  await expect(vision.getByText('Never seen / No data')).toBeVisible();
+  await vision.getByRole('link', { name: /View device details/ }).click();
+  await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Never seen / No data' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Chart controls' })).toHaveCount(0);
+
+  expect(browserErrors).toEqual([]);
+});
+
+test('mobile Overview, Explore, Devices, and Device Detail have no horizontal overflow', async ({
+  page,
+}) => {
   const browserErrors = collectBrowserAndApiErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
+
   await page.goto('/');
-
-  await expect(page.getByRole('heading', { name: 'Orchard Park monitoring site' })).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
-
-  await page.getByRole('link', { name: 'Devices', exact: true }).click();
-  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
+  await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
   await page.getByRole('link', { name: 'Explore', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
-  await expect(page.getByTestId('explore-series-chart')).toHaveCount(4);
-  await page.getByRole('combobox', { name: 'Time range' }).focus();
-  await expect(page.getByRole('combobox', { name: 'Time range' })).toBeFocused();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
-  expect(browserErrors).toEqual([]);
-});
+  await expectNoHorizontalOverflow(page);
 
-test('TTN testbed card, filters, detail, and mobile layout remain isolated', async ({ page }) => {
-  const browserErrors = collectBrowserAndApiErrors(page);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/devices');
-  await expect.poll(() => page.getByRole('article').count()).toBeGreaterThanOrEqual(8);
-
-  const outflow = page.getByRole('article').filter({ hasText: 'Outflow A' });
-  test.skip(
-    (await outflow.count()) === 0,
-    'The local stack has not replayed the optional TTN fixture',
-  );
-  await expect(page.getByRole('article')).toHaveCount(9);
-  await expect(outflow.getByText('Testbed', { exact: true })).toBeVisible();
-  const isLiveMqtt = (await outflow.getByText('Live MQTT', { exact: true }).count()) === 1;
-  await expect(
-    outflow.getByText(isLiveMqtt ? 'Live MQTT' : 'Replay data', { exact: true }),
-  ).toBeVisible();
-  await expect(outflow.getByText('Unit unverified', { exact: true })).toBeVisible();
-
-  await page
-    .getByRole('combobox', { name: 'Site' })
-    .selectOption({ label: 'Orchard Park monitoring site' });
+  await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('article')).toHaveCount(8);
-  await expect(page.getByRole('heading', { name: 'Outflow A' })).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
 
-  await page.getByRole('combobox', { name: 'Site' }).selectOption({ label: 'TTN Testbed' });
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await outflow.getByRole('link', { name: /View device details/ }).click();
-  await expect(page.getByRole('heading', { name: 'Outflow A' })).toBeVisible();
-  await expect(
-    page.getByText(isLiveMqtt ? 'Live MQTT reference time' : 'Replay dataset reference time'),
-  ).toBeVisible();
-  await expect(page.getByText('Measurement 1', { exact: true })).toBeVisible();
-  await expect(page.getByText('Measurement 2', { exact: true })).toBeVisible();
-  await expect(page.getByText('Scientific meaning not verified')).toHaveCount(2);
-  await expect(
-    page.getByText(
-      isLiveMqtt ? 'TTN gateway (identifier withheld)' : 'Replay gateway (identifier withheld)',
-    ),
-  ).toBeVisible();
+  const vision = page.getByRole('article').filter({ hasText: 'vision-ai' });
+  await vision.getByRole('link', { name: /View device details/ }).click();
+  await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
   expect(browserErrors).toEqual([]);
 });

@@ -1,0 +1,24 @@
+{
+  "end_device_ids": {
+    "device_id": "soil-moisture-1",
+    "application_ids": { "application_id": "rain-garden" }
+  },
+  "correlation_ids": ["redacted-correlation-id"],
+  "received_at": "2026-08-05T12:00:00Z",
+  "uplink_message": {
+    "session_key_id": "redacted-session-key",
+    "f_port": 3,
+    "f_cnt": 1,
+    "confirmed": false,
+    "frm_payload": "cmVkYWN0ZWQ=",
+    "decoded_payload": {
+      "valid": true,
+      "err": 0,
+      "messages": [
+        [
+          { "measurementId": 1, "type": "Measurement", "measurementValue": 1 }
+        ]
+      ]
+    }
+  }
+}

@@ -148,10 +148,12 @@ export function ExplorePage() {
   if (overview.isError || !overview.data) {
     return <ErrorState message={overview.error?.message} />;
   }
+  const isProxy =
+    !overview.data.synthetic && overview.data.synthetic_notice?.startsWith('Live proxy') === true;
 
   return (
     <div className="page-stack">
-      <SyntheticBanner />
+      <SyntheticBanner mode={isProxy ? 'proxy' : 'synthetic'} />
       <header className="page-hero">
         <div>
           <p className="eyebrow">Site-wide history</p>
@@ -194,8 +196,14 @@ export function ExplorePage() {
             }}
           >
             <option value="all">All features</option>
-            <option value="swale">Swale</option>
-            <option value="tree-pit">Tree pit</option>
+            {isProxy ? (
+              <option value="proxy-sensors">Proxy sensors</option>
+            ) : (
+              <>
+                <option value="swale">Swale</option>
+                <option value="tree-pit">Tree pit</option>
+              </>
+            )}
           </select>
         </label>
         <label className="filter-field">

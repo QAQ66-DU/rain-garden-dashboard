@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from statistics import median
 from uuid import UUID
 
@@ -29,14 +29,20 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
         raise ServiceError(404, "Site not found", "No matching site exists.", "not_found")
 
     is_replay_site = overview_repository.has_test_device(session, site.id)
-    reference_time = current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
+    is_proxy_site = overview_repository.has_proxy_device(session, site.id)
+    reference_time = (
+        datetime.now(UTC)
+        if is_proxy_site
+        else current_site_reference_time(session, site.id, demo_mode=settings.demo_mode)
+    )
     statuses = [
         calculate_freshness(
             last_seen,
             reference_time,
             settings.device_stale_after_minutes,
             settings.device_offline_after_minutes,
-            demo_mode=settings.demo_mode,
+            demo_mode=settings.demo_mode and not is_proxy_site,
+            status_basis="current_utc_time" if is_proxy_site else None,
         ).status
         for last_seen in overview_repository.device_last_seen_values(session, site.id)
     ]
@@ -91,7 +97,12 @@ def get_overview(session: Session, settings: Settings, site_id: UUID | None) -> 
         display_timezone=site.display_timezone,
         synthetic=settings.demo_mode and not is_replay_site,
         synthetic_notice=(
-            "Offline replay data — not a live TTN connection."
+            (
+                "Live proxy sensor data — these devices are not deployed at Orchard Park; "
+                "physical units remain unverified."
+            )
+            if is_proxy_site
+            else "Offline replay data — not a live TTN connection."
             if is_replay_site
             else (
                 "Synthetic demonstration data — not live observations."

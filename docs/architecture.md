@@ -50,12 +50,14 @@ not enable the existing webhook or create a live connection.
 
 The separately started MQTT path adds a thin transport adapter before the same ApplicationUp
 normaliser. A dedicated worker container is excluded from normal Compose startup by the `live`
-profile and subscribes only to Outflow A. Its composition root injects a shared ingestion service
+profile and subscribes to application-wide uplinks. Its composition root injects a shared ingestion service
 into the MQTT adapter; the MQTT module has no database, model, or repository dependency. TLS,
 credential loading, bounded reconnect, malformed-message containment, and clean shutdown remain in
 the transport layer. Bounded JSON decoding, payload normalisation, device mapping, validation,
 raw preservation, quarantine, idempotency, and one database transaction per message are owned by
-the transport-independent service and repository layers. A future authenticated webhook can call
+the transport-independent service and repository layers. An explicit eight-device allowlist selects
+one evidence-backed mapping or quarantines the event; it never infers a mapping from an unknown
+payload. A future authenticated webhook can call
 the same service without changing storage or public consumers. The API key is read only from the
 ignored local environment and is never part of the FastAPI process.
 
@@ -97,9 +99,11 @@ Device connectivity status is calculated, never stored as unquestioned truth:
 
 Phase 1 demo defaults are 90 and 180 minutes. They are operational presentation settings based on the one-hour synthetic generator, not scientific or manufacturer thresholds. The response includes thresholds, age, reference time, and status basis. In demo mode, the reference time is the maximum dataset receipt time, not wall-clock time. Maintenance/disabled overrides are stored and reported separately.
 
-The isolated TTN test device uses the maximum receipt time for its own replay site and reports
+Live proxy devices use current UTC time for freshness. Offline replay reports
 `replay_dataset_reference_time`. Orchard Park keeps its own site-scoped synthetic reference, so
-replaying later-dated testbed events cannot change Orchard device status.
+proxy events cannot change Orchard device status. When the proxy inventory exists, normal list and
+default-site queries select it and omit synthetic sites; explicit demo/test databases remain
+available through their separate seed workflow.
 
 ## API and privacy boundaries
 

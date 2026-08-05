@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 
@@ -16,13 +17,15 @@ FIXTURE = Path(__file__).parent / "fixtures" / "ttn" / "outflow-a-redacted.json"
 
 def test_live_mqtt_envelope_converts_to_the_existing_canonical_uplink() -> None:
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    application_up = fixture["events"][0]["data"]
+    application_up = copy.deepcopy(fixture["events"][0]["data"])
+    application_up["end_device_ids"]["device_id"] = "outflow-a"
+    application_up["end_device_ids"]["application_ids"]["application_id"] = "rain-garden"
 
     decoded = decode_ttn_application_up(json.dumps(application_up).encode())
     canonical = normalise_application_up(decoded, raw_event=decoded)
 
-    assert canonical.application_id == "synthetic-rain-garden"
-    assert canonical.device_id == "synthetic-outflow-a"
+    assert canonical.application_id == "rain-garden"
+    assert canonical.device_id == "outflow-a"
     assert canonical.f_port == application_up["uplink_message"]["f_port"]
     assert canonical.f_cnt == application_up["uplink_message"]["f_cnt"]
     assert [(item.measurement_id, int(item.value)) for item in canonical.measurements] == [

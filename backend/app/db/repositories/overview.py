@@ -32,6 +32,15 @@ def has_test_device(session: Session, site_id: UUID) -> bool:
     return bool(value)
 
 
+def has_proxy_device(session: Session, site_id: UUID) -> bool:
+    value = session.scalar(
+        select(func.count())
+        .select_from(Device)
+        .where(Device.site_id == site_id, Device.environment == "proxy")
+    )
+    return bool(value)
+
+
 def last_data_update(session: Session, site_id: UUID) -> datetime | None:
     return session.scalar(
         select(func.max(UplinkEvent.received_at))

@@ -1,25 +1,27 @@
 # Live TTN MQTT development worker
 
-The live MQTT path is an explicitly started development worker for the single approved `Outflow A`
-TTN Testbed device. It is not part of the normal Docker Compose startup and it does not change the
-existing TTN Console configuration, Google Sheets webhook, FastAPI webhook scaffold, or Orchard
-Park inventory.
+The live MQTT path is an explicitly started worker for exactly eight approved proxy device IDs in
+the `rain-garden` TTN application. These devices are not deployed at Orchard Park. The worker is not
+part of normal Docker Compose startup and does not change TTN Console, the Google Sheets webhook,
+the FastAPI webhook scaffold, or the separate Orchard Park demo inventory.
 
 ## Architecture and data flow
 
 1. The dedicated `ttn-mqtt-worker` container opens a TLS-authenticated MQTT 3.1.1 connection to the
    configured TTN cluster.
-2. It subscribes only to `v3/rain-garden@ttn/devices/outflow-a/up`.
+2. It subscribes to `v3/rain-garden@ttn/devices/+/up` and the shared ingestion service rejects and
+   quarantines any device ID outside the eight-entry allowlist.
 3. Each message must be a UTF-8 JSON TTN ApplicationUp object. The adapter does not expect the
    outer TTN Live Data console-export event wrapper.
-4. The ApplicationUp object enters the shared Outflow A normaliser and persistence service.
+4. The ApplicationUp object enters the transport-independent shared normaliser and persistence
+   service, which selects the device-specific evidence-backed mapping.
 5. A database transaction privately stores the raw ApplicationUp, creates unverified unitless
    measurements when decoding is valid, updates testbed telemetry, and applies the existing
    deterministic idempotency rule. Unsafe mapped JSON is retained in private quarantine; malformed
    non-JSON messages are discarded without terminating the worker or logging their content.
 
-The scientific query axis is UTC `measured_at`. The reviewed Outflow A payload has no separate,
-verified device observation timestamp, so the adapter currently uses the TTN ApplicationUp
+The scientific query axis is UTC `measured_at`. The reviewed payloads have no separate, verified
+device observation timestamp, so the adapter currently uses the TTN ApplicationUp
 `received_at` timestamp. A future verified device/application observation field would take
 precedence only through an explicitly reviewed payload mapping; otherwise this fallback remains.
 
@@ -36,13 +38,15 @@ only MQTT settings:
 TTN_MQTT_HOST=eu1.cloud.thethings.network
 TTN_MQTT_PORT=8883
 TTN_MQTT_USERNAME=rain-garden@ttn
-TTN_MQTT_TOPIC=v3/rain-garden@ttn/devices/outflow-a/up
+TTN_MQTT_TOPIC=v3/rain-garden@ttn/devices/+/up
 TTN_MQTT_API_KEY=
 ```
 
 Keep the complete read-only TTN Application API key only in the ignored local `.env`; never put it
 in `.env.example`, source code, logs, screenshots, or Git. The worker fails clearly if the key is
 blank, while the normal database, backend, frontend, tests, and offline replay continue to work.
+Run `python -m app.db.seed_ttn_proxy` through Compose to create the same inventory without starting
+MQTT or creating observations; the worker repeats this idempotent inventory step at startup.
 
 ## Start and stop
 
@@ -53,9 +57,9 @@ database dependency:
 docker compose --profile live up --build -d ttn-mqtt-worker
 ```
 
-The Outflow A Device Detail page polls its device and selected-channel queries every 30 seconds while
-the page is open and visible. Background refreshes preserve the current chart if one request fails;
-the browser does not reload the page or change the selected channel.
+The dashboard polls its active live queries every 30 seconds while the page is open and visible.
+Background refreshes preserve cached data if one request fails; the browser does not reload the
+page or change the selected channel.
 
 Stop it cleanly from another terminal:
 
@@ -69,12 +73,25 @@ handoff before activation.
 
 ## Confirm private storage without printing raw uplinks
 
-After TTN has delivered a new Outflow A uplink, run this local aggregate query. It reports only the
-count and latest receipt time, not raw payloads or external identifiers:
+After TTN has delivered new uplinks, use a local aggregate database query that reports only counts,
+approved public device IDs, and latest receipt times. Never select `raw_payload`, decoded JSON,
+session identifiers, DevEUIs, gateway IDs, or credentials.
 
-```bash
-docker compose exec db sh -lc 'psql -U "$POSTGRES_USER" -d "$APP_DB_NAME" -c "SELECT COUNT(*) AS mqtt_raw_uplinks, MAX(ue.received_at) AS latest_received_at FROM uplink_events ue JOIN devices d ON d.id = ue.device_id WHERE ue.source = '\''ttn_mqtt'\'' AND d.display_name = '\''Outflow A'\'' AND d.is_test_device = true;"'
-```
+The approved public IDs are `outflow-a`, `soil-moisture-1`, `prototype-board-1`,
+`weather-station-2`, `weather-station`, `vision-ai`, `ph-sensor`, and
+`soilmoisture-temp-sensor`. `vision-ai` has no supplied formatter or uplink evidence and remains
+`Never seen / No data` with zero channels. No physical unit is confirmed by this integration.
 
-This preparation does not configure TTN, alter the existing Google Sheets webhook, send downlinks,
-or subscribe to any other device.
+| Device                     | Evidence-backed measurement mapping                                                                                                                                  | Remaining uncertainty          |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `outflow-a`                | IDs 1 and 2, generic `Measurement` fields                                                                                                                            | Meaning and units pending      |
+| `soil-moisture-1`          | ID 1, generic `Measurement` field                                                                                                                                    | Meaning and unit pending       |
+| `prototype-board-1`        | No observed uplink; zero channels                                                                                                                                    | Payload and channels pending   |
+| `weather-station-2`        | Air Temperature 4097, Air Humidity 4098, Light Intensity 4099, UV Index 4190, Wind Speed 4105, Wind Direction Sensor 4104, Rain Gauge 4113, Barometric Pressure 4101 | All physical units pending     |
+| `weather-station`          | Same eight decoder-labelled fields as `weather-station-2`                                                                                                            | All physical units pending     |
+| `vision-ai`                | No formatter or observed uplink; zero channels                                                                                                                       | Entire payload mapping pending |
+| `ph-sensor`                | Generic telemetry IDs 4097 and 4106                                                                                                                                  | Meanings and units pending     |
+| `soilmoisture-temp-sensor` | Generic telemetry IDs 4102, 4103, and 4108                                                                                                                           | Meanings and units pending     |
+
+This integration does not configure TTN, alter the existing Google Sheets webhook, send downlinks,
+use the TTN Storage API, or backfill the supplied console exports.

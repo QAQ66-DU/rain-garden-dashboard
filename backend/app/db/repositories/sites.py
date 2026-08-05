@@ -3,7 +3,18 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.models.device import Device
 from app.models.site import Site
+
+
+def get_proxy_site(session: Session) -> Site | None:
+    return session.scalar(
+        select(Site)
+        .join(Device, Device.site_id == Site.id)
+        .where(Device.environment == "proxy", Site.active.is_(True))
+        .order_by(Site.name, Site.id)
+        .limit(1)
+    )
 
 
 def list_sites(
@@ -14,6 +25,9 @@ def list_sites(
 ) -> list[Site]:
     normalized_name = func.lower(Site.name)
     statement = select(Site)
+    proxy_site = get_proxy_site(session)
+    if proxy_site is not None:
+        statement = statement.where(Site.id == proxy_site.id)
     if after is not None:
         name, identifier = after
         statement = statement.where(
@@ -30,4 +44,6 @@ def get_site(session: Session, site_id: UUID) -> Site | None:
 
 
 def get_default_site(session: Session) -> Site | None:
-    return session.scalar(select(Site).where(Site.active.is_(True)).order_by(Site.name, Site.id))
+    return get_proxy_site(session) or session.scalar(
+        select(Site).where(Site.active.is_(True)).order_by(Site.name, Site.id)
+    )

@@ -2,12 +2,11 @@
 
 A portable browser dashboard for an MSc Data Science project investigating LoRaWAN monitoring of rain gardens and related urban green infrastructure.
 
-Phase 0 and Phase 1 are complete. The inventory reflects the confirmed Orchard Park monitoring
-layout, and a site-wide Time Explorer supports bounded historical inspection. Orchard Park
-observations remain deterministic synthetic demonstration data. A separate `TTN Testbed` can replay
-one local TTN console export for parser and UI verification; it is not live ingestion, does not
-confirm physical meanings or units, and is excluded from Orchard Park outputs. The application does
-not calculate hydrological performance scores.
+Phase 0 and Phase 1 are complete. The normal dashboard now presents eight approved TTN proxy
+devices from the `rain-garden` application. They are not deployed at Orchard Park, and their physical
+units remain pending. The confirmed Orchard Park inventory and deterministic synthetic observations
+remain available through the explicit demo seed/test workflow, but are hidden from normal live
+dashboard responses. The application does not calculate hydrological performance scores.
 
 ## Screenshots
 
@@ -24,7 +23,8 @@ not calculate hydrological performance scores.
 - Generated TypeScript API types from FastAPI OpenAPI.
 - Unit, integration, contract, migration, responsive, and browser smoke tests.
 - An isolated, idempotent offline replay command for the local `outflow-a` TTN console export.
-- An opt-in, profile-gated TTN MQTT development worker prepared for the single Outflow A device.
+- An opt-in, profile-gated TTN MQTT worker subscribed to application-wide uplinks for exactly eight
+  approved proxy device IDs.
 
 The outdoor LoRaWAN gateway is infrastructure and is not counted as a monitored sensor device. Numeric demo values and charts display both a unit and its `synthetic_demo_only` provenance; this does not confirm the deployed payload or physical-unit mapping. Missing records remain missing and are never converted to zero.
 
@@ -62,11 +62,11 @@ Host Python and Node.js are optional contributor tools. Dashboard users need nei
    docker compose up -d db
    ```
 
-3. Apply the migration and load the deterministic dataset:
+3. Apply the migration and load the inventory-only proxy catalogue (no observations or API key):
 
    ```bash
    docker compose run --rm backend uv run alembic upgrade head
-   docker compose run --rm backend uv run python -m app.db.seed
+   docker compose run --rm backend uv run python -m app.db.seed_ttn_proxy
    ```
 
 4. Start the API and frontend:
@@ -78,7 +78,18 @@ Host Python and Node.js are optional contributor tools. Dashboard users need nei
 
 Open [http://localhost:5173](http://localhost:5173). The API health endpoint is [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health).
 
-The seed command is idempotent; rerunning it does not duplicate the canonical uplinks or measurements. It never deletes or mixes an older Phase 1 inventory. If an existing demo database still contains that inventory, the seed stops and explains that an explicit demo-only reset is required. After reviewing the scope and confirming that the database contains no required data, run:
+The proxy inventory seed is idempotent and creates exactly eight device records plus their
+evidence-backed channel definitions; it creates no uplinks or measurements. The deterministic
+Orchard Park seed remains an explicit demo/test workflow:
+
+```bash
+docker compose run --rm backend uv run python -m app.db.seed
+```
+
+The demo seed is also idempotent; rerunning it does not duplicate canonical uplinks or measurements.
+It never deletes or mixes an older Phase 1 inventory. If an existing demo database still contains
+that inventory, the seed stops and explains that an explicit demo-only reset is required. After
+reviewing the scope and confirming that the database contains no required data, run:
 
 ```bash
 docker compose run --rm backend uv run python -m app.db.reset_demo --confirm-reset
@@ -101,9 +112,9 @@ docker compose run --rm backend uv run python -m app.scripts.replay_ttn_export \
 ```
 
 The command selects only `as.up.data.forward`, preserves each selected raw event privately, and
-upserts `Outflow A` under the separate `TTN Testbed` site. Run it again to verify that every selected
-uplink is reported as a skipped duplicate. Open the Devices page, then filter Site to `TTN Testbed`
-or select `View device details` on `Outflow A`.
+upserts `outflow-a` under the separate proxy site. Run it again to verify that every selected uplink
+is reported as a skipped duplicate. This compatibility workflow does not create the other seven
+devices unless the live worker inventory initialiser runs.
 
 This workflow needs no TTN API key and makes no TTN request. It did not alter the TTN application,
 devices, payload formatter, downlinks, MQTT configuration, or Google Sheets webhook. Measurement 1
@@ -128,7 +139,7 @@ read-only key have been prepared.
 | `WEBHOOK_BODY_LIMIT_BYTES`                                      | TTN request ceiling                         | Defaults to 262,144 bytes (256 KiB)                    |
 | `TTN_WEBHOOK_ENABLED`, `TTN_WEBHOOK_SECRET`                     | Authenticated future ingestion boundary     | Endpoint remains disabled after valid authentication   |
 | `TTN_MQTT_HOST`, `TTN_MQTT_PORT`                                | Opt-in worker broker connection             | `eu1.cloud.thethings.network`, TLS port `8883`         |
-| `TTN_MQTT_USERNAME`, `TTN_MQTT_TOPIC`                           | Single-device TTN subscription              | Restricted to `rain-garden@ttn` / Outflow A            |
+| `TTN_MQTT_USERNAME`, `TTN_MQTT_TOPIC`                           | Application uplink subscription             | Restricted to `rain-garden@ttn` and eight mapped IDs   |
 | `TTN_MQTT_API_KEY`                                              | MQTT password for the opt-in worker         | Blank by default; local ignored `.env` only            |
 | `PUBLIC_RATE_LIMIT_*`, `INGESTION_RATE_LIMIT_*`                 | Per-process request windows                 | In-memory, single-process only                         |
 | `DEVICE_STALE_AFTER_MINUTES`, `DEVICE_OFFLINE_AFTER_MINUTES`    | Freshness thresholds                        | Calculated against the explicit dataset reference time |
@@ -145,6 +156,8 @@ Run commands from the repository root with Docker:
 ```bash
 docker compose run --rm backend uv run alembic upgrade head
 docker compose run --rm backend uv run alembic check
+docker compose run --rm backend uv run python -m app.db.seed_ttn_proxy
+# Explicit demo/test workflow only:
 docker compose run --rm backend uv run python -m app.db.seed
 ```
 
@@ -159,7 +172,7 @@ or `synthetic_demo_only`; “unknown” is never stored as a physical unit.
 `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the
 database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
-The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Real ingestion remains disabled and will require explicit payload, metric, and physical-unit mapping before a channel can become `confirmed`.
+The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Live proxy channels remain `pending` with nullable units; a channel requires explicit physical-unit evidence before it can become `confirmed`.
 
 Historical queries use half-open UTC windows `[start, end)`, with display times converted to the site's `Europe/London` timezone. Coverage counts schedule-aligned slots from the explicit interval, anchor, and jitter tolerance; it is unavailable rather than inferred when any schedule input is missing. Duplicate-slot observations do not increase received coverage, flagged slots are received but not valid, and missing never means numeric zero. Rainfall duration above zero is shown only with complete valid scheduled coverage.
 
@@ -215,21 +228,22 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
 
 ## Known limitations
 
-- No default-enabled TTN ingestion, live webhook adapter, downlinks, or multi-device MQTT
-  subscriptions. The opt-in MQTT worker is restricted to Outflow A and remains inactive unless the
-  `live` profile is explicitly started with a local key.
+- No live webhook adapter, downlinks, cloud deployment, TTN Storage API backfill, or automatic
+  historical import. The application-wide MQTT worker remains inactive unless the `live` profile is
+  explicitly started with a local key and accepts only the eight mapped device IDs.
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
 - No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.
 - No downsampling or persisted rollups; raw observations and Explorer drill-downs are bounded and rejected above the configured ceiling.
 - Synthetic status thresholds are configurable operational defaults, not scientifically confirmed values.
-- Deployed physical units, reporting schedules, water-level datum, and the tree-pit probe's depth/channel layout remain unconfirmed. The UI labels demo-normalised units and shows the tree-pit device as configuration pending.
+- Proxy physical units, reporting schedules, and several decoded numeric meanings remain
+  unconfirmed. `prototype-board-1` and `vision-ai` have no observed uplink evidence, and `vision-ai`
+  has no supplied formatter; both therefore have zero configured channels.
 - Software licensing remains unresolved pending university, supervisor, and partner confirmation; no licence file is included.
 
 ## Scope boundary
 
-The remaining later roadmap work is not implemented. The fixture-driven `outflow-a` decoder adapter
-does not establish physical quantity or unit mappings and cannot be promoted to live ingestion
-without a separate review. The repository contains no rainfall-event analysis, hydrological formula,
-machine-learning result, or performance score. The legacy Replit prototype remains requirements-only
-and is not a package, service, build input, or runtime dependency.
+The repository contains no rainfall-event analysis, hydrological formula, machine-learning or
+camera result, performance score, cloud deployment, or historical backfill. Decoder labels do not
+establish physical units. The legacy Replit prototype remains requirements-only and is not a
+package, service, build input, or runtime dependency.

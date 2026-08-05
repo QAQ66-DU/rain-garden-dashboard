@@ -13,9 +13,10 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from app.ingestion.ttn_devices import TTN_DEVICE_MAPPINGS
+
 FORWARD_EVENT_NAME = "as.up.data.forward"
-PARSER_VERSION = "outflow-a-console-v1"
-SUPPORTED_MEASUREMENT_IDS = {1, 2}
+PARSER_VERSION = "rain-garden-application-up-v2"
 
 
 class TTNReplayParseError(ValueError):
@@ -113,10 +114,22 @@ def _decimal(value: Any) -> Decimal | None:
     return parsed if parsed.is_finite() else None
 
 
+def _measurement_id(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value)
+    return None
+
+
 def _flatten_messages(decoded: dict[str, Any]) -> list[dict[str, Any]] | None:
     groups = decoded.get("messages")
     if not isinstance(groups, list):
         return None
+    if all(isinstance(message, dict) for message in groups):
+        return groups
     messages: list[dict[str, Any]] = []
     for group in groups:
         if not isinstance(group, list):
@@ -138,15 +151,28 @@ def _normalise_status(messages: list[dict[str, Any]]) -> NormalisedStatus | None
         ),
         None,
     )
-    if status is None:
+    battery_message = next(
+        (message for message in messages if message.get("type") == "upload_battery"),
+        None,
+    )
+    interval_message = next(
+        (message for message in messages if message.get("type") == "upload_interval"),
+        None,
+    )
+    if status is None and battery_message is None and interval_message is None:
         return None
+    status = status or {}
+    battery_message = battery_message or {}
+    interval_message = interval_message or {}
     firmware = status.get("Firmware Version")
     hardware = status.get("Hardware Version")
     return NormalisedStatus(
-        battery_percent=_decimal(status.get("Battery(%)")),
+        battery_percent=_decimal(status.get("Battery(%)", battery_message.get("battery"))),
         firmware_version=str(firmware) if firmware is not None else None,
         hardware_version=str(hardware) if hardware is not None else None,
-        measurement_interval_value=_decimal(status.get("measureInterval")),
+        measurement_interval_value=_decimal(
+            status.get("measureInterval", interval_message.get("interval"))
+        ),
         threshold_measurement_interval_value=_decimal(status.get("thresholdMeasureInterval")),
     )
 
@@ -195,6 +221,7 @@ def normalise_application_up(
         "missing_device_identifier",
         "TTN device_id is required",
     )
+    mapping = TTN_DEVICE_MAPPINGS.get(device_id)
     received_at = _parse_datetime(payload.get("received_at"))
     uplink = _require_mapping(
         payload.get("uplink_message"),
@@ -231,18 +258,37 @@ def normalise_application_up(
             invalid_reason = "malformed_decoded_messages"
         else:
             status = _normalise_status(messages)
-            measurement_messages = [
-                message for message in messages if message.get("type") == "Measurement"
-            ]
-            identifiers_seen = {message.get("measurementId") for message in measurement_messages}
-            if not identifiers_seen.issubset(SUPPORTED_MEASUREMENT_IDS):
+            channel_mappings = (
+                {channel.measurement_id: channel for channel in mapping.channels}
+                if mapping is not None
+                else {}
+            )
+            measurement_messages = [message for message in messages if "measurementId" in message]
+            identifiers_seen = {
+                _measurement_id(message.get("measurementId")) for message in measurement_messages
+            }
+            types_match = True
+            for message in measurement_messages:
+                mapped_id = _measurement_id(message.get("measurementId"))
+                if (
+                    mapped_id is None
+                    or mapped_id not in channel_mappings
+                    or message.get("type") != channel_mappings[mapped_id].decoded_type
+                ):
+                    types_match = False
+                    break
+            if (
+                mapping is None
+                or not identifiers_seen.issubset(channel_mappings)
+                or not types_match
+            ):
                 decoded_valid = False
                 invalid_reason = "unmapped_measurement_id"
             else:
                 for message in measurement_messages:
-                    measurement_id = message.get("measurementId")
+                    measurement_id = _measurement_id(message.get("measurementId"))
                     value = _decimal(message.get("measurementValue"))
-                    if not isinstance(measurement_id, int) or value is None:
+                    if measurement_id is None or value is None:
                         decoded_valid = False
                         invalid_reason = "malformed_measurement"
                         measurements.clear()

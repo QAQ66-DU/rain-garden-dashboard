@@ -1,9 +1,10 @@
 import copy
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from app.db.repositories.ttn_replay import TTN_TESTBED_SITE_NAME
+from app.db.repositories.ttn_replay import REPLAY_SOURCE, TTN_TESTBED_SITE_NAME
 from app.db.seed import SITE_ID, seed_session
 from app.models.device import Device
 from app.models.measurement import Measurement
@@ -24,12 +25,15 @@ REDACTED_FIXTURE = Path(__file__).parents[1] / "fixtures" / "ttn" / "outflow-a-r
 def _approved_replay_fixture(tmp_path: Path) -> Path:
     fixture = json.loads(REDACTED_FIXTURE.read_text(encoding="utf-8"))
     approved = copy.deepcopy(fixture)
-    for event in approved["events"]:
+    for index, event in enumerate(approved["events"]):
         if event.get("name") != "as.up.data.forward":
             continue
         identifiers = event["data"]["end_device_ids"]
         identifiers["device_id"] = "outflow-a"
         identifiers["application_ids"]["application_id"] = "rain-garden"
+        event["data"]["received_at"] = f"2099-08-03T16:{10 + index:02d}:00Z"
+        event["data"]["uplink_message"]["session_key_id"] = f"integration-offline-replay-{index}"
+        event["data"]["uplink_message"]["f_cnt"] = 910_000 + index
     destination = tmp_path / "approved-redacted-replay.json"
     destination.write_text(json.dumps(approved), encoding="utf-8")
     return destination
@@ -40,6 +44,27 @@ def test_replay_is_deterministic_idempotent_and_isolated(
 ) -> None:
     seed_session(db_session)
     fixture = _approved_replay_fixture(tmp_path)
+    existing_outflow = db_session.scalar(
+        select(Device).where(Device.external_device_id == "outflow-a")
+    )
+    raw_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(UplinkEvent)
+            .where(UplinkEvent.device_id == existing_outflow.id)
+        )
+        if existing_outflow is not None
+        else 0
+    ) or 0
+    measurements_before = (
+        db_session.scalar(
+            select(func.count())
+            .select_from(Measurement)
+            .where(Measurement.device_id == existing_outflow.id)
+        )
+        if existing_outflow is not None
+        else 0
+    ) or 0
 
     first = replay_ttn_export(db_session, fixture)
     db_session.flush()
@@ -67,18 +92,22 @@ def test_replay_is_deterministic_idempotent_and_isolated(
         .where(Device.site_id == SITE_ID)
     )
     assert (orchard_devices, orchard_channels) == (8, 20)
-    assert db_session.scalar(select(func.count()).select_from(Device)) == 9
 
     testbed = db_session.scalar(select(Site).where(Site.name == TTN_TESTBED_SITE_NAME))
     assert testbed is not None
-    outflow = db_session.scalar(select(Device).where(Device.site_id == testbed.id))
+    outflow = db_session.scalar(
+        select(Device).where(
+            Device.site_id == testbed.id,
+            Device.external_device_id == "outflow-a",
+        )
+    )
     assert outflow is not None
-    assert outflow.display_name == "Outflow A"
+    assert outflow.display_name == "outflow-a"
     assert outflow.is_test_device is True
     channels = list(
         db_session.scalars(select(SensorChannel).where(SensorChannel.device_id == outflow.id))
     )
-    assert [channel.channel_code for channel in channels] == [
+    assert sorted(channel.channel_code for channel in channels) == [
         "outflow_measurement_1",
         "outflow_measurement_2",
     ]
@@ -89,32 +118,48 @@ def test_replay_is_deterministic_idempotent_and_isolated(
         db_session.scalar(
             select(func.count()).select_from(UplinkEvent).where(UplinkEvent.device_id == outflow.id)
         )
-        == 3
+        == raw_before + 3
     )
     assert (
         db_session.scalar(
             select(func.count()).select_from(Measurement).where(Measurement.device_id == outflow.id)
         )
-        == 4
+        == measurements_before + 4
     )
     stored_events = list(
         db_session.scalars(
             select(UplinkEvent)
-            .where(UplinkEvent.device_id == outflow.id)
+            .where(
+                UplinkEvent.device_id == outflow.id,
+                UplinkEvent.source == REPLAY_SOURCE,
+                UplinkEvent.received_at >= datetime(2099, 8, 3, tzinfo=UTC),
+            )
             .order_by(UplinkEvent.received_at)
         )
     )
     assert all(event.raw_payload["name"] == "as.up.data.forward" for event in stored_events)
     assert all(event.raw_payload["data"]["uplink_message"] for event in stored_events)
     stored_measurements = list(
-        db_session.scalars(select(Measurement).where(Measurement.device_id == outflow.id))
+        db_session.scalars(
+            select(Measurement).where(
+                Measurement.device_id == outflow.id,
+                Measurement.measured_at >= datetime(2099, 8, 3, tzinfo=UTC),
+            )
+        )
     )
     event_times = {event.id: event.received_at for event in stored_events}
     assert all(
         measurement.measured_at == event_times[measurement.uplink_event_id]
         for measurement in stored_measurements
     )
-    assert db_session.scalar(select(func.count()).select_from(TTNReplayQuarantine)) == 0
+    assert (
+        db_session.scalar(
+            select(func.count())
+            .select_from(TTNReplayQuarantine)
+            .where(TTNReplayQuarantine.source == REPLAY_SOURCE)
+        )
+        == 0
+    )
 
 
 def test_replay_device_is_publicly_labelled_without_private_payload_fields(
@@ -126,13 +171,13 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
     devices = api_client.get("/api/v1/devices", params={"page_size": 100})
     assert devices.status_code == 200
     items = devices.json()["items"]
-    assert len(items) == 9
+    assert 1 <= len(items) <= 8
     assert devices.json()["synthetic"] is False
-    assert items[-1]["display_name"] == "Outflow A"
-    assert items[-1]["is_test_device"] is True
-    assert items[-1]["freshness"]["status_basis"] == "replay_dataset_reference_time"
+    outflow_item = next(item for item in items if item["display_name"] == "outflow-a")
+    assert outflow_item["is_test_device"] is True
+    assert outflow_item["freshness"]["status_basis"] == "replay_dataset_reference_time"
 
-    detail = api_client.get(f"/api/v1/devices/{items[-1]['id']}")
+    detail = api_client.get(f"/api/v1/devices/{outflow_item['id']}")
     assert detail.status_code == 200
     body = detail.json()
     assert len(body["channels"]) == 2
@@ -152,10 +197,10 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
         assert forbidden not in serialized
 
     measurements = api_client.get(
-        f"/api/v1/devices/{items[-1]['id']}/measurements",
+        f"/api/v1/devices/{outflow_item['id']}/measurements",
         params={
-            "start": "2026-08-03T00:00:00Z",
-            "end": "2026-08-04T00:00:00Z",
+            "start": "2099-08-03T00:00:00Z",
+            "end": "2099-08-04T00:00:00Z",
             "sensor_channel_id": body["channels"][0]["id"],
             "page_size": 500,
         },

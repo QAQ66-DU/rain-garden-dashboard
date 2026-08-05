@@ -28,7 +28,7 @@ def test_health_and_security_headers(api_client: TestClient) -> None:
 
 
 def test_overview_is_channel_aware_and_synthetic(api_client: TestClient) -> None:
-    response = api_client.get("/api/v1/overview")
+    response = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
 
     assert response.status_code == 200
     body = response.json()
@@ -50,7 +50,7 @@ def test_overview_is_channel_aware_and_synthetic(api_client: TestClient) -> None
 
 def test_public_responses_exclude_private_fields(api_client: TestClient) -> None:
     site = api_client.get(f"/api/v1/sites/{SITE_ID}")
-    devices = api_client.get("/api/v1/devices")
+    devices = api_client.get("/api/v1/devices", params={"site_id": str(SITE_ID)})
     detail = api_client.get(f"/api/v1/devices/{WEATHER_DEVICE_ID}")
 
     assert site.status_code == devices.status_code == detail.status_code == 200
@@ -122,7 +122,7 @@ def test_oversized_raw_result_is_rejected(db_session: Session) -> None:
 
 
 def test_confirmed_inventory_features_and_pending_tree_probe(api_client: TestClient) -> None:
-    devices = api_client.get("/api/v1/devices", params={"page_size": 100})
+    devices = api_client.get("/api/v1/devices", params={"page_size": 100, "site_id": str(SITE_ID)})
     tree = api_client.get(f"/api/v1/devices/{TREE_PROBE_ID}")
 
     assert devices.status_code == tree.status_code == 200
@@ -139,7 +139,9 @@ def test_confirmed_inventory_features_and_pending_tree_probe(api_client: TestCli
 
 
 def test_feature_filter_returns_only_swale_devices(api_client: TestClient) -> None:
-    response = api_client.get("/api/v1/devices", params={"feature": "swale"})
+    response = api_client.get(
+        "/api/v1/devices", params={"feature": "swale", "site_id": str(SITE_ID)}
+    )
 
     assert response.status_code == 200
     assert len(response.json()["items"]) == 7
@@ -198,6 +200,7 @@ def test_explorer_uses_half_open_periods_and_schedule_aligned_coverage(
             "start": "2026-05-25T12:00:00Z",
             "end": "2026-06-01T12:00:00Z",
             "metric_group": "hydrology",
+            "site_id": str(SITE_ID),
         },
     )
 
@@ -269,6 +272,7 @@ def test_explorer_feature_and_channel_selection_are_explicit(api_client: TestCli
             "end": "2026-06-01T12:00:00Z",
             "feature": "tree-pit",
             "metric_group": "soil",
+            "site_id": str(SITE_ID),
         },
     )
     assert tree.status_code == 200
@@ -282,6 +286,7 @@ def test_explorer_feature_and_channel_selection_are_explicit(api_client: TestCli
             "start": "2026-05-25T12:00:00Z",
             "end": "2026-06-01T12:00:00Z",
             "metric_group": "hydrology",
+            "site_id": str(SITE_ID),
         },
     ).json()
     channel_id = hydrology["available_channels"][0]["channel_id"]
@@ -292,6 +297,7 @@ def test_explorer_feature_and_channel_selection_are_explicit(api_client: TestCli
             "end": "2026-06-01T12:00:00Z",
             "metric_group": "hydrology",
             "channels": channel_id,
+            "site_id": str(SITE_ID),
         },
     )
     assert selected.status_code == 200
@@ -308,6 +314,7 @@ def test_explorer_empty_period_reports_missing_slots_without_zero_fill(
             "start": "2026-05-01T12:00:00Z",
             "end": "2026-05-01T13:00:00Z",
             "metric_group": "hydrology",
+            "site_id": str(SITE_ID),
         },
     )
 
@@ -330,6 +337,7 @@ def test_explorer_does_not_infer_unknown_reporting_schedule(
             "start": "2026-05-25T12:00:00Z",
             "end": "2026-05-25T13:00:00Z",
             "metric_group": "hydrology",
+            "site_id": str(SITE_ID),
         },
     ).json()
     channel_id = initial["available_channels"][0]["channel_id"]
@@ -347,6 +355,7 @@ def test_explorer_does_not_infer_unknown_reporting_schedule(
             "end": "2026-05-25T13:00:00Z",
             "metric_group": "hydrology",
             "channels": channel_id,
+            "site_id": str(SITE_ID),
         },
     )
 
@@ -369,7 +378,12 @@ def test_explorer_rejects_invalid_periods(
 ) -> None:
     response = api_client.get(
         "/api/v1/explore",
-        params={"start": start, "end": end, "metric_group": "hydrology"},
+        params={
+            "start": start,
+            "end": end,
+            "metric_group": "hydrology",
+            "site_id": str(SITE_ID),
+        },
     )
 
     assert response.status_code == 422

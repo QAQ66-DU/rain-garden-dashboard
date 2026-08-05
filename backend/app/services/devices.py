@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.db.repositories import devices as device_repository
+from app.db.repositories import sites as site_repository
 from app.db.repositories.measurements import current_reference_time
 from app.metric_catalog import METRICS_BY_CODE, get_unit
 from app.models.enums import DeviceType
@@ -51,9 +52,11 @@ def _device_public(
         demo_mode=settings.demo_mode,
         status_basis=(
             "live_mqtt_reference_time"
-            if row.device.is_test_device and row.device.ingestion_mode == "live_mqtt"
+            if row.device.ingestion_mode == "live_mqtt"
             else "replay_dataset_reference_time"
-            if row.device.is_test_device
+            if row.device.ingestion_mode == "offline_replay"
+            else "current_utc_time"
+            if row.device.environment == "proxy"
             else None
         ),
     )
@@ -104,13 +107,17 @@ def list_devices(
     status: ConnectivityStatus | None,
 ) -> DeviceList:
     reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
+    resolved_site_id = site_id
+    if resolved_site_id is None:
+        default_site = site_repository.get_default_site(session)
+        resolved_site_id = default_site.id if default_site is not None else None
     after = decode_device_cursor(cursor) if cursor else None
     rows = device_repository.list_devices(
         session,
         page_size=page_size,
         after=after,
         search=search,
-        site_id=site_id,
+        site_id=resolved_site_id,
         feature_slug=feature_slug,
         device_type=_validate_device_type(device_type),
         status=status,
@@ -120,7 +127,15 @@ def list_devices(
     )
     has_more = len(rows) > page_size
     rows = rows[:page_size]
-    item_reference_times = [row.site_reference_time or reference_time for row in rows]
+    current_utc = datetime.now(UTC)
+    item_reference_times = [
+        (
+            current_utc
+            if row.device.environment == "proxy" and row.device.ingestion_mode != "offline_replay"
+            else row.site_reference_time or reference_time
+        )
+        for row in rows
+    ]
     latest = device_repository.latest_measurements_by_channel(
         session, [row.device.id for row in rows]
     )
@@ -140,7 +155,12 @@ def list_devices(
             _device_public(
                 row,
                 latest.get(row.device.id, []),
-                reference_time=row.site_reference_time or reference_time,
+                reference_time=(
+                    current_utc
+                    if row.device.environment == "proxy"
+                    and row.device.ingestion_mode != "offline_replay"
+                    else row.site_reference_time or reference_time
+                ),
                 settings=settings,
             )
             for row in rows
@@ -159,7 +179,11 @@ def get_device(session: Session, settings: Settings, device_id: UUID) -> DeviceD
             404, "Device not found", "The requested device does not exist.", "not_found"
         )
     fallback_reference_time = current_reference_time(session, demo_mode=settings.demo_mode)
-    reference_time = row.site_reference_time or fallback_reference_time
+    reference_time = (
+        datetime.now(UTC)
+        if row.device.environment == "proxy" and row.device.ingestion_mode != "offline_replay"
+        else row.site_reference_time or fallback_reference_time
+    )
     latest = device_repository.latest_measurements_by_channel(session, [device_id]).get(
         device_id, []
     )

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ttn_mqtt_host: str = "eu1.cloud.thethings.network"
     ttn_mqtt_port: int = Field(default=8883, ge=1, le=65_535)
     ttn_mqtt_username: str = "rain-garden@ttn"
-    ttn_mqtt_topic: str = "v3/rain-garden@ttn/devices/outflow-a/up"
+    ttn_mqtt_topic: str = "v3/rain-garden@ttn/devices/+/up"
     ttn_mqtt_api_key: SecretStr | None = None
 
     public_rate_limit_requests: int = Field(default=120, ge=1, le=10_000)

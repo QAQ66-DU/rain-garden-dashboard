@@ -39,7 +39,7 @@ The implementation separates:
    mapping, and writes normalized testbed records; and
 4. the local replay command, which reads the file and reports outcomes.
 
-The replay upserts one `Outflow A` test device under the separate `TTN Testbed` site and monitoring
+The replay upserts one `outflow-a` test device under the separate `TTN proxy network` site and monitoring
 feature. It never associates the device with Orchard Park. Orchard Park Overview, Explorer, device
 counts, availability, quality warnings, and summaries remain site-scoped and unchanged.
 
@@ -87,7 +87,7 @@ forwarded uplink.
 ## What remains unimplemented
 
 The offline command never starts a live connection. A separate profile-gated MQTT development
-worker is now prepared only for Outflow A, while the live webhook, production authentication,
+worker now accepts the eight explicitly mapped application devices, while the live webhook, production authentication,
 retention policy, and confirmed scientific payload mapping remain unimplemented. Controlled live
 use still requires confirmed fields, quantities, units, scaling and signedness, timestamp rules,
 reporting schedules, sensor specifications, key rotation, and a clean inventory-only database.

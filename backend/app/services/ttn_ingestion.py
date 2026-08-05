@@ -13,7 +13,7 @@ from app.db.repositories.ttn_replay import (
 )
 from app.db.repositories.ttn_replay import (
     OFFLINE_REPLAY_CONTEXT,
-    ensure_ttn_testbed_inventory,
+    ensure_ttn_proxy_inventory,
     persist_ttn_uplink,
     quarantine_event,
 )
@@ -70,7 +70,7 @@ def ingest_normalised_ttn_uplink(
     session: Session,
     uplink: NormalisedTTNUplink,
     *,
-    device: Device,
+    device: Device | None,
     context: TTNIngestionContext = OFFLINE_REPLAY_CONTEXT,
 ) -> PersistResult:
     """Persist one transport-independent, normalized TTN ApplicationUp."""
@@ -90,7 +90,11 @@ def ingest_ttn_application_up(
     from app.db.sync_catalog import sync_metric_catalog
 
     sync_metric_catalog(session)
-    device = ensure_ttn_testbed_inventory(session, context=context)
+    devices = ensure_ttn_proxy_inventory(
+        session,
+        context=context,
+        include_all_devices=context.source == LIVE_MQTT_CONTEXT.source,
+    )
     try:
         uplink = normalise_application_up(payload, raw_event=raw_event)
     except TTNReplayParseError as exc:
@@ -102,7 +106,12 @@ def ingest_ttn_application_up(
             source=context.source,
         )
         return PersistResult("quarantined" if created else "duplicate_quarantine")
-    return ingest_normalised_ttn_uplink(session, uplink, device=device, context=context)
+    return ingest_normalised_ttn_uplink(
+        session,
+        uplink,
+        device=devices.get(uplink.device_id),
+        context=context,
+    )
 
 
 class TTNIngestionService:

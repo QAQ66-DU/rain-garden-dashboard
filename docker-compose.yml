@@ -77,7 +77,7 @@ services:
       TTN_MQTT_HOST: ${TTN_MQTT_HOST:-eu1.cloud.thethings.network}
       TTN_MQTT_PORT: ${TTN_MQTT_PORT:-8883}
       TTN_MQTT_USERNAME: ${TTN_MQTT_USERNAME:-rain-garden@ttn}
-      TTN_MQTT_TOPIC: ${TTN_MQTT_TOPIC:-v3/rain-garden@ttn/devices/outflow-a/up}
+      TTN_MQTT_TOPIC: ${TTN_MQTT_TOPIC:-v3/rain-garden@ttn/devices/+/up}
       TTN_MQTT_API_KEY: ${TTN_MQTT_API_KEY:-}
     volumes:
       - ./backend:/app

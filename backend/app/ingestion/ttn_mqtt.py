@@ -10,6 +10,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion, MQTTProtocolVersion
 
 from app.core.config import Settings
+from app.ingestion.ttn_devices import TTN_APPLICATION_UP_TOPIC
 from app.services.ttn_ingestion import (
     DEFAULT_TTN_PAYLOAD_LIMIT_BYTES,
     LIVE_MQTT_CONTEXT,
@@ -21,7 +22,6 @@ from app.services.ttn_ingestion import (
 
 logger = logging.getLogger(__name__)
 
-OUTFLOW_A_TOPIC = "v3/rain-garden@ttn/devices/outflow-a/up"
 MIN_RECONNECT_DELAY_SECONDS = 1
 MAX_RECONNECT_DELAY_SECONDS = 30
 
@@ -41,9 +41,9 @@ class TTNJSONIngestor(Protocol):
 
 
 def require_mqtt_api_key(settings: Settings) -> str:
-    if settings.ttn_mqtt_topic != OUTFLOW_A_TOPIC:
+    if settings.ttn_mqtt_topic != TTN_APPLICATION_UP_TOPIC:
         raise MQTTConfigurationError(
-            "TTN_MQTT_TOPIC must remain restricted to the approved Outflow A uplink topic"
+            "TTN_MQTT_TOPIC must use the approved rain-garden application uplink topic"
         )
     if settings.ttn_mqtt_api_key is None:
         raise MQTTConfigurationError(
@@ -123,7 +123,7 @@ def build_mqtt_client(
             logger.error("TTN MQTT connection rejected; reason=%s", reason_code)
             return
         connected_client.subscribe(settings.ttn_mqtt_topic)
-        logger.info("Connected to TTN MQTT and subscribed to the approved Outflow A topic")
+        logger.info("Connected to TTN MQTT and subscribed to the approved application uplink topic")
 
     def on_disconnect(
         _client: mqtt.Client,
