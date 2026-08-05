@@ -19,7 +19,7 @@ from app.models.device import Device
 from app.models.measurement import Measurement
 from app.models.site import Site
 from app.models.uplink_event import UplinkEvent
-from app.services.ttn_ingestion import ingest_ttn_application_up
+from app.services.ttn_ingestion import TTNIngestionService, ingest_ttn_application_up
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
@@ -49,7 +49,7 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
     def session_scope() -> Generator[Session]:
         yield db_session
 
-    processor = MQTTMessageProcessor(session_scope)
+    processor = MQTTMessageProcessor(TTNIngestionService(session_scope))
     first = processor.process(message.payload)
     db_session.flush()
     second = processor.process(message.payload)

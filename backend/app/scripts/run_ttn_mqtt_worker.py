@@ -4,7 +4,9 @@ import logging
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.ingestion.ttn_mqtt import MQTTConfigurationError, run_mqtt_worker
+from app.db.session import SessionLocal
+from app.ingestion.ttn_mqtt import MQTTConfigurationError, MQTTMessageProcessor, run_mqtt_worker
+from app.services.ttn_ingestion import TTNIngestionService
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +14,12 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
+    processor = MQTTMessageProcessor(
+        TTNIngestionService(SessionLocal.begin),
+        max_payload_bytes=settings.webhook_body_limit_bytes,
+    )
     try:
-        run_mqtt_worker(settings)
+        run_mqtt_worker(settings, processor=processor)
     except MQTTConfigurationError as exc:
         logger.error(str(exc))
         raise SystemExit(2) from None

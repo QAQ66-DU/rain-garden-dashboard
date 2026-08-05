@@ -50,11 +50,14 @@ not enable the existing webhook or create a live connection.
 
 The separately started MQTT path adds a thin transport adapter before the same ApplicationUp
 normaliser. A dedicated worker container is excluded from normal Compose startup by the `live`
-profile, subscribes only to Outflow A, and creates one database transaction per message. TLS,
+profile and subscribes only to Outflow A. Its composition root injects a shared ingestion service
+into the MQTT adapter; the MQTT module has no database, model, or repository dependency. TLS,
 credential loading, bounded reconnect, malformed-message containment, and clean shutdown remain in
-the transport layer; mapping, raw preservation, quarantine, idempotency, and measurement creation
-remain in shared services and repositories. The API key is read only from the ignored local
-environment and is never part of the FastAPI process.
+the transport layer. Bounded JSON decoding, payload normalisation, device mapping, validation,
+raw preservation, quarantine, idempotency, and one database transaction per message are owned by
+the transport-independent service and repository layers. A future authenticated webhook can call
+the same service without changing storage or public consumers. The API key is read only from the
+ignored local environment and is never part of the FastAPI process.
 
 ## Data model
 

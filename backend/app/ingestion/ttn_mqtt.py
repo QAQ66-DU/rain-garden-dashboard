@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-import json
 import logging
 import signal
 import ssl
-from collections.abc import Callable
-from contextlib import AbstractContextManager
 from threading import Event
-from typing import Any
+from typing import Any, Protocol
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion, MQTTProtocolVersion
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.repositories.ttn_replay import LIVE_MQTT_CONTEXT, PersistResult
-from app.services.ttn_ingestion import ingest_ttn_application_up
+from app.services.ttn_ingestion import (
+    DEFAULT_TTN_PAYLOAD_LIMIT_BYTES,
+    LIVE_MQTT_CONTEXT,
+    PersistResult,
+    TTNApplicationUpPayloadError,
+    TTNIngestionContext,
+    TTNIngestionPersistenceError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,19 @@ OUTFLOW_A_TOPIC = "v3/rain-garden@ttn/devices/outflow-a/up"
 MIN_RECONNECT_DELAY_SECONDS = 1
 MAX_RECONNECT_DELAY_SECONDS = 30
 
-SessionScope = Callable[[], AbstractContextManager[Session]]
-
 
 class MQTTConfigurationError(ValueError):
     pass
 
 
-class MQTTMessageError(ValueError):
-    pass
+class TTNJSONIngestor(Protocol):
+    def ingest_json(
+        self,
+        payload: bytes,
+        *,
+        context: TTNIngestionContext,
+        max_payload_bytes: int,
+    ) -> PersistResult: ...
 
 
 def require_mqtt_api_key(settings: Settings) -> str:
@@ -52,47 +57,32 @@ def require_mqtt_api_key(settings: Settings) -> str:
     return api_key
 
 
-def decode_mqtt_application_up(
-    payload: bytes, *, max_payload_bytes: int = 262_144
-) -> dict[str, Any]:
-    if len(payload) > max_payload_bytes:
-        raise MQTTMessageError("MQTT message exceeds the configured payload limit")
-    try:
-        decoded = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise MQTTMessageError("MQTT message must contain a valid UTF-8 JSON object") from exc
-    if not isinstance(decoded, dict):
-        raise MQTTMessageError("MQTT message must contain a JSON object")
-    return decoded
-
-
 class MQTTMessageProcessor:
-    def __init__(self, session_scope: SessionScope, *, max_payload_bytes: int = 262_144) -> None:
-        self._session_scope = session_scope
+    """Thin MQTT adapter that delegates each message to the shared ingestion service."""
+
+    def __init__(
+        self,
+        ingestor: TTNJSONIngestor,
+        *,
+        max_payload_bytes: int = DEFAULT_TTN_PAYLOAD_LIMIT_BYTES,
+    ) -> None:
+        self._ingestor = ingestor
         self._max_payload_bytes = max_payload_bytes
 
     def process(self, payload: bytes) -> PersistResult | None:
         try:
-            application_up = decode_mqtt_application_up(
+            result = self._ingestor.ingest_json(
                 payload,
+                context=LIVE_MQTT_CONTEXT,
                 max_payload_bytes=self._max_payload_bytes,
             )
-        except MQTTMessageError:
+        except TTNApplicationUpPayloadError:
             logger.warning("Discarded malformed TTN MQTT message")
             return None
-
-        try:
-            with self._session_scope() as session:
-                result = ingest_ttn_application_up(
-                    session,
-                    application_up,
-                    raw_event=application_up,
-                    context=LIVE_MQTT_CONTEXT,
-                )
-        except SQLAlchemyError as exc:
+        except TTNIngestionPersistenceError as exc:
             logger.error(
                 "Failed to process TTN MQTT message; error_type=%s",
-                type(exc).__name__,
+                exc.error_type,
             )
             return None
 
@@ -158,15 +148,13 @@ def build_mqtt_client(
     return client
 
 
-def run_mqtt_worker(settings: Settings, *, stop_event: Event | None = None) -> None:
+def run_mqtt_worker(
+    settings: Settings,
+    *,
+    processor: MQTTMessageProcessor,
+    stop_event: Event | None = None,
+) -> None:
     api_key = require_mqtt_api_key(settings)
-
-    from app.db.session import SessionLocal
-
-    processor = MQTTMessageProcessor(
-        SessionLocal.begin,
-        max_payload_bytes=settings.webhook_body_limit_bytes,
-    )
     client = build_mqtt_client(settings, api_key=api_key, processor=processor)
     resolved_stop_event = stop_event or Event()
 

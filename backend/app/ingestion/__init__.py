@@ -1,1 +1,1 @@
-"""Canonical ingestion boundary; no real TTN payload adapter exists in Phase 1."""
+"""Transport adapters for canonical ingestion; domain logic remains in shared services."""
