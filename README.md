@@ -17,7 +17,8 @@ dashboard responses. The application does not calculate hydrological performance
 - A responsive Overview with device freshness, rainfall, quality, and channel-aware soil-moisture spread.
 - A site-wide Time Explorer with shareable UTC periods, feature/metric/channel filters, synchronized unit-separated charts, schedule-aligned coverage, and a safe quality-warning drill-down.
 - A searchable/filterable public device inventory.
-- A device detail view with per-channel latest values and a selectable, bounded seven-day raw time series.
+- A device detail view with per-channel latest values, shareable 24-hour, 7-day, 30-day or custom
+  raw time ranges, and privacy-reviewed CSV export for the selected device channel and period.
 - A read-only FastAPI service backed by PostgreSQL 16.
 - A deterministic, idempotent seed for eight confirmed sensor/end-device records: seven configured swale devices with 20 channels and one tree-pit probe whose depth/channel configuration remains pending.
 - Generated TypeScript API types from FastAPI OpenAPI.
@@ -241,7 +242,9 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
   explicitly started with a local key and accepts only the eight mapped device IDs.
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
-- No private-coordinate endpoint, CSV export, alert engine, maps, advanced data-quality detection, or research analytics.
+- No private-coordinate endpoint, alert engine, maps, advanced data-quality detection, or research
+  analytics. Device Detail CSV export is limited to the selected normalized channel and bounded
+  time range; it does not export private raw uplinks or network identifiers.
 - No downsampling or persisted rollups; raw observations and Explorer drill-downs are bounded and rejected above the configured ceiling.
 - Synthetic status thresholds are configurable operational defaults, not scientifically confirmed values.
 - Proxy physical units, reporting schedules, and several decoded numeric meanings remain

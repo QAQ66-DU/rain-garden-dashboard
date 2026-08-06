@@ -118,6 +118,13 @@ available through their separate seed workflow.
 
 Public endpoints return public IDs, monitoring-feature labels, calculated freshness, normalized measurements, and channel metadata needed for interpretation. They never return raw uplinks, external device IDs, DevEUIs, private channel metadata, or exact coordinates. Confirmed coordinates are stored only on private device fields. Exact-coordinate access would require a separately approved authenticated endpoint.
 
+Device Detail resolves bounded half-open UTC measurement windows through the existing measurement
+service and repository. Its CSV endpoint applies the same device, channel, window, and maximum-row
+rules, preserves stored decimal values and per-uplink ingestion provenance, and returns headers only
+for an empty result. The browser accesses the endpoint through the generated OpenAPI client and a
+TanStack Query mutation. CSV fields are explicitly allowlisted; raw JSON, credentials, external
+device and gateway identifiers, coordinates, and private network metadata are never selected.
+
 ## Deployment
 
 Docker Compose runs PostgreSQL, backend, and frontend. Development targets provide reload behavior; production targets use a non-root backend process and Nginx static hosting/proxying. Migrations are an explicit deployment step rather than an automatic multi-replica startup side effect. Seed data is an explicit demo-only command.

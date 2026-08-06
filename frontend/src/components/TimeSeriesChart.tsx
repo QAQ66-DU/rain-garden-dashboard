@@ -29,7 +29,7 @@ export function TimeSeriesChart({ title, subtitle, unit, points }: TimeSeriesCha
     <section className="chart-card" data-testid="time-series-chart">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Seven-day raw series</p>
+          <p className="eyebrow">Selected-period raw series</p>
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>

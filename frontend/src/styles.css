@@ -1027,6 +1027,33 @@ h2 {
   line-height: 1.45;
 }
 
+.device-chart-filters {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.device-custom-time-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.device-custom-time-fields input {
+  width: 100%;
+  min-height: 43px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #ced8d3;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fafbf9;
+  font-size: 0.78rem;
+}
+
+.chart-controls .secondary-button {
+  margin-bottom: 0.65rem;
+}
+
 .quality-callout {
   padding: 0.65rem 0.8rem;
   border-radius: 7px;
@@ -1452,6 +1479,10 @@ h2 {
 
   .custom-time-fields {
     grid-column: auto;
+  }
+
+  .device-custom-time-fields {
+    grid-template-columns: 1fr;
   }
 
   .explore-summary {

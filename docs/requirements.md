@@ -23,6 +23,9 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
   unaffected.
 - Make the eight proxy devices the normal dashboard inventory while excluding the synthetic Orchard
   Park dataset from default live API/UI queries. Preserve the deterministic demo seed separately.
+- Provide shareable Device Detail 24-hour, 7-day, 30-day, and custom UTC ranges plus a bounded CSV
+  export containing only the selected device, channel, period, normalized values, and reviewed
+  interpretation/provenance fields.
 
 ## Measurement query contract
 
@@ -32,6 +35,11 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Pagination: opaque cursor; no offset pagination.
 - Maximum matching raw result set: 5,000 rows, checked before page delivery.
 - Oversized matching sets produce an explicit validation error; they are never truncated or downsampled.
+- Device Detail stores resolved `start` and `end` timestamps in the URL, displays controls in
+  `Europe/London`, and sends UTC timestamps to the API using half-open `[start, end)` semantics.
+- Device Detail CSV uses the same device/channel/window filters and row ceiling as the normalized
+  measurement query. Empty periods return headers only; raw uplinks, credentials, external device
+  and gateway identifiers, private coordinates, and private network metadata are excluded.
 
 ## Site-wide Time Explorer
 
@@ -69,13 +77,13 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
 
 Default-enabled worker startup, live webhook handling, TTN Storage API backfill, cloud deployment,
 confirmed physical-unit mapping, threshold editing,
-shared distributed rate limiting, authentication/user management, maps, public coordinates, CSV
-export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
+shared distributed rate limiting, authentication/user management, maps, public coordinates,
+site-wide/bulk CSV export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
 machine learning, camera data, image recognition, and deployment to a vendor-specific platform are
 not implemented.
 
 ## Future scope
 
 Controlled MQTT activation on an inventory-only database, confirmed physical payload mapping,
-richer quality monitoring, safe CSV export, scientifically approved rainfall-event analytics,
+richer quality monitoring, scientifically approved rainfall-event analytics,
 authenticated production deployment, backups, and stakeholder evaluation require separate approval.

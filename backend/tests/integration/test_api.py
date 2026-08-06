@@ -1,4 +1,8 @@
+import csv
+from collections.abc import Mapping
 from datetime import UTC, datetime
+from io import StringIO
+from typing import Any, Protocol, cast
 from uuid import UUID
 
 import pytest
@@ -15,6 +19,47 @@ pytestmark = pytest.mark.integration
 
 WEATHER_DEVICE_ID = stable_uuid("device:synthetic-v2-swale-weather-001")
 TREE_PROBE_ID = stable_uuid("device:synthetic-v2-tree-pit-probe-001")
+
+
+class ClientResponse(Protocol):
+    status_code: int
+    headers: Mapping[str, str]
+    text: str
+
+    def json(self) -> Any: ...
+
+
+def _weather_channel_id(api_client: TestClient, channel_code: str = "rainfall_intensity") -> str:
+    detail = api_client.get(f"/api/v1/devices/{WEATHER_DEVICE_ID}")
+    assert detail.status_code == 200
+    return str(
+        next(
+            channel["id"]
+            for channel in detail.json()["channels"]
+            if channel["channel_code"] == channel_code
+        )
+    )
+
+
+def _export_measurements(
+    api_client: TestClient,
+    *,
+    start: str,
+    end: str,
+    device_id: UUID = WEATHER_DEVICE_ID,
+    channel_id: str | None = None,
+) -> ClientResponse:
+    return cast(
+        ClientResponse,
+        api_client.get(
+            f"/api/v1/devices/{device_id}/measurements/export.csv",
+            params={
+                "start": start,
+                "end": end,
+                "sensor_channel_id": channel_id or _weather_channel_id(api_client),
+            },
+        ),
+    )
 
 
 def test_health_and_security_headers(api_client: TestClient) -> None:
@@ -95,6 +140,134 @@ def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
     assert datetime.fromisoformat(
         second.json()["items"][0]["measured_at"]
     ) > datetime.fromisoformat(first_body["items"][-1]["measured_at"])
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "expected_rows"),
+    (
+        ("2026-05-31T12:00:00Z", "2026-06-01T12:00:00Z", 24),
+        ("2026-05-25T12:00:00Z", "2026-06-01T12:00:00Z", 168),
+        ("2026-05-02T12:00:00Z", "2026-06-01T12:00:00Z", 168),
+        ("2026-05-31T09:00:00Z", "2026-05-31T12:00:00Z", 3),
+    ),
+)
+def test_measurement_csv_export_accepts_preset_and_custom_windows(
+    api_client: TestClient, start: str, end: str, expected_rows: int
+) -> None:
+    response = _export_measurements(api_client, start=start, end=end)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.headers["content-disposition"] == (
+        f'attachment; filename="swale-weather-station_rainfall-intensity_'
+        f'{start[:10]}_{end[:10]}.csv"'
+    )
+    rows = list(csv.DictReader(StringIO(response.text)))
+    assert len(rows) == expected_rows
+
+
+def test_measurement_csv_export_is_half_open_precise_and_privacy_safe(
+    api_client: TestClient,
+) -> None:
+    channel_id = _weather_channel_id(api_client)
+    response = _export_measurements(
+        api_client,
+        start="2026-05-31T11:00:00+00:00",
+        end="2026-05-31T12:00:00+00:00",
+        channel_id=channel_id,
+    )
+
+    assert response.status_code == 200
+    reader = csv.DictReader(StringIO(response.text))
+    assert reader.fieldnames == [
+        "observed_at",
+        "device_id",
+        "device_name",
+        "channel_id",
+        "channel_name",
+        "measurement_value",
+        "unit_code",
+        "unit_confirmation_status",
+        "verification_status",
+        "quality_flag",
+        "ingestion_mode",
+        "provenance",
+    ]
+    rows = list(reader)
+    assert len(rows) == 1
+    assert rows[0]["observed_at"] == "2026-05-31T11:00:00Z"
+    assert rows[0]["device_id"] == str(WEATHER_DEVICE_ID)
+    assert rows[0]["device_name"] == "Swale weather station"
+    assert rows[0]["channel_id"] == channel_id
+    assert rows[0]["channel_name"] == "Rainfall intensity"
+    assert rows[0]["measurement_value"].endswith("000000")
+    assert rows[0]["unit_code"] == "mm_h"
+    assert rows[0]["unit_confirmation_status"] == "synthetic_demo_only"
+    assert rows[0]["verification_status"] == "catalogued"
+    assert rows[0]["quality_flag"] in {"valid", "out_of_range", "suspect"}
+    serialized = response.text.lower()
+    for forbidden in (
+        "raw_payload",
+        "external_device_id",
+        "deveui",
+        "joineui",
+        "devaddr",
+        "gateway",
+        "session_key",
+        "private_latitude",
+        "private_longitude",
+    ):
+        assert forbidden not in serialized
+
+
+def test_measurement_csv_export_returns_headers_for_empty_window(api_client: TestClient) -> None:
+    response = _export_measurements(
+        api_client,
+        start="2026-05-01T00:00:00Z",
+        end="2026-05-01T01:00:00Z",
+    )
+
+    assert response.status_code == 200
+    assert len(list(csv.reader(StringIO(response.text)))) == 1
+
+
+@pytest.mark.parametrize(
+    ("params", "error_code"),
+    (
+        (
+            {"start": "2026-05-31T11:00:00Z", "end": "2026-05-31T11:00:00Z"},
+            "invalid_time_range",
+        ),
+        ({"start": "not-a-timestamp", "end": "2026-05-31T12:00:00Z"}, "validation_error"),
+        ({"start": "2026-05-31T11:00:00Z"}, "validation_error"),
+        ({"end": "2026-05-31T12:00:00Z"}, "validation_error"),
+    ),
+)
+def test_measurement_csv_export_rejects_invalid_ranges(
+    api_client: TestClient, params: dict[str, str], error_code: str
+) -> None:
+    response = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements/export.csv",
+        params={"sensor_channel_id": _weather_channel_id(api_client), **params},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error_code"] == error_code
+
+
+def test_measurement_csv_export_rejects_channel_from_another_device(
+    api_client: TestClient,
+) -> None:
+    response = _export_measurements(
+        api_client,
+        start="2026-05-31T11:00:00Z",
+        end="2026-05-31T12:00:00Z",
+        device_id=TREE_PROBE_ID,
+        channel_id=_weather_channel_id(api_client),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error_code"] == "channel_not_found"
 
 
 def test_oversized_raw_result_is_rejected(db_session: Session) -> None:

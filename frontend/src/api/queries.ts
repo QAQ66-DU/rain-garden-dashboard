@@ -1,9 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import {
   fetchDevice,
   fetchDevices,
   fetchExplorer,
+  fetchMeasurementCsv,
   fetchMeasurements,
   fetchOverview,
   fetchSites,
@@ -54,12 +55,17 @@ export function useMeasurements(
   channelId: string | undefined,
   start?: string,
   end?: string,
+  enabled = true,
 ) {
   return useQuery({
     queryKey: ['measurements', deviceId, channelId, start, end],
     queryFn: () => fetchMeasurements(deviceId ?? '', channelId ?? '', start, end),
-    enabled: Boolean(deviceId && channelId),
+    enabled: Boolean(deviceId && channelId && enabled),
     refetchInterval: DEVICE_DETAIL_POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
   });
+}
+
+export function useMeasurementExport() {
+  return useMutation({ mutationFn: fetchMeasurementCsv });
 }

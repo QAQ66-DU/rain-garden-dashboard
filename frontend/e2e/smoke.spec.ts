@@ -82,6 +82,33 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   expect(browserErrors).toEqual([]);
 });
 
+test('Device Detail selects a shareable range and exports that channel as CSV', async ({
+  page,
+}) => {
+  const browserErrors = collectBrowserAndApiErrors(page);
+
+  await page.goto('/devices');
+  const outflow = page.getByRole('article').filter({ hasText: 'outflow-a' });
+  await outflow.getByRole('link', { name: /View device details/ }).click();
+  await expect(page.getByRole('heading', { name: 'outflow-a', exact: true })).toBeVisible();
+
+  await page.getByRole('combobox', { name: 'Time range' }).selectOption('24h');
+  await expect(page).toHaveURL(/preset=24h/);
+  const selectedUrl = new URL(page.url());
+  expect(selectedUrl.searchParams.get('start')).toBeTruthy();
+  expect(selectedUrl.searchParams.get('end')).toBeTruthy();
+
+  const exportButton = page.getByRole('button', { name: 'Export CSV' });
+  await expect(exportButton).toBeEnabled();
+  const pageUrlBeforeExport = page.url();
+  const downloadPromise = page.waitForEvent('download');
+  await exportButton.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^outflow-a_.+\.csv$/);
+  expect(page.url()).toBe(pageUrlBeforeExport);
+  expect(browserErrors).toEqual([]);
+});
+
 test('vision-ai remains an evidence-based no-data device', async ({ page }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 

@@ -78,17 +78,19 @@ describe('monitoring dashboard', () => {
   });
 
   it('renders one explicitly selected sensor channel as a raw seven-day series', async () => {
-    renderRoute(`/devices/${weatherDeviceId}`);
+    renderRoute(
+      `/devices/${weatherDeviceId}?start=2026-05-25T12%3A00%3A00Z&end=2026-06-01T12%3A00%3A00Z&preset=7d`,
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'Swale weather station' }),
     ).toBeInTheDocument();
     expect(await screen.findByTestId('time-series-chart')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Rainfall intensity over time' }),
+      screen.getByRole('heading', { name: 'Rainfall intensity · Last 7 days' }),
     ).toBeInTheDocument();
     const controls = screen.getByRole('region', { name: 'Chart controls' });
-    expect(within(controls).getByRole('combobox')).toHaveValue(
+    expect(within(controls).getByRole('combobox', { name: 'Sensor channel' })).toHaveValue(
       '00000000-0000-4000-8000-000000000021',
     );
     expect(screen.getByText(/Missing records are not converted to zero/)).toBeInTheDocument();

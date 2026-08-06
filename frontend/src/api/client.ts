@@ -58,6 +58,18 @@ export interface ExplorerFilters {
   channels?: string;
 }
 
+export interface MeasurementExportFilters {
+  deviceId: string;
+  channelId: string;
+  start: string;
+  end: string;
+}
+
+export interface MeasurementCsvDownload {
+  blob: Blob;
+  filename: string;
+}
+
 export async function fetchOverview(siteId?: string): Promise<Overview> {
   const { data, error, response } = await client.GET('/api/v1/overview', {
     params: { query: siteId ? { site_id: siteId } : {} },
@@ -156,4 +168,32 @@ export async function fetchMeasurements(
     cursor = page.next_cursor ?? undefined;
   }
   return { ...firstPage, items, next_cursor: null };
+}
+
+export async function fetchMeasurementCsv(
+  filters: MeasurementExportFilters,
+): Promise<MeasurementCsvDownload> {
+  const { data, error, response } = await client.GET(
+    '/api/v1/devices/{device_id}/measurements/export.csv',
+    {
+      params: {
+        path: { device_id: filters.deviceId },
+        query: {
+          start: filters.start,
+          end: filters.end,
+          sensor_channel_id: filters.channelId,
+        },
+      },
+      parseAs: 'text',
+    },
+  );
+  if (!response.ok || typeof data !== 'string') {
+    throw new ApiError(response.status, errorMessage(error));
+  }
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? 'measurements.csv';
+  return {
+    blob: new Blob([data], { type: response.headers.get('content-type') ?? 'text/csv' }),
+    filename,
+  };
 }

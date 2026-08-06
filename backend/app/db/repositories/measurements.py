@@ -35,6 +35,8 @@ class MeasurementRecord:
     measured_at: datetime
     quality_flag: str
     quality_notes: str | None
+    ingestion_mode: str | None
+    provenance: str | None
 
 
 def dataset_reference_time(session: Session) -> datetime | None:
@@ -131,10 +133,13 @@ def list_measurements(
             Measurement.measured_at,
             Measurement.quality_flag,
             Measurement.quality_notes,
+            UplinkEvent.ingestion_mode,
+            UplinkEvent.provenance,
         )
         .join(SensorChannel, SensorChannel.id == Measurement.sensor_channel_id)
         .join(MetricDefinition, MetricDefinition.metric_code == SensorChannel.metric_code)
         .outerjoin(UnitDefinition, UnitDefinition.unit_code == SensorChannel.unit_code)
+        .join(UplinkEvent, UplinkEvent.id == Measurement.uplink_event_id)
         .where(*conditions)
         .order_by(Measurement.measured_at, Measurement.id)
         .limit(page_size + 1)
@@ -158,6 +163,8 @@ def list_measurements(
             measured_at=cast(datetime, row[14]),
             quality_flag=cast(str, row[15]),
             quality_notes=cast(str | None, row[16]),
+            ingestion_mode=cast(str | None, row[17]),
+            provenance=cast(str | None, row[18]),
         )
         for row in rows
     ]

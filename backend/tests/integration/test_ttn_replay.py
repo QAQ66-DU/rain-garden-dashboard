@@ -1,6 +1,8 @@
 import copy
+import csv
 import json
 from datetime import UTC, datetime
+from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -217,6 +219,25 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
     assert all(item["quality_flag"] == "valid" for item in measurement_body["items"])
     assert all(item["quality_notes"] is None for item in measurement_body["items"])
 
+    exported = api_client.get(
+        f"/api/v1/devices/{outflow_item['id']}/measurements/export.csv",
+        params={
+            "start": "2099-08-03T00:00:00Z",
+            "end": "2099-08-04T00:00:00Z",
+            "sensor_channel_id": body["channels"][0]["id"],
+        },
+    )
+    assert exported.status_code == 200
+    exported_rows = list(csv.DictReader(StringIO(exported.text)))
+    assert len(exported_rows) == 2
+    assert all(row["unit_code"] == "" for row in exported_rows)
+    assert all(row["unit_confirmation_status"] == "pending" for row in exported_rows)
+    assert all(row["verification_status"] == "unverified" for row in exported_rows)
+    assert all(row["ingestion_mode"] == "offline_replay" for row in exported_rows)
+    assert all(row["provenance"] == "exported_live_data" for row in exported_rows)
+    for forbidden in ("raw_payload", "session_key_id", "external_device_id", "gateway"):
+        assert forbidden not in exported.text.lower()
+
     orchard = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
     assert orchard.status_code == 200
     assert orchard.json()["devices"]["total"] == 8
@@ -253,7 +274,8 @@ def test_malformed_selected_event_is_preserved_in_private_quarantine(
     assert summary.quarantined == 1
     quarantined = db_session.scalar(
         select(TTNReplayQuarantine).where(
-            TTNReplayQuarantine.failure_code == "missing_idempotency_identity"
+            TTNReplayQuarantine.source == REPLAY_SOURCE,
+            TTNReplayQuarantine.failure_code == "missing_idempotency_identity",
         )
     )
     assert quarantined is not None

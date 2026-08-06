@@ -94,7 +94,9 @@ describe('live Outflow A device detail', () => {
       }),
     );
 
-    renderRoute(`/devices/${replayDeviceId}`);
+    renderRoute(
+      `/devices/${replayDeviceId}?start=2026-07-27T16%3A11%3A01Z&end=2026-08-03T16%3A11%3A01Z&preset=7d`,
+    );
 
     expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
     expect(screen.getByText('Live TTN testbed data')).toBeInTheDocument();
@@ -104,7 +106,7 @@ describe('live Outflow A device detail', () => {
     expect(screen.queryByText('TTN console export')).not.toBeInTheDocument();
 
     const controls = screen.getByRole('region', { name: 'Chart controls' });
-    const channelSelect = within(controls).getByRole('combobox');
+    const channelSelect = within(controls).getByRole('combobox', { name: 'Sensor channel' });
     await user.selectOptions(channelSelect, replayChannelTwoId);
     expect(channelSelect).toHaveValue(replayChannelTwoId);
     expect(await screen.findByText(/1 raw observations/)).toBeInTheDocument();

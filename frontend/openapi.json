@@ -2540,6 +2540,79 @@
         ]
       }
     },
+    "/api/v1/devices/{device_id}/measurements/export.csv": {
+      "get": {
+        "operationId": "export_measurements_csv_api_v1_devices__device_id__measurements_export_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sensor_channel_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sensor Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Privacy-reviewed normalized measurements as CSV."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Measurements Csv",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
     "/api/v1/explore": {
       "get": {
         "operationId": "explore_api_v1_explore_get",

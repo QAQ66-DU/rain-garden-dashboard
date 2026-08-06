@@ -218,7 +218,10 @@ def test_unknown_application_device_is_quarantined_without_measurements(
 
     assert result.outcome == "quarantined"
     quarantine = db_session.scalar(
-        select(TTNReplayQuarantine).where(TTNReplayQuarantine.source == LIVE_MQTT_SOURCE)
+        select(TTNReplayQuarantine).where(
+            TTNReplayQuarantine.source == LIVE_MQTT_SOURCE,
+            TTNReplayQuarantine.failure_code == "unknown_ttn_device",
+        )
     )
     assert quarantine is not None
     assert quarantine.failure_code == "unknown_ttn_device"
