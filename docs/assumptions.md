@@ -10,6 +10,10 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 - The one-hour cadence is not a claim about real equipment.
 - Status is calculated at the dataset reference time with configurable 90-minute stale and 180-minute offline demo defaults.
 - The public raw-measurement query defaults to seven days, permits at most 31 days, and rejects matching sets above 5,000 rows.
+- Device Detail and Explore visualizations use the same configurable 2,000-point per-series display
+  target and deterministic real-point selector. Explore summaries and coverage still use every
+  matching observation; complete Device Detail normalized observations remain available through
+  streamed CSV export.
 - In-memory rate limiting is acceptable only for a single process; a reverse proxy/shared limiter is required for horizontal scaling.
 - TTN authentication is secret-based and constant-time, but real payload mapping is disabled.
 - No software licence is added until university and partner intellectual-property ownership is confirmed.

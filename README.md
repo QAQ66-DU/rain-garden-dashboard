@@ -14,11 +14,13 @@ dashboard responses. The application does not calculate hydrological performance
 
 ## What is included
 
-- A responsive Overview with device freshness, rainfall, quality, and channel-aware soil-moisture spread.
+- A responsive Overview with device freshness, rainfall, quality, channel-aware soil-moisture
+  spread, and an interactive map of the eight confirmed Orchard Park sensor locations.
 - A site-wide Time Explorer with shareable UTC periods, feature/metric/channel filters, synchronized unit-separated charts, schedule-aligned coverage, and a safe quality-warning drill-down.
 - A searchable/filterable public device inventory.
 - A device detail view with per-channel latest values, shareable 24-hour, 7-day, 30-day or custom
-  raw time ranges, and privacy-reviewed CSV export for the selected device channel and period.
+  time ranges, range-aware local-time axes, bounded representative chart series, and complete
+  privacy-reviewed CSV export for the selected device channel and period.
 - A read-only FastAPI service backed by PostgreSQL 16.
 - A deterministic, idempotent seed for eight confirmed sensor/end-device records: seven configured swale devices with 20 channels and one tree-pit probe whose depth/channel configuration remains pending.
 - Generated TypeScript API types from FastAPI OpenAPI.
@@ -31,7 +33,7 @@ The outdoor LoRaWAN gateway is infrastructure and is not counted as a monitored 
 
 ## Architecture
 
-- React 19, Vite, strict TypeScript, React Router, TanStack Query, and Recharts frontend.
+- React 19, Vite, strict TypeScript, React Router, TanStack Query, Recharts, and Leaflet frontend.
 - FastAPI, Pydantic v2, SQLAlchemy 2, and Alembic backend on Python 3.12.
 - PostgreSQL 16 with a non-superuser application role in the Docker workflow.
 - FastAPI OpenAPI as the public contract and generated frontend types as its consumer.
@@ -147,6 +149,7 @@ read-only key have been prepared.
 | `DEFAULT_MEASUREMENT_RANGE_DAYS`                                | Default raw query window                    | 7 days                                                 |
 | `MAX_MEASUREMENT_RANGE_DAYS`                                    | Maximum raw query window                    | 31 days                                                |
 | `MAX_MEASUREMENT_RESULT_ROWS`                                   | Raw matching-row preflight ceiling          | 5,000; excess requests are rejected, not truncated     |
+| `CHART_MEASUREMENT_TARGET_POINTS`                               | Per-series chart display target             | 2,000 representative real observations                 |
 
 `.env.example` contains placeholders only. `.env` is ignored by Git.
 
@@ -184,6 +187,11 @@ For explicitly mapped TTN proxy channels, successfully decoded finite numbers ar
 observations even while their scientific metadata and unit remain pending. The UI keeps those
 states visible as `Metadata pending` and `Unit unverified`; unverified channels receive only basic
 descriptive summaries and no hydrological interpretation.
+
+The device inventory keeps ingestion source, operational status, configuration completeness, and
+unit interpretation in separate columns. Its device-level unit summary is derived only from stored
+unit-confirmation metadata on active channels; it never infers a unit from device type, labels,
+measurement values, or payload structure.
 
 ## Quality commands
 
@@ -233,7 +241,11 @@ GitHub Actions repeats the static, test, PostgreSQL migration, generated-contrac
 
 The Dockerfiles contain non-root backend and static Nginx frontend production targets, but production deployment is intentionally outside Phase 1. Before deploying non-public data, require HTTPS, an established OIDC provider or authenticated reverse proxy, shared/reverse-proxy rate limiting, managed secrets, restricted network access, database backup/restore tests, retention rules, and a renewed privacy/threat review. Do not expose PostgreSQL publicly.
 
-Exact coordinates, external device identifiers, DevEUI values, and raw uplink payloads are absent from public schemas. The disabled TTN boundary must not be enabled until confirmed payload fixtures and a separately approved Phase 2 adapter exist.
+Exact coordinates, external device identifiers, DevEUI values, and raw uplink payloads are absent
+from public schemas. The Overview map uses a separate curated frontend reference dataset containing
+only the eight explicitly confirmed Orchard Park coordinates and measurement capabilities; it does
+not associate them with live TTN proxy devices. The disabled TTN boundary must not be enabled until
+confirmed payload fixtures and a separately approved Phase 2 adapter exist.
 
 ## Known limitations
 
@@ -242,10 +254,12 @@ Exact coordinates, external device identifiers, DevEUI values, and raw uplink pa
   explicitly started with a local key and accepts only the eight mapped device IDs.
 - No user authentication; public demo mode is suitable only for synthetic or approved non-sensitive data.
 - Rate limiting is process-local and not sufficient for horizontally scaled deployment.
-- No private-coordinate endpoint, alert engine, maps, advanced data-quality detection, or research
-  analytics. Device Detail CSV export is limited to the selected normalized channel and bounded
-  time range; it does not export private raw uplinks or network identifiers.
-- No downsampling or persisted rollups; raw observations and Explorer drill-downs are bounded and rejected above the configured ceiling.
+- No private-coordinate endpoint, alert engine, additional site maps, advanced data-quality
+  detection, or research analytics. Device Detail CSV export is limited to the selected normalized
+  channel and bounded time range; it does not export private raw uplinks or network identifiers.
+- No persisted downsampling or rollups. Device Detail and Explore sample real observations only
+  for chart display, independently per channel; raw pagination and quality-warning drill-downs keep
+  their configured bounds, and Device Detail CSV export remains complete.
 - Synthetic status thresholds are configurable operational defaults, not scientifically confirmed values.
 - Proxy physical units, reporting schedules, and several decoded numeric meanings remain
   unconfirmed. `prototype-board-1` and `vision-ai` have no observed uplink evidence, and `vision-ai`

@@ -18,6 +18,13 @@ function collectBrowserAndApiErrors(page: Page) {
     if (message.type() === 'error') errors.push(message.text());
   });
   page.on('requestfailed', (request) => {
+    const requestUrl = new URL(request.url());
+    if (
+      request.resourceType() === 'image' &&
+      requestUrl.hostname.endsWith('.tile.openstreetmap.org')
+    ) {
+      return;
+    }
     errors.push(`Request failed: ${request.url()}`);
   });
   page.on('response', (response) => {
@@ -46,23 +53,41 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
   await expect(page.getByText('Live proxy sensor data')).toBeVisible();
   await expect(page.getByText('Proxy network; not Orchard Park')).toBeVisible();
+  const map = page.getByRole('region', {
+    name: 'Interactive map of Orchard Park monitoring locations',
+  });
+  await expect(map).toBeVisible();
+  await expect(map.getByRole('button', { name: /sensor|station/ })).toHaveCount(8);
+  await expect(map.getByRole('link', { name: 'OpenStreetMap' })).toBeVisible();
+  await map.getByRole('button', { name: 'Weather station', exact: true }).click();
+  await expect(map.getByText('55.955312, -3.238602')).toBeVisible();
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(8);
+  const desktopLayout = await page.evaluate(() => {
+    const sidebar = document.querySelector('.site-sidebar');
+    const main = document.querySelector('.page-shell');
+    return {
+      mainLeft: Math.round(main?.getBoundingClientRect().left ?? -1),
+      sidebarWidth: Math.round(sidebar?.getBoundingClientRect().width ?? -1),
+    };
+  });
+  expect(desktopLayout).toEqual({ mainLeft: 224, sidebarWidth: 224 });
+  const inventory = page.getByRole('table');
+  await expect(inventory.getByRole('row')).toHaveCount(9);
   for (const deviceId of PROXY_DEVICE_IDS) {
-    await expect(page.getByRole('heading', { name: deviceId, exact: true })).toBeVisible();
+    await expect(inventory.getByText(deviceId, { exact: true })).toBeVisible();
   }
   await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
   await expect(page.getByRole('option', { name: 'Swale' })).toHaveCount(0);
 
-  const weather = page.getByRole('article').filter({ hasText: 'weather-station-2' });
-  await weather.getByRole('link', { name: /View device details/ }).click();
+  const weather = inventory.getByRole('row').filter({ hasText: 'weather-station-2' });
+  await weather.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('link', { name: '← Back to devices' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'weather-station-2', exact: true })).toBeVisible();
-  await expect(page.getByText('Proxy sensor', { exact: true })).toBeVisible();
+  await expect(page.getByText('Proxy sensor', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
-  await expect(page.getByText('Metadata pending').first()).toBeVisible();
+  await expect(page.getByText('Configuration pending').first()).toBeVisible();
   await expect(page.getByText('Unit unverified').first()).toBeVisible();
 
   expect(browserErrors).toEqual([]);
@@ -75,28 +100,133 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
   await expect(page.getByText('Live proxy sensor data')).toBeVisible();
   await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
+  const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
+  await rangeSelect.selectOption('24h');
   await page.getByRole('combobox', { name: 'Metric group' }).selectOption('weather');
   await expect(page.getByRole('heading', { name: 'Sensor channels' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Quality warnings' })).toBeVisible();
+  const charts = page.getByTestId('explore-series-chart');
+  await expect(charts).toHaveCount(14);
+  await expect(
+    page
+      .getByTestId('explore-series-chart')
+      .filter({ has: page.locator('svg') })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel('weather-station, Air Temperature, measured in unit pending'),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel('weather-station-2, Air Temperature, measured in unit pending'),
+  ).toBeVisible();
+
+  const aggregateStatus = page.locator('.channel-selector').getByRole('status');
+  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
+  await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
+  const hourLabels = (await charts.first().locator('svg text').allTextContents()).filter((label) =>
+    /^(?:\d{1,2} [A-Z][a-z]{2}, )?\d{2}:\d{2}$/.test(label),
+  );
+  expect(hourLabels.length).toBeGreaterThanOrEqual(4);
+
+  await rangeSelect.selectOption('7d');
+  await expect(page).toHaveURL(/preset=7d/);
+  await expect(charts).toHaveCount(14);
+  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
+  await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
+  const sevenDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
+    (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+  );
+  expect(sevenDayLabels.length).toBeGreaterThanOrEqual(3);
+  expect(sevenDayLabels.length).toBeLessThanOrEqual(8);
+
+  await rangeSelect.selectOption('30d');
+  await expect(page).toHaveURL(/preset=30d/);
+  await expect(charts).toHaveCount(14);
+  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
+  await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
+  const thirtyDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
+    (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+  );
+  expect(thirtyDayLabels.length).toBeGreaterThanOrEqual(3);
+  expect(thirtyDayLabels.length).toBeLessThanOrEqual(8);
+
+  await page.getByLabel('Custom start (Europe/London)', { exact: true }).fill('01/08/2026 00:00');
+  await page.getByLabel('Custom end (Europe/London)', { exact: true }).fill('13/08/2026 14:00');
+  await page.getByRole('button', { name: 'Apply custom range' }).click();
+  await expect(page).toHaveURL(/preset=custom/);
+  await expect(page).toHaveURL(/start=2026-07-31T23%3A00%3A00.000Z/);
+  await expect(charts).toHaveCount(14);
+  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
+  await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
 
   expect(browserErrors).toEqual([]);
 });
 
-test('Device Detail selects a shareable range and exports that channel as CSV', async ({
+test('Device Detail adapts its time axis, preserves selection, and exports complete CSV', async ({
   page,
 }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/devices');
-  const outflow = page.getByRole('article').filter({ hasText: 'outflow-a' });
-  await outflow.getByRole('link', { name: /View device details/ }).click();
+  const outflow = page.getByRole('row').filter({ hasText: 'outflow-a' });
+  await outflow.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('heading', { name: 'outflow-a', exact: true })).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Time range' }).selectOption('24h');
+  const channelSelect = page.getByRole('combobox', { name: 'Sensor channel' });
+  const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
+  await channelSelect.selectOption({ label: 'Measurement 2 · unit not verified' });
+  await rangeSelect.selectOption('24h');
   await expect(page).toHaveURL(/preset=24h/);
   const selectedUrl = new URL(page.url());
   expect(selectedUrl.searchParams.get('start')).toBeTruthy();
   expect(selectedUrl.searchParams.get('end')).toBeTruthy();
+  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
+  const chart = page.getByTestId('time-series-chart');
+  await expect(chart).toContainText(/raw observations/);
+  const hourLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
+    /^(?:\d{1,2} [A-Z][a-z]{2}, )?\d{2}:\d{2}$/.test(label),
+  );
+  expect(hourLabels.length).toBeGreaterThanOrEqual(5);
+
+  await rangeSelect.selectOption('7d');
+  await expect(page).toHaveURL(/preset=7d/);
+  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
+  await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
+  await expect(chart).toContainText(
+    'Chart downsampled for display. Full raw data remains available for export.',
+  );
+  const sevenDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
+    /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+  );
+  expect(sevenDayLabels.length).toBeGreaterThanOrEqual(6);
+  expect(sevenDayLabels.length).toBeLessThanOrEqual(8);
+
+  await rangeSelect.selectOption('30d');
+  await expect(page).toHaveURL(/preset=30d/);
+  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
+  await expect(page.getByRole('heading', { name: 'Measurement 2 · Last 30 days' })).toBeVisible();
+  await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
+  const thirtyDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
+    /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+  );
+  expect(thirtyDayLabels.length).toBeGreaterThanOrEqual(5);
+  expect(thirtyDayLabels.length).toBeLessThanOrEqual(8);
+  const labelsOverlap = await chart.evaluate((element) => {
+    const labels = Array.from(element.querySelectorAll('svg text'))
+      .filter((node) => /^\d{1,2} [A-Z][a-z]{2}$/.test(node.textContent))
+      .map((node) => node.getBoundingClientRect())
+      .sort((left, right) => left.left - right.left);
+    return labels
+      .slice(1)
+      .some((label, index) => label.left < (labels[index]?.right ?? label.left));
+  });
+  expect(labelsOverlap).toBe(false);
+
+  const plot = chart.locator('.recharts-wrapper');
+  const plotBox = await plot.boundingBox();
+  if (!plotBox) throw new Error('The Device Detail chart must have a visible plot.');
+  await plot.hover({ position: { x: plotBox.width / 2, y: plotBox.height / 2 } });
+  await expect(chart).toContainText(/\d{1,2} [A-Z][a-z]{2} 2026, \d{2}:\d{2}:\d{2}/);
 
   const exportButton = page.getByRole('button', { name: 'Export CSV' });
   await expect(exportButton).toBeEnabled();
@@ -113,9 +243,9 @@ test('vision-ai remains an evidence-based no-data device', async ({ page }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/devices');
-  const vision = page.getByRole('article').filter({ hasText: 'vision-ai' });
-  await expect(vision.getByText('Never seen / No data')).toBeVisible();
-  await vision.getByRole('link', { name: /View device details/ }).click();
+  const vision = page.getByRole('row').filter({ hasText: 'vision-ai' });
+  await expect(vision.getByText('Never received')).toBeVisible();
+  await vision.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Never seen / No data' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Chart controls' })).toHaveCount(0);
@@ -138,11 +268,43 @@ test('mobile Overview, Explore, Devices, and Device Detail have no horizontal ov
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
-  await expect(page.getByRole('article')).toHaveCount(8);
+  const inventory = page.getByRole('table');
+  await expect(inventory.getByRole('row')).toHaveCount(9);
+  const mobileLayout = await page.evaluate(() => {
+    const sidebar = document.querySelector('.site-sidebar');
+    const main = document.querySelector('.page-shell');
+    const firstRow = document.querySelector('.data-table--responsive tbody tr');
+    const firstCell = firstRow?.querySelector('td');
+    return {
+      clientWidth: document.documentElement.clientWidth,
+      firstCellDisplay: firstCell ? getComputedStyle(firstCell).display : null,
+      firstRowDisplay: firstRow ? getComputedStyle(firstRow).display : null,
+      mainLeft: Math.round(main?.getBoundingClientRect().left ?? -1),
+      sidebarWidth: Math.round(sidebar?.getBoundingClientRect().width ?? -1),
+    };
+  });
+  expect(mobileLayout.firstCellDisplay).toBe('grid');
+  expect(mobileLayout.firstRowDisplay).toBe('block');
+  expect(mobileLayout.mainLeft).toBe(0);
+  expect(mobileLayout.sidebarWidth).toBe(mobileLayout.clientWidth);
+  await expect(inventory.getByRole('row').nth(1).locator('td')).toHaveCount(8);
+  await expect(inventory.getByRole('row').nth(1).locator('td').first()).toHaveAttribute(
+    'data-label',
+    'Device',
+  );
   await expectNoHorizontalOverflow(page);
 
-  const vision = page.getByRole('article').filter({ hasText: 'vision-ai' });
-  await vision.getByRole('link', { name: /View device details/ }).click();
+  await page.reload();
+  const searchInput = page.getByRole('searchbox', { name: 'Search devices' });
+  const monitoringFeature = page.getByRole('combobox', { name: 'Monitoring feature' });
+  await searchInput.press('Tab');
+  await expect(monitoringFeature).toBeFocused();
+  expect(
+    await monitoringFeature.evaluate((element) => getComputedStyle(element).outlineWidth),
+  ).toBe('3px');
+
+  const vision = page.getByRole('row').filter({ hasText: 'vision-ai' });
+  await vision.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 

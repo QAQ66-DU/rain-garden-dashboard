@@ -4,6 +4,8 @@ import { useOverview } from '../api/queries';
 import { ErrorState, LoadingState } from '../components/DataState';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { MetricCard } from '../components/MetricCard';
+import { OrchardParkMap } from '../components/OrchardParkMap';
+import { PageHeader } from '../components/PageHeader';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { UnitStatusNote } from '../components/UnitStatusNote';
 import { formatDateTime, formatNumber } from '../utils/format';
@@ -34,20 +36,20 @@ export function OverviewPage() {
   return (
     <div className="page-stack">
       {isProxy ? <SyntheticBanner mode="proxy" /> : data.synthetic ? <SyntheticBanner /> : null}
-      <header className="page-hero page-hero--overview">
-        <div>
-          <p className="eyebrow">Site overview</p>
-          <h1>{data.site_name}</h1>
-          <p>{data.public_location_label}</p>
-        </div>
-        <div className="hero-meta">
-          <span>Reference time</span>
-          <strong>{formatDateTime(data.reference_time)}</strong>
-          <small>
-            {isProxy ? 'Current UTC time' : 'Calculated from the deterministic dataset'}
-          </small>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Site overview"
+        title={data.site_name}
+        description={data.public_location_label}
+        meta={
+          <dl className="page-header__facts">
+            <div>
+              <dt>Reference time</dt>
+              <dd>{formatDateTime(data.reference_time)}</dd>
+              <small>{isProxy ? 'Current UTC time' : 'Deterministic dataset reference'}</small>
+            </div>
+          </dl>
+        }
+      />
 
       <section className="metric-grid" aria-label="Overview metrics">
         <MetricCard
@@ -93,6 +95,8 @@ export function OverviewPage() {
           Review quality warnings in Time Explorer <span aria-hidden="true">→</span>
         </Link>
       </div>
+
+      <OrchardParkMap />
 
       <section className="overview-grid">
         <article className="panel status-panel">

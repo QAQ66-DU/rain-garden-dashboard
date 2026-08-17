@@ -22,6 +22,8 @@ flowchart LR
 ## Components and dependency direction
 
 - Frontend pages compose features and present view models.
+- Curated Orchard Park reference locations are held in one frontend metadata module for the
+  Overview map. They are not inferred from, or associated with, live proxy devices.
 - The typed client is generated from OpenAPI and is the only browser network boundary.
 - TanStack Query owns server-state fetching and caching.
 - Recharts receives already prepared numeric series; it performs no scientific calculations.
@@ -89,9 +91,23 @@ pending. The UI labels that distinction as `Metadata pending` and `Unit unverifi
 perform domain interpretation. The same separation applies to schedule metadata: coverage is
 unavailable unless interval and anchor are explicitly configured.
 
+Device list and detail responses expose `unit_confirmation_summary` as a read-time derivative of
+stored `unit_confirmation_status` values on active channels only. A single distinct channel status
+is preserved, multiple statuses become `mixed`, and no active channels becomes
+`no_active_channels`. Device type, measurement labels or values, payload fields, and browser logic
+never participate in this summary.
+
 ## Time Explorer and coverage
 
-`GET /api/v1/explore` is a bounded, read-only site query. The endpoint validates a maximum 31-day half-open UTC window, performs result-count preflights, and delegates to a service that joins public device/channel records with pure coverage and summary calculations. Browser URLs retain `start`, `end`, feature, metric group, and explicit channel selection so the same analytical view can be shared or carried between Overview, Explore, and Devices.
+`GET /api/v1/explore` is a bounded, read-only site query. The endpoint validates a maximum 31-day
+half-open UTC window and delegates to a service that joins public device/channel records with pure
+coverage and summary calculations. Coverage and summaries use every matching observation. Each
+channel's visualization points independently reuse the canonical configurable time-bucket min/max
+selector: smaller series are unchanged, while larger series preserve real first, last, minimum, and
+maximum observations without mixing devices or channels. Response-level counts are sums of explicit
+per-series total/displayed metadata. Browser URLs retain `start`, `end`, feature, metric group, and
+explicit channel selection so the same analytical view can be shared or carried between Overview,
+Explore, and Devices. The separate quality-warning drill-down retains its raw-result ceiling.
 
 The scientific time axis is `measured_at`; `received_at` is returned separately for transmission-delay assessment. Expected observations are schedule-aligned slots inside `[start, end)`, calculated from the channel's explicit expected interval and schedule anchor—not from rounded window duration. A configurable jitter tolerance assigns at most one accepted observation to a slot. Duplicate-slot observations do not increase received count; flagged observations are received but not valid; out-of-tolerance and late observations retain explicit timing labels; absent slots remain missing rather than zero. “Late” means reception occurred more than one expected reporting interval after `measured_at`; it does not reuse timestamp-jitter tolerance. If interval, anchor, or tolerance is absent, precise coverage is unavailable.
 
@@ -116,14 +132,22 @@ available through their separate seed workflow.
 
 ## API and privacy boundaries
 
-Public endpoints return public IDs, monitoring-feature labels, calculated freshness, normalized measurements, and channel metadata needed for interpretation. They never return raw uplinks, external device IDs, DevEUIs, private channel metadata, or exact coordinates. Confirmed coordinates are stored only on private device fields. Exact-coordinate access would require a separately approved authenticated endpoint.
+Public endpoints return public IDs, monitoring-feature labels, calculated freshness, normalized measurements, and channel metadata needed for interpretation. Device inventory presentation keeps ingestion source, operational freshness, configuration completeness, and unit interpretation as separate fields. They never return raw uplinks, external device IDs, DevEUIs, private channel metadata, or exact coordinates. Confirmed device coordinates remain private API fields. The separately approved Orchard Park Overview map publishes only its eight confirmed reference locations from curated frontend metadata, without device IDs, TTN identifiers, live values, or deployment state; any API-based exact-coordinate access would still require a separately approved authenticated endpoint.
 
 Device Detail resolves bounded half-open UTC measurement windows through the existing measurement
-service and repository. Its CSV endpoint applies the same device, channel, window, and maximum-row
-rules, preserves stored decimal values and per-uplink ingestion provenance, and returns headers only
-for an empty result. The browser accesses the endpoint through the generated OpenAPI client and a
-TanStack Query mutation. CSV fields are explicitly allowlisted; raw JSON, credentials, external
-device and gateway identifiers, coordinates, and private network metadata are never selected.
+service and repository. Raw pagination retains its 5,000-row preflight. A separate, single-channel
+chart endpoint streams ordered records through a configurable 2,000-point time-bucket min/max
+envelope: smaller results are unchanged, while larger results select only real observations,
+preserve the first and last records, retain chronological order, and expose total/displayed counts
+and whether sampling occurred. The chart uses the selected window—not sampled extrema—as its
+numeric time domain, with Europe/London presentation labels only.
+
+The CSV endpoint applies the same device, channel, and window rules but streams the complete ordered
+normalized result independently of both display sampling and the raw pagination ceiling. It
+preserves stored decimal values and per-uplink ingestion provenance and returns headers only for an
+empty result. The browser accesses these endpoints through the generated OpenAPI client and TanStack
+Query. CSV fields are explicitly allowlisted; raw JSON, credentials, external device and gateway
+identifiers, coordinates, and private network metadata are never selected.
 
 ## Deployment
 

@@ -11,7 +11,7 @@ PUBLIC_TARGETS = (
     ROOT / "frontend" / "tests" / "fixtures",
     ROOT / "frontend" / "e2e",
 )
-FORBIDDEN = (
+FORBIDDEN_PRIVATE_FIELDS = (
     "private_latitude",
     "private_longitude",
     "external_device_id",
@@ -19,6 +19,8 @@ FORBIDDEN = (
     "raw_payload",
     "channel_metadata",
     "deveui",
+)
+CONFIRMED_ORCHARD_PARK_COORDINATES = (
     "55.955391",
     "55.955470",
     "55.955613",
@@ -36,6 +38,11 @@ FORBIDDEN = (
     "-3.238602",
     "-3.239190",
 )
+APPROVED_COORDINATE_FILES = {
+    Path("frontend/e2e/smoke.spec.ts"),
+    Path("frontend/src/data/orchardParkSensors.ts"),
+    Path("frontend/tests/orchardParkMap.test.tsx"),
+}
 
 
 def files_to_scan() -> list[Path]:
@@ -57,9 +64,14 @@ def main() -> int:
         except UnicodeDecodeError:
             continue
         scanned += 1
-        for forbidden in FORBIDDEN:
+        relative_path = path.relative_to(ROOT)
+        for forbidden in FORBIDDEN_PRIVATE_FIELDS:
             if forbidden in contents:
-                findings.append(f"{path.relative_to(ROOT)}: contains {forbidden}")
+                findings.append(f"{relative_path}: contains {forbidden}")
+        if relative_path not in APPROVED_COORDINATE_FILES:
+            for coordinate in CONFIRMED_ORCHARD_PARK_COORDINATES:
+                if coordinate in contents:
+                    findings.append(f"{relative_path}: contains {coordinate}")
     if findings:
         print("Public privacy check failed:")
         for finding in findings:

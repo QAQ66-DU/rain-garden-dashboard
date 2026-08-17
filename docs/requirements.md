@@ -11,8 +11,14 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Preserve raw synthetic uplinks privately while returning only public, normalized schemas.
 - Display Overview, Explore, Devices, and Device Detail pages.
 - Show synthetic provenance, last update, device freshness, units, missing states, and quality warnings.
-- Provide a selectable channel-aware time-series chart with a bounded raw query.
+- Provide a selectable channel-aware time-series chart that returns every matching observation
+  below its display threshold and deterministic representative real observations above it.
 - Search/filter devices by public attributes.
+- Present device source, operational freshness, last receipt, configuration completeness, and
+  active-channel unit confirmation as separate inventory fields; never collapse them into one
+  ambiguous status.
+- Show an interactive Overview map of the eight confirmed Orchard Park sensor locations as
+  status-neutral reference markers, with sensor-type differentiation and no inferred TTN mapping.
 - Represent the confirmed Orchard Park inventory as eight sensor/end devices grouped under Swale and Tree pit; exclude the outdoor gateway from monitored-device counts.
 - Seed at least seven deterministic days for the seven configured swale devices. Keep the tree-pit probe at zero channels and observations until its depth/channel configuration is confirmed.
 - Expose versioned read-only REST endpoints and an authenticated but disabled TTN scaffold.
@@ -34,12 +40,21 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Ordering: ascending `(measured_at, id)`.
 - Pagination: opaque cursor; no offset pagination.
 - Maximum matching raw result set: 5,000 rows, checked before page delivery.
-- Oversized matching sets produce an explicit validation error; they are never truncated or downsampled.
+- Oversized raw pagination requests produce an explicit validation error; they are never silently
+  truncated or treated as a complete export.
+- The single-channel Device Detail chart endpoint returns all points below a configurable 2,000-point
+  display target. Above that target it preserves the first and last observations and chronological
+  time-bucket minima/maxima, reports total matching and displayed counts, and never invents values
+  or changes stored observations.
 - Device Detail stores resolved `start` and `end` timestamps in the URL, displays controls in
   `Europe/London`, and sends UTC timestamps to the API using half-open `[start, end)` semantics.
-- Device Detail CSV uses the same device/channel/window filters and row ceiling as the normalized
-  measurement query. Empty periods return headers only; raw uplinks, credentials, external device
-  and gateway identifiers, private coordinates, and private network metadata are excluded.
+- Device Detail CSV uses the same device/channel/window filters and streams the complete ordered
+  normalized result independently of the chart display threshold and raw pagination ceiling. Empty
+  periods return headers only; raw uplinks, credentials, external device and gateway identifiers,
+  private coordinates, and private network metadata are excluded.
+- Device Detail charts use the selected UTC `[start, end)` window as a numeric time-axis domain.
+  Europe/London tick labels adapt from hour-level detail at 24 hours to day-level labels at 7 and
+  30 days, while tooltips retain local date, year, and seconds.
 
 ## Site-wide Time Explorer
 
@@ -48,6 +63,10 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
 - Display timestamps in the site `Europe/London` timezone while keeping `measured_at` as the scientific axis and `received_at` as separate transmission context, including daylight-saving transitions.
 - Filter available devices, channels, charts, summaries, and warnings by monitoring feature; group channel availability by controlled hydrology, soil, weather, and operational/unverified metric groups.
 - Keep metrics, units, depths, positions, and unit-confirmation provenance channel-specific. Never combine incompatible series; show compatible channels as synchronized small multiples with units on every panel.
+- Return all chart observations when a channel is below the configurable display target. Above the
+  target, independently select deterministic real first/last and time-bucket extrema per channel;
+  report exact total and displayed counts per series and in aggregate without changing summaries,
+  coverage calculations, or stored measurements.
 - Calculate expected coverage from explicit reporting interval, schedule anchor, and configurable jitter tolerance. Count schedule-aligned slots inside the requested window rather than applying a rounded duration formula.
 - Deduplicate observations by expected slot for coverage, allow one accepted observation per slot, count flagged accepted observations as received but not valid, label late/out-of-tolerance records, and preserve missing as distinct from zero.
 - Return coverage as unavailable when interval, anchor, or jitter tolerance is unknown; do not infer a deployed reporting schedule from observations.
@@ -72,12 +91,14 @@ Phase 1 does not combine channels into a mean. It returns the latest valid obser
   through `unit_confirmation_status`. Real numeric ingestion requires an explicitly approved
   device/channel mapping, but pending scientific metadata or units do not by themselves make a
   successfully decoded finite observation suspect.
+- Device-level unit summaries use stored active-channel `unit_confirmation_status` values only;
+  they must not be inferred from device properties, measurements, payloads, or frontend logic.
 
 ## Explicit non-goals
 
 Default-enabled worker startup, live webhook handling, TTN Storage API backfill, cloud deployment,
 confirmed physical-unit mapping, threshold editing,
-shared distributed rate limiting, authentication/user management, maps, public coordinates,
+shared distributed rate limiting, authentication/user management, additional maps or unconfirmed public coordinates,
 site-wide/bulk CSV export, alert evaluation, mass balance, evapotranspiration, event analytics, anomaly detection,
 machine learning, camera data, image recognition, and deployment to a vendor-specific platform are
 not implemented.

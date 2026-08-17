@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { MeasurementDisplay } from '../src/components/MeasurementDisplay';
 import {
+  devicesFixture,
   exploreFixture,
   replayDeviceId,
   siteId,
@@ -26,6 +27,12 @@ describe('monitoring dashboard', () => {
     expect(screen.getByText('Soil moisture sensor 1')).toBeInTheDocument();
     expect(screen.getByText('Soil moisture sensor 3')).toBeInTheDocument();
     expect(screen.getByText('Median')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Orchard Park monitoring layout' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Interactive map of Orchard Park monitoring locations' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Demo-normalised unit · not deployment-confirmed')).toBeInTheDocument();
     expect(screen.queryByText('Average')).not.toBeInTheDocument();
     expect(
@@ -37,44 +44,112 @@ describe('monitoring dashboard', () => {
     const user = userEvent.setup();
     renderRoute('/devices');
 
+    expect(await screen.findByText('Swale weather station')).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: 'Source' })).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Swale weather station' }),
+      within(table).getByRole('columnheader', { name: 'Operational status' }),
     ).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Configuration' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Units' })).toBeInTheDocument();
     expect(screen.getAllByText('Online')).not.toHaveLength(0);
     expect(screen.getAllByText('Stale')).not.toHaveLength(0);
     expect(screen.getAllByText('Offline')).not.toHaveLength(0);
 
     await user.type(screen.getByRole('searchbox', { name: 'Search devices' }), 'soil');
 
-    expect(await screen.findByRole('heading', { name: 'Swale soil sensor 1' })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Swale weather station' }),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText('Swale soil sensor 1')).toBeInTheDocument();
+    expect(screen.queryByText('Swale weather station')).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
   });
 
-  it('keeps the eight Orchard devices isolated from the ninth TTN Testbed card', async () => {
+  it('renders inventory columns from separate source, operational, configuration and unit fields', async () => {
+    const livePending = {
+      ...devicesFixture.items[0],
+      display_name: 'Live pending device',
+      ingestion_mode: 'live_mqtt',
+      provenance: 'proxy',
+      source_system: 'ttn',
+      sensor_configuration_status: 'pending',
+      unit_confirmation_summary: 'pending',
+      freshness: {
+        ...devicesFixture.items[0]?.freshness,
+        calculated_status: 'online',
+      },
+    };
+    const replayMixed = {
+      ...devicesFixture.items[5],
+      display_name: 'Replay mixed device',
+      ingestion_mode: 'offline_replay',
+      provenance: 'exported_live_data',
+      source_system: 'ttn',
+      unit_confirmation_summary: 'mixed',
+      freshness: {
+        ...devicesFixture.items[5]?.freshness,
+        calculated_status: 'offline',
+      },
+    };
+    const noChannels = {
+      ...devicesFixture.items[7],
+      display_name: 'No-channel device',
+      last_seen_at: null,
+      unit_confirmation_summary: 'no_active_channels',
+      freshness: {
+        ...devicesFixture.items[7]?.freshness,
+        calculated_status: 'unknown',
+      },
+    };
+    server.use(
+      http.get('*/api/v1/devices', () =>
+        HttpResponse.json({
+          ...devicesFixture,
+          items: [livePending, replayMixed, noChannels],
+        }),
+      ),
+    );
+
+    renderRoute('/devices');
+
+    const table = await screen.findByRole('table');
+    const liveRow = within(table).getByRole('row', { name: /Live pending device/ });
+    expect(within(liveRow).getByText('Live MQTT')).toBeInTheDocument();
+    expect(within(liveRow).getByText('Online')).toBeInTheDocument();
+    expect(within(liveRow).getByText('Configuration pending')).toBeInTheDocument();
+    expect(within(liveRow).getByText('Unit unverified')).toBeInTheDocument();
+
+    const replayRow = within(table).getByRole('row', { name: /Replay mixed device/ });
+    expect(within(replayRow).getByText('Offline replay')).toBeInTheDocument();
+    expect(within(replayRow).getByText('Offline')).toBeInTheDocument();
+    expect(within(replayRow).getByText('Mixed unit status')).toBeInTheDocument();
+
+    const emptyRow = within(table).getByRole('row', { name: /No-channel device/ });
+    expect(within(emptyRow).getByText('Unknown')).toBeInTheDocument();
+    expect(within(emptyRow).getByText('Never received')).toBeInTheDocument();
+    expect(within(emptyRow).getByText('No active channels')).toBeInTheDocument();
+  });
+
+  it('keeps the eight Orchard devices isolated from the ninth TTN Testbed row', async () => {
     const user = userEvent.setup();
     renderRoute('/devices');
 
-    expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(9);
-    expect(screen.getByText('Testbed')).toBeInTheDocument();
-    expect(screen.getByText('Replay data')).toBeInTheDocument();
+    expect(await screen.findByText('Outflow A')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10);
+    expect(screen.getByText(/Testbed · TTN Testbed/)).toBeInTheDocument();
+    expect(screen.getByText('Offline replay')).toBeInTheDocument();
     expect(screen.getByText('Unit unverified')).toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Site' }), siteId);
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Outflow A' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Outflow A')).not.toBeInTheDocument();
     });
-    expect(screen.getAllByRole('article')).toHaveLength(8);
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(9);
 
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Site' }),
       '00000000-0000-4000-8000-000000000099',
     );
-    expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(await screen.findByText('Outflow A')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2);
   });
 
   it('renders one explicitly selected sensor channel as a raw seven-day series', async () => {
@@ -115,7 +190,7 @@ describe('monitoring dashboard', () => {
     expect(screen.getByText('Offline TTN replay data')).toBeInTheDocument();
     expect(screen.getAllByText('Unit unverified').length).toBeGreaterThan(0);
     expect(screen.getByText('Replay dataset reference time')).toBeInTheDocument();
-    expect(screen.getByText('TTN console export')).toBeInTheDocument();
+    expect(screen.getAllByText('Offline replay').length).toBeGreaterThan(0);
     expect(screen.getByText('Replay gateway (identifier withheld)')).toBeInTheDocument();
     expect(screen.getByText('840')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
@@ -145,6 +220,76 @@ describe('monitoring dashboard', () => {
     expect(screen.getByRole('heading', { name: 'Quality warnings' })).toBeInTheDocument();
     expect(screen.getByText('Relative humidity')).toBeInTheDocument();
     expect(screen.getByText('Excluded')).toBeInTheDocument();
+  });
+
+  it('renders sampled 24-hour, 7-day, 30-day and custom Explore ranges without a raw-limit error', async () => {
+    const user = userEvent.setup();
+    const requestedWindows: number[] = [];
+    server.use(
+      http.get('*/api/v1/explore', ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        const start = params.get('start') ?? exploreFixture.start;
+        const end = params.get('end') ?? exploreFixture.end;
+        requestedWindows.push(Date.parse(end) - Date.parse(start));
+        return HttpResponse.json({
+          ...exploreFixture,
+          start,
+          end,
+          total_matching: 11_816,
+          points_returned: 4_000,
+          downsampling_applied: true,
+          series: exploreFixture.series.map((series) => ({
+            ...series,
+            total_matching: 5_908,
+            points_returned: 2_000,
+            downsampling_applied: true,
+          })),
+        });
+      }),
+    );
+    const { router } = renderRoute(
+      '/explore?start=2026-05-31T12%3A00%3A00Z&end=2026-06-01T12%3A00%3A00Z&preset=24h&feature=all&group=hydrology',
+    );
+
+    expect(
+      await screen.findByText('11,816 observations · 4,000 displayed across 2 series.'),
+    ).toBeVisible();
+    expect(screen.getAllByText('5,908 observations · 2,000 displayed')).toHaveLength(2);
+    expect(screen.queryByText(/maximum.*5000/i)).not.toBeInTheDocument();
+    const range = screen.getByRole('combobox', { name: 'Time range' });
+    const feature = screen.getByRole('combobox', { name: 'Feature' });
+    const group = screen.getByRole('combobox', { name: 'Metric group' });
+    expect(feature).toHaveValue('all');
+    expect(group).toHaveValue('hydrology');
+
+    await user.selectOptions(range, '7d');
+    await waitFor(() => {
+      expect(requestedWindows).toContain(7 * 24 * 60 * 60 * 1_000);
+      expect(router.state.location.search).toContain('preset=7d');
+    });
+    await user.selectOptions(range, '30d');
+    await waitFor(() => {
+      expect(requestedWindows).toContain(30 * 24 * 60 * 60 * 1_000);
+      expect(router.state.location.search).toContain('preset=30d');
+    });
+
+    await user.selectOptions(range, 'custom');
+    fireEvent.change(screen.getByLabelText('Custom start (Europe/London)'), {
+      target: { value: '20/05/2026 13:00' },
+    });
+    fireEvent.change(screen.getByLabelText('Custom end (Europe/London)'), {
+      target: { value: '01/06/2026 13:00' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Apply custom range' }));
+    await waitFor(() => {
+      expect(router.state.location.search).toContain('preset=custom');
+    });
+    expect(
+      await screen.findByText('11,816 observations · 4,000 displayed across 2 series.'),
+    ).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(feature).toHaveValue('all');
+    expect(group).toHaveValue('hydrology');
   });
 
   it('persists the selected period and filters when navigating to Devices', async () => {
@@ -189,19 +334,19 @@ describe('monitoring dashboard', () => {
     );
     await screen.findByRole('heading', { name: 'Explore' });
     fireEvent.change(screen.getByLabelText('Custom start (Europe/London)'), {
-      target: { value: '2026-06-01T13:00' },
+      target: { value: '01/06/2026 13:00' },
     });
     fireEvent.change(screen.getByLabelText('Custom end (Europe/London)'), {
-      target: { value: '2026-06-01T12:00' },
+      target: { value: '01/06/2026 12:00' },
     });
     await user.click(screen.getByRole('button', { name: 'Apply custom range' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Start must be earlier than end.');
 
     fireEvent.change(screen.getByLabelText('Custom start (Europe/London)'), {
-      target: { value: '2026-03-29T01:30' },
+      target: { value: '29/03/2026 01:30' },
     });
     fireEvent.change(screen.getByLabelText('Custom end (Europe/London)'), {
-      target: { value: '2026-03-29T03:00' },
+      target: { value: '29/03/2026 03:00' },
     });
     await user.click(screen.getByRole('button', { name: 'Apply custom range' }));
     expect(screen.getByRole('alert')).toHaveTextContent('daylight-saving transition');
