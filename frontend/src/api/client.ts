@@ -5,7 +5,7 @@ import type {
   DeviceDetail,
   DeviceList,
   ExploreResponse,
-  MeasurementPage,
+  MeasurementChartSeries,
   Overview,
   SiteList,
 } from './types';
@@ -142,32 +142,21 @@ export async function fetchMeasurements(
   channelId: string,
   start?: string,
   end?: string,
-): Promise<MeasurementPage> {
-  async function fetchPage(cursor?: string): Promise<MeasurementPage> {
-    const query = {
-      sensor_channel_id: channelId,
-      page_size: 500,
-      ...(start && end ? { start, end } : {}),
-      ...(cursor ? { cursor } : {}),
-    };
-    const { data, error, response } = await client.GET('/api/v1/devices/{device_id}/measurements', {
+): Promise<MeasurementChartSeries> {
+  const query = {
+    sensor_channel_id: channelId,
+    ...(start && end ? { start, end } : {}),
+  };
+  const { data, error, response } = await client.GET(
+    '/api/v1/devices/{device_id}/measurements/chart',
+    {
       params: { path: { device_id: deviceId }, query },
-    });
-    if (!data) {
-      throw new ApiError(response.status, errorMessage(error));
-    }
-    return data;
+    },
+  );
+  if (!data) {
+    throw new ApiError(response.status, errorMessage(error));
   }
-
-  const firstPage = await fetchPage();
-  const items = [...firstPage.items];
-  let cursor = firstPage.next_cursor ?? undefined;
-  while (cursor) {
-    const page = await fetchPage(cursor);
-    items.push(...page.items);
-    cursor = page.next_cursor ?? undefined;
-  }
-  return { ...firstPage, items, next_cursor: null };
+  return data;
 }
 
 export async function fetchMeasurementCsv(

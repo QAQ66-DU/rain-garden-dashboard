@@ -33,6 +33,9 @@ export const handlers = [
       channelParam === null
         ? availableChannels.map((channel) => channel.channel_id)
         : channelParam.split(',').filter(Boolean);
+    const selectedSeries = exploreFixture.series.filter((series) =>
+      selected.includes(series.channel.channel_id),
+    );
     return HttpResponse.json({
       ...exploreFixture,
       start: params.get('start') ?? exploreFixture.start,
@@ -42,9 +45,10 @@ export const handlers = [
       available_devices: availableDevices,
       available_channels: availableChannels,
       selected_channel_ids: selected,
-      series: exploreFixture.series.filter((series) =>
-        selected.includes(series.channel.channel_id),
-      ),
+      series: selectedSeries,
+      total_matching: selectedSeries.reduce((total, series) => total + series.total_matching, 0),
+      points_returned: selectedSeries.reduce((total, series) => total + series.points_returned, 0),
+      downsampling_applied: selectedSeries.some((series) => series.downsampling_applied),
       quality_warnings: feature === 'tree-pit' ? [] : exploreFixture.quality_warnings,
     });
   }),
@@ -70,7 +74,7 @@ export const handlers = [
     if (params['deviceId'] === replayDeviceId) return HttpResponse.json(replayDeviceDetailFixture);
     return HttpResponse.json(deviceDetailFixture);
   }),
-  http.get('*/api/v1/devices/:deviceId/measurements', ({ params }) =>
+  http.get('*/api/v1/devices/:deviceId/measurements/chart', ({ params }) =>
     HttpResponse.json(
       params['deviceId'] === replayDeviceId ? replayMeasurementsFixture : measurementsFixture,
     ),

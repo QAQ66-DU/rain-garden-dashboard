@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { useDevice, useMeasurementExport, useMeasurements } from '../api/queries';
+import { ConfigurationStatus } from '../components/ConfigurationStatus';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
+import { EnglishDateTimeInput } from '../components/EnglishDateTimeInput';
+import { IngestionSource } from '../components/IngestionSource';
 import { MetadataStatusNote } from '../components/MetadataStatusNote';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
+import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { TimeSeriesChart, type ChartPoint } from '../components/TimeSeriesChart';
@@ -79,6 +83,8 @@ export function DeviceDetailPage() {
   const [customStart, setCustomStart] = useState<string | null>(null);
   const [customEnd, setCustomEnd] = useState<string | null>(null);
   const [customError, setCustomError] = useState<string>();
+  const [rollingLivePreset, setRollingLivePreset] = useState(hasNoRange);
+  const lastLiveObservation = useRef<string | null>(null);
   const selectedChannelId = channelId ?? device.data?.channels[0]?.id;
   const measurements = useMeasurements(
     deviceId,
@@ -108,6 +114,43 @@ export function DeviceDetailPage() {
     setPeriodParams(next, { replace: true });
   }, [hasNoRange, measurements.data, periodParams, setPeriodParams]);
 
+  useEffect(() => {
+    const observedAt = device.data?.last_seen_at;
+    if (
+      !rollingLivePreset ||
+      selectedPreset === 'custom' ||
+      device.data?.ingestion_mode !== 'live_mqtt' ||
+      !observedAt
+    ) {
+      return;
+    }
+    if (lastLiveObservation.current === null) {
+      lastLiveObservation.current = observedAt;
+      return;
+    }
+    const observedMilliseconds = Date.parse(observedAt);
+    if (observedMilliseconds <= Date.parse(lastLiveObservation.current)) return;
+    lastLiveObservation.current = observedAt;
+    if (hasNoRange || (resolvedEnd && observedMilliseconds < Date.parse(resolvedEnd))) return;
+
+    const exclusiveEnd = new Date(observedMilliseconds + 1).toISOString();
+    const [nextStart, nextEnd] = presetWindow(exclusiveEnd, PRESET_HOURS[selectedPreset]);
+    const next = new URLSearchParams(periodParams);
+    next.set('start', nextStart);
+    next.set('end', nextEnd);
+    next.set('preset', selectedPreset);
+    setPeriodParams(next, { replace: true });
+  }, [
+    device.data?.ingestion_mode,
+    device.data?.last_seen_at,
+    hasNoRange,
+    periodParams,
+    resolvedEnd,
+    rollingLivePreset,
+    selectedPreset,
+    setPeriodParams,
+  ]);
+
   const updateRange = (start: string, end: string, preset: TimePreset) => {
     const next = new URLSearchParams(periodParams);
     next.set('start', start);
@@ -122,6 +165,7 @@ export function DeviceDetailPage() {
 
   const applyPreset = (preset: TimePreset) => {
     if (preset === 'custom') {
+      setRollingLivePreset(false);
       const next = new URLSearchParams(periodParams);
       next.set('preset', 'custom');
       setPeriodParams(next);
@@ -130,6 +174,8 @@ export function DeviceDetailPage() {
       return;
     }
     if (!device.data) return;
+    setRollingLivePreset(device.data.ingestion_mode === 'live_mqtt');
+    lastLiveObservation.current = device.data.last_seen_at;
     const [start, end] = presetWindow(device.data.freshness.reference_time, PRESET_HOURS[preset]);
     updateRange(start, end, preset);
   };
@@ -206,49 +252,55 @@ export function DeviceDetailPage() {
       <Link className="back-link" to={{ pathname: '/devices', search: location.search }}>
         ← Back to devices
       </Link>
-      <header className="device-hero">
-        <div>
-          <div className="hero-status-row">
-            <p className="eyebrow">{humanizeCode(data.device_type)}</p>
-            <StatusBadge status={status} />
-          </div>
-          <h1>{data.display_name}</h1>
-          <p>
-            {data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} ·{' '}
-            {data.site_name}
-          </p>
-          {data.is_test_device ? (
-            <div className="provenance-tags" aria-label="Data provenance">
-              <span className="provenance-tag">{isProxy ? 'Proxy sensor' : 'Testbed'}</span>
-              <span className="provenance-tag">{isLiveMqtt ? 'Live MQTT' : 'Replay data'}</span>
-              <span className="provenance-tag provenance-tag--warning">Metadata pending</span>
-              <span className="provenance-tag provenance-tag--warning">Unit unverified</span>
+      <PageHeader
+        eyebrow={humanizeCode(data.device_type)}
+        title={data.display_name}
+        description={`${data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} · ${data.site_name}`}
+        meta={
+          <dl className="page-header__facts page-header__facts--device">
+            <div>
+              <dt>Operational status</dt>
+              <dd>
+                <StatusBadge status={status} />
+              </dd>
             </div>
-          ) : null}
-        </div>
-        <dl className="hero-facts">
-          <div>
-            <dt>Last seen</dt>
-            <dd>
-              {data.last_seen_at === null
-                ? 'Never seen / No data'
-                : formatDateTime(data.last_seen_at)}
-            </dd>
-          </div>
-          <div>
-            <dt>Configuration</dt>
-            <dd>{humanizeCode(data.sensor_configuration_status)}</dd>
-          </div>
-          <div>
-            <dt>Reference time</dt>
-            <dd>{formatDateTime(data.freshness.reference_time)}</dd>
-          </div>
-          <div>
-            <dt>Status basis</dt>
-            <dd>{formatStatusBasis(data.freshness.status_basis)}</dd>
-          </div>
-        </dl>
-      </header>
+            <div>
+              <dt>Source</dt>
+              <dd>
+                <IngestionSource
+                  compact
+                  ingestionMode={data.ingestion_mode}
+                  provenance={data.provenance}
+                  sourceSystem={data.source_system}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Last received</dt>
+              <dd>
+                {data.last_seen_at === null ? 'Never received' : formatDateTime(data.last_seen_at)}
+              </dd>
+            </div>
+            <div>
+              <dt>Configuration</dt>
+              <dd>
+                <ConfigurationStatus compact status={data.sensor_configuration_status} />
+              </dd>
+            </div>
+            <div>
+              <dt>Units</dt>
+              <dd>
+                <UnitStatusNote compact status={data.unit_confirmation_summary} />
+              </dd>
+            </div>
+            <div>
+              <dt>Status basis</dt>
+              <dd>{formatStatusBasis(data.freshness.status_basis)}</dd>
+              <small>Reference {formatDateTime(data.freshness.reference_time)}</small>
+            </div>
+          </dl>
+        }
+      />
 
       {data.is_test_device ? (
         <section className="panel" aria-labelledby="ingestion-provenance-heading">
@@ -268,12 +320,14 @@ export function DeviceDetailPage() {
           </div>
           <dl className="telemetry-grid">
             <div>
-              <dt>Source</dt>
-              <dd>{isLiveMqtt ? 'TTN application uplink' : 'TTN console export'}</dd>
-            </div>
-            <div>
-              <dt>Ingestion</dt>
-              <dd>{humanizeCode(data.ingestion_mode ?? 'offline_replay')}</dd>
+              <dt>Ingestion source</dt>
+              <dd>
+                <IngestionSource
+                  ingestionMode={data.ingestion_mode}
+                  provenance={data.provenance}
+                  sourceSystem={data.source_system}
+                />
+              </dd>
             </div>
             <div>
               <dt>Environment</dt>
@@ -372,7 +426,7 @@ export function DeviceDetailPage() {
         />
       ) : (
         <>
-          <section className="latest-section">
+          <section className="panel latest-section">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Per-channel snapshot</p>
@@ -399,7 +453,7 @@ export function DeviceDetailPage() {
             </div>
           </section>
 
-          <section className="chart-controls" aria-label="Chart controls">
+          <section className="toolbar chart-controls" aria-label="Chart controls">
             <div className="device-chart-filters">
               <label>
                 <span>Sensor channel</span>
@@ -421,6 +475,16 @@ export function DeviceDetailPage() {
                   ))}
                 </select>
               </label>
+              <p className="device-control-helper">
+                Each selection plots one channel only. Depth and position are not merged or assumed
+                comparable.
+              </p>
+              {selectedChannel ? (
+                <div className="device-control-badges" aria-label="Selected channel metadata">
+                  <MetadataStatusNote status={selectedChannel.verification_status} />
+                  <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
+                </div>
+              ) : null}
               <label>
                 <span>Time range</span>
                 <select
@@ -435,28 +499,24 @@ export function DeviceDetailPage() {
                   <option value="custom">Custom range</option>
                 </select>
               </label>
+              <p className="device-control-helper">
+                Selected period: {presetLabel(selectedPreset)} · [start, end) in UTC · displayed in{' '}
+                {SITE_TIME_ZONE}.
+              </p>
               {selectedPreset === 'custom' ? (
                 <div className="device-custom-time-fields">
-                  <label>
-                    <span>Custom start ({SITE_TIME_ZONE})</span>
-                    <input
-                      type="datetime-local"
-                      value={customStartValue}
-                      onChange={(event) => {
-                        setCustomStart(event.target.value);
-                      }}
-                    />
-                  </label>
-                  <label>
-                    <span>Custom end ({SITE_TIME_ZONE})</span>
-                    <input
-                      type="datetime-local"
-                      value={customEndValue}
-                      onChange={(event) => {
-                        setCustomEnd(event.target.value);
-                      }}
-                    />
-                  </label>
+                  <EnglishDateTimeInput
+                    label={`Custom start (${SITE_TIME_ZONE})`}
+                    timeZone={SITE_TIME_ZONE}
+                    value={customStartValue}
+                    onChange={setCustomStart}
+                  />
+                  <EnglishDateTimeInput
+                    label={`Custom end (${SITE_TIME_ZONE})`}
+                    timeZone={SITE_TIME_ZONE}
+                    value={customEndValue}
+                    onChange={setCustomEnd}
+                  />
                   <button className="secondary-button" type="button" onClick={applyCustomRange}>
                     Apply custom range
                   </button>
@@ -467,38 +527,24 @@ export function DeviceDetailPage() {
                   {customError ?? rangeError}
                 </p>
               ) : null}
-            </div>
-            <div>
-              <p>
-                Each selection plots one channel only. Depth and position are not merged or assumed
-                comparable.
-              </p>
-              <p>
-                Selected period: {presetLabel(selectedPreset)} · [start, end) in UTC · displayed in{' '}
-                {SITE_TIME_ZONE}.
-              </p>
-              {selectedChannel ? (
-                <>
-                  <MetadataStatusNote status={selectedChannel.verification_status} />
-                  <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
-                </>
-              ) : null}
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={
-                  measurementExport.isPending ||
-                  !deviceId ||
-                  !selectedChannelId ||
-                  !resolvedStart ||
-                  !resolvedEnd ||
-                  Boolean(rangeError)
-                }
-                onClick={exportCsv}
-              >
-                {measurementExport.isPending ? 'Preparing CSV…' : 'Export CSV'}
-              </button>
-              <p>The CSV contains the selected device, channel and time range only.</p>
+              <div className="device-export-control">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={
+                    measurementExport.isPending ||
+                    !deviceId ||
+                    !selectedChannelId ||
+                    !resolvedStart ||
+                    !resolvedEnd ||
+                    Boolean(rangeError)
+                  }
+                  onClick={exportCsv}
+                >
+                  {measurementExport.isPending ? 'Preparing CSV…' : 'Export CSV'}
+                </button>
+                <p>The CSV contains the selected device, channel and time range only.</p>
+              </div>
               {measurementExport.isError ? (
                 <p className="control-error" role="alert">
                   {measurementExport.error.message}
@@ -520,9 +566,17 @@ export function DeviceDetailPage() {
           {selectedChannel && measurements.data && points.length > 0 ? (
             <TimeSeriesChart
               title={`${selectedChannel.display_name} · ${presetLabel(selectedPreset)}`}
-              subtitle={`${String(points.length)} raw observations · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
+              subtitle={`${
+                measurements.data.downsampling_applied
+                  ? `${formatNumber(measurements.data.total_matching)} observations · ${formatNumber(measurements.data.points_returned)} displayed`
+                  : `${formatNumber(measurements.data.total_matching)} raw observations`
+              } · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
               unit={selectedChannel.unit_symbol ?? 'Unit not verified'}
               points={points}
+              rangeStart={measurements.data.start}
+              rangeEnd={measurements.data.end}
+              rangePreset={selectedPreset}
+              downsamplingApplied={measurements.data.downsampling_applied}
             />
           ) : null}
         </>

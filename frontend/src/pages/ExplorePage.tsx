@@ -4,11 +4,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useExplorer, useOverview } from '../api/queries';
 import type { ExploreResponse } from '../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
+import { EnglishDateTimeInput } from '../components/EnglishDateTimeInput';
 import { ExploreSeriesChart } from '../components/ExploreSeriesChart';
 import { MetadataStatusNote } from '../components/MetadataStatusNote';
+import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { UnitStatusNote } from '../components/UnitStatusNote';
+import type { ChartRangePreset } from '../utils/chartTimeAxis';
 import {
   formatDateTime,
   formatDurationSeconds,
@@ -50,6 +53,9 @@ export function ExplorePage() {
   const featureParam = searchParams.get('feature') ?? 'all';
   const metricGroupParam = searchParams.get('group');
   const metricGroup: MetricGroup = isMetricGroup(metricGroupParam) ? metricGroupParam : 'hydrology';
+  const presetParam = searchParams.get('preset');
+  const rangePreset: ChartRangePreset =
+    presetParam === '24h' || presetParam === '7d' || presetParam === '30d' ? presetParam : 'custom';
   const channels = searchParams.has('channels') ? (searchParams.get('channels') ?? '') : undefined;
   const timeZone = overview.data?.display_timezone ?? 'Europe/London';
 
@@ -160,25 +166,24 @@ export function ExplorePage() {
   return (
     <div className="page-stack">
       <SyntheticBanner mode={isProxy ? 'proxy' : 'synthetic'} />
-      <header className="page-hero">
-        <div>
-          <p className="eyebrow">Site-wide history</p>
-          <h1>Explore</h1>
-          <p>
-            Inspect channel-specific conditions on a shared time axis. Present device status and
-            selected-period availability remain separate.
-          </p>
-        </div>
-        <div className="hero-meta">
-          <span>Selected half-open period</span>
-          <strong>
-            {formatDateTime(start, timeZone)} → {formatDateTime(end, timeZone)}
-          </strong>
-          <small>[start, end) in UTC · displayed in {timeZone}</small>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Site-wide history"
+        title="Explore"
+        description="Inspect channel-specific conditions on a shared time axis. Current operational status remains separate from historical availability."
+        meta={
+          <dl className="page-header__facts">
+            <div>
+              <dt>Selected period</dt>
+              <dd>
+                {formatDateTime(start, timeZone)} → {formatDateTime(end, timeZone)}
+              </dd>
+              <small>[start, end) in UTC · displayed in {timeZone}</small>
+            </div>
+          </dl>
+        }
+      />
 
-      <section className="explore-controls" aria-label="Time Explorer controls">
+      <section className="toolbar explore-controls" aria-label="Time Explorer controls">
         <label className="filter-field">
           <span>Time range</span>
           <select
@@ -227,26 +232,18 @@ export function ExplorePage() {
           </select>
         </label>
         <div className="custom-time-fields">
-          <label className="filter-field">
-            <span>Custom start ({timeZone})</span>
-            <input
-              type="datetime-local"
-              value={customStartValue}
-              onChange={(event) => {
-                setCustomStart(event.target.value);
-              }}
-            />
-          </label>
-          <label className="filter-field">
-            <span>Custom end ({timeZone})</span>
-            <input
-              type="datetime-local"
-              value={customEndValue}
-              onChange={(event) => {
-                setCustomEnd(event.target.value);
-              }}
-            />
-          </label>
+          <EnglishDateTimeInput
+            label={`Custom start (${timeZone})`}
+            timeZone={timeZone}
+            value={customStartValue}
+            onChange={setCustomStart}
+          />
+          <EnglishDateTimeInput
+            label={`Custom end (${timeZone})`}
+            timeZone={timeZone}
+            value={customEndValue}
+            onChange={setCustomEnd}
+          />
           <button className="secondary-button" type="button" onClick={applyCustom}>
             Apply custom range
           </button>
@@ -262,7 +259,7 @@ export function ExplorePage() {
       {explorer.isError ? <ErrorState message={explorer.error.message} /> : null}
       {explorer.data ? (
         <>
-          <section className="channel-selector" aria-labelledby="channel-selector-title">
+          <section className="panel channel-selector" aria-labelledby="channel-selector-title">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Explicit selection</p>
@@ -315,6 +312,16 @@ export function ExplorePage() {
                 No configured channels match this feature and metric group.
               </p>
             )}
+            <p className="chart-note" role="status">
+              {explorer.data.downsampling_applied
+                ? `${formatNumber(explorer.data.total_matching)} observations · ${formatNumber(explorer.data.points_returned)} displayed across ${formatNumber(explorer.data.series.length)} series.`
+                : `${formatNumber(explorer.data.total_matching)} observations.`}
+            </p>
+            <p className="chart-note">
+              {explorer.data.downsampling_applied
+                ? 'Chart sampling is applied independently per series and affects display only; raw observations remain preserved.'
+                : 'All matching observations are displayed.'}
+            </p>
           </section>
 
           {unitGroups.length === 0 ? (
@@ -335,7 +342,7 @@ export function ExplorePage() {
                 if (!first) return null;
                 return (
                   <section
-                    className="explore-group"
+                    className="panel explore-group"
                     key={`${first.channel.metric_code}-${first.channel.unit_code ?? 'pending'}`}
                   >
                     <div className="section-heading">
@@ -366,18 +373,30 @@ export function ExplorePage() {
                             <p className="status-separation-note">
                               Current status above · historical availability below
                             </p>
+                            <p className="chart-note">
+                              {series.downsampling_applied
+                                ? `${formatNumber(series.total_matching)} observations · ${formatNumber(series.points_returned)} displayed`
+                                : `${formatNumber(series.total_matching)} observations`}
+                            </p>
                             {series.points.length > 0 ? (
                               <ExploreSeriesChart
                                 series={series}
                                 start={explorer.data.start}
                                 end={explorer.data.end}
                                 timeZone={explorer.data.display_timezone}
+                                rangePreset={rangePreset}
                               />
                             ) : (
                               <p className="empty-chart">
                                 No observations in this period; numeric zero is not substituted.
                               </p>
                             )}
+                            {series.downsampling_applied ? (
+                              <p className="chart-note">
+                                Chart sampling affects display only; raw observations remain
+                                preserved.
+                              </p>
+                            ) : null}
                             <div className="explore-summary" aria-label="Period summary">
                               {series.summary.statistics.map((statistic) => (
                                 <div key={statistic.code}>
@@ -474,7 +493,7 @@ export function ExplorePage() {
             </div>
           )}
 
-          <section className="quality-drilldown" id="quality-warnings">
+          <section className="panel quality-drilldown" id="quality-warnings">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Read-only drill-down</p>
@@ -486,7 +505,7 @@ export function ExplorePage() {
               <p className="missing-value">No flagged observations in this selected period.</p>
             ) : (
               <div className="table-scroll">
-                <table>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Device and channel</th>

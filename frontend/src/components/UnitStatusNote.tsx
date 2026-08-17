@@ -1,17 +1,16 @@
+import { StatusLabel } from './StatusLabel';
+import { unitStatusPresentation } from '../utils/unitStatus';
+
 interface UnitStatusNoteProps {
+  compact?: boolean;
   status: string;
 }
 
-export function UnitStatusNote({ status }: UnitStatusNoteProps) {
-  if (status === 'synthetic_demo_only') {
-    return (
-      <span className="unit-status unit-status--demo">
-        Demo-normalised unit · not deployment-confirmed
-      </span>
-    );
-  }
-  if (status === 'confirmed') {
-    return <span className="unit-status unit-status--confirmed">Deployment unit confirmed</span>;
-  }
-  return <span className="unit-status unit-status--pending">Unit unverified</span>;
+export function UnitStatusNote({ compact = false, status }: UnitStatusNoteProps) {
+  const presentation = unitStatusPresentation(status);
+  return (
+    <StatusLabel compact={compact} tone={presentation.tone}>
+      {compact ? presentation.compactLabel : presentation.detailedLabel}
+    </StatusLabel>
+  );
 }

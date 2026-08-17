@@ -14,6 +14,7 @@ export function formatDateTime(
   return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    hourCycle: 'h23',
     timeZone,
   }).format(date);
 }
@@ -24,6 +25,7 @@ export function formatCompactDate(value: string, timeZone = SITE_TIME_ZONE): str
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    hourCycle: 'h23',
     timeZone,
   }).format(new Date(value));
 }

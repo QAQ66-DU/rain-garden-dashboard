@@ -8,10 +8,23 @@ import { renderRoute } from './render';
 import { server } from './server';
 
 vi.mock('../src/components/TimeSeriesChart', () => ({
-  TimeSeriesChart: ({ title, subtitle }: { title: string; subtitle: string }) => (
-    <section data-testid="time-series-chart">
+  TimeSeriesChart: ({
+    title,
+    subtitle,
+    rangePreset,
+    downsamplingApplied,
+  }: {
+    title: string;
+    subtitle: string;
+    rangePreset: string;
+    downsamplingApplied: boolean;
+  }) => (
+    <section data-testid="time-series-chart" data-range-preset={rangePreset}>
       <h2>{title}</h2>
       <p>{subtitle}</p>
+      {downsamplingApplied ? (
+        <p>Chart downsampled for display. Full raw data remains available for export.</p>
+      ) : null}
     </section>
   ),
 }));
@@ -29,7 +42,7 @@ describe('Device Detail history controls and CSV export', () => {
   it('persists the default range and updates 24-hour, 7-day and 30-day URLs and counts', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('*/api/v1/devices/:deviceId/measurements', ({ request }) => {
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', ({ request }) => {
         const params = new URL(request.url).searchParams;
         const start = params.get('start');
         const items = start?.startsWith('2026-05-31T12:00:00')
@@ -41,6 +54,7 @@ describe('Device Detail history controls and CSV export', () => {
           ...measurementsFixture,
           items,
           total_matching: items.length,
+          points_returned: items.length,
           start: start ?? measurementsFixture.start,
           end: params.get('end') ?? measurementsFixture.end,
         });
@@ -55,6 +69,8 @@ describe('Device Detail history controls and CSV export', () => {
       expect(params.get('end')).toBe(measurementsFixture.end);
     });
     const rangeSelect = screen.getByRole('combobox', { name: 'Time range' });
+    const channelSelect = screen.getByRole('combobox', { name: 'Sensor channel' });
+    const selectedChannel = (channelSelect as HTMLSelectElement).value;
     expect(rangeSelect).toHaveValue('7d');
 
     await user.selectOptions(rangeSelect, '24h');
@@ -68,6 +84,8 @@ describe('Device Detail history controls and CSV export', () => {
       await screen.findByRole('heading', { name: 'Rainfall intensity · Last 24 hours' }),
     ).toBeVisible();
     expect(screen.getByText(/1 raw observations/)).toBeVisible();
+    expect(screen.getByTestId('time-series-chart')).toHaveAttribute('data-range-preset', '24h');
+    expect(channelSelect).toHaveValue(selectedChannel);
 
     await user.selectOptions(rangeSelect, '30d');
     await waitFor(() => {
@@ -79,6 +97,8 @@ describe('Device Detail history controls and CSV export', () => {
       await screen.findByRole('heading', { name: 'Rainfall intensity · Last 30 days' }),
     ).toBeVisible();
     expect(screen.getByText(/3 raw observations/)).toBeVisible();
+    expect(screen.getByTestId('time-series-chart')).toHaveAttribute('data-range-preset', '30d');
+    expect(channelSelect).toHaveValue(selectedChannel);
 
     await user.selectOptions(rangeSelect, '7d');
     await waitFor(() => {
@@ -87,6 +107,30 @@ describe('Device Detail history controls and CSV export', () => {
     expect(
       await screen.findByRole('heading', { name: 'Rainfall intensity · Last 7 days' }),
     ).toBeVisible();
+    expect(screen.getByTestId('time-series-chart')).toHaveAttribute('data-range-preset', '7d');
+    expect(channelSelect).toHaveValue(selectedChannel);
+  });
+
+  it('displays large-range sampling metadata without showing the raw-result limit error', async () => {
+    server.use(
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', () =>
+        HttpResponse.json({
+          ...measurementsFixture,
+          total_matching: 9_614,
+          points_returned: 2_000,
+          downsampling_applied: true,
+        }),
+      ),
+    );
+    renderRoute(periodUrl('2026-07-13T12:00:00Z', '2026-08-12T12:00:00Z', '30d'));
+
+    expect(await screen.findByText(/9,614 observations · 2,000 displayed/)).toBeVisible();
+    expect(
+      screen.getByText(
+        'Chart downsampled for display. Full raw data remains available for export.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/maximum raw result size is 5000/i)).not.toBeInTheDocument();
   });
 
   it('reproduces and applies a custom Europe/London range as UTC URL parameters', async () => {
@@ -94,7 +138,7 @@ describe('Device Detail history controls and CSV export', () => {
     let requestedStart: string | null = null;
     let requestedEnd: string | null = null;
     server.use(
-      http.get('*/api/v1/devices/:deviceId/measurements', ({ request }) => {
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', ({ request }) => {
         const params = new URL(request.url).searchParams;
         requestedStart = params.get('start');
         requestedEnd = params.get('end');
@@ -108,19 +152,32 @@ describe('Device Detail history controls and CSV export', () => {
     const { router } = renderRoute(periodUrl('2026-05-31T12:00:00Z', '2026-05-31T14:00:00Z'));
 
     expect(await screen.findByLabelText('Custom start (Europe/London)')).toHaveValue(
-      '2026-05-31T13:00',
+      '31/05/2026 13:00',
     );
-    expect(screen.getByLabelText('Custom end (Europe/London)')).toHaveValue('2026-05-31T15:00');
+    expect(screen.getByLabelText('Custom end (Europe/London)')).toHaveValue('31/05/2026 15:00');
+    expect(screen.getByLabelText('Custom start (Europe/London)')).toHaveAttribute('lang', 'en-GB');
+    expect(screen.getAllByText('Format: DD/MM/YYYY HH:mm · 24-hour time')).toHaveLength(2);
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Custom start (Europe/London): open English calendar',
+      }),
+    );
+    const picker = screen.getByRole('dialog', { name: 'Custom start (Europe/London) picker' });
+    expect(picker).toHaveTextContent('May 2026');
+    expect(picker).toHaveTextContent('MonTueWedThuFriSatSun');
+    expect(picker).toHaveTextContent('Hour');
+    expect(picker).toHaveTextContent('Minute');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => {
       expect(requestedStart).toBe('2026-05-31T12:00:00Z');
       expect(requestedEnd).toBe('2026-05-31T14:00:00Z');
     });
 
     fireEvent.change(screen.getByLabelText('Custom start (Europe/London)'), {
-      target: { value: '2026-05-31T10:00' },
+      target: { value: '31/05/2026 10:00' },
     });
     fireEvent.change(screen.getByLabelText('Custom end (Europe/London)'), {
-      target: { value: '2026-05-31T12:30' },
+      target: { value: '31/05/2026 12:30' },
     });
     await user.click(screen.getByRole('button', { name: 'Apply custom range' }));
 
@@ -139,7 +196,7 @@ describe('Device Detail history controls and CSV export', () => {
     const user = userEvent.setup();
     let measurementRequests = 0;
     server.use(
-      http.get('*/api/v1/devices/:deviceId/measurements', () => {
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', () => {
         measurementRequests += 1;
         return HttpResponse.json(measurementsFixture);
       }),
@@ -162,10 +219,10 @@ describe('Device Detail history controls and CSV export', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Time range' }), 'custom');
     fireEvent.change(screen.getByLabelText('Custom start (Europe/London)'), {
-      target: { value: '2026-05-31T14:00' },
+      target: { value: '31/05/2026 14:00' },
     });
     fireEvent.change(screen.getByLabelText('Custom end (Europe/London)'), {
-      target: { value: '2026-05-31T13:00' },
+      target: { value: '31/05/2026 13:00' },
     });
     await user.click(screen.getByRole('button', { name: 'Apply custom range' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Start must be earlier than end.');

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -36,6 +36,8 @@ const proxyDevices = devicesFixture.items.slice(0, 8).map((device, index) => ({
   monitoring_feature: proxyFeature,
   display_name: proxyIds[index] ?? 'missing-proxy-id',
   sensor_configuration_status: 'pending',
+  unit_confirmation_summary:
+    index === 2 || index === 5 ? ('no_active_channels' as const) : ('pending' as const),
   environment: 'proxy',
   source_system: 'ttn',
   ingestion_mode: index === 0 ? 'live_mqtt' : null,
@@ -114,6 +116,9 @@ beforeEach(() => {
         available_channels: [],
         selected_channel_ids: [],
         series: [],
+        total_matching: 0,
+        points_returned: 0,
+        downsampling_applied: false,
         quality_warnings: [],
       }),
     ),
@@ -126,13 +131,13 @@ describe('proxy TTN dashboard', () => {
 
     expect(await screen.findByText('Live proxy sensor data')).toBeInTheDocument();
     for (const deviceId of proxyIds) {
-      expect(screen.getByRole('heading', { name: deviceId })).toBeInTheDocument();
+      expect(screen.getByText(deviceId)).toBeInTheDocument();
     }
-    expect(screen.getAllByRole('article')).toHaveLength(8);
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(9);
     expect(screen.getByRole('option', { name: 'Proxy sensors' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Swale' })).not.toBeInTheDocument();
     expect(screen.queryByText('Orchard Park monitoring site')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Never seen / No data')).toHaveLength(7);
+    expect(screen.getAllByText('Never received')).toHaveLength(7);
   });
 
   it('shows the required no-data state for vision-ai without channels', async () => {
@@ -172,7 +177,7 @@ describe('proxy TTN dashboard', () => {
           provenance: 'proxy',
         }),
       ),
-      http.get('*/api/v1/devices/:deviceId/measurements', () =>
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', () =>
         HttpResponse.json({
           ...replayMeasurementsFixture,
           provenance: 'proxy',
@@ -225,6 +230,9 @@ describe('proxy TTN dashboard', () => {
                 expected_slot_at: null,
                 timing_status: 'schedule_unavailable',
               })),
+              total_matching: 2,
+              points_returned: 2,
+              downsampling_applied: false,
               summary: {
                 status: 'available',
                 status_detail: 'Basic valid observations; metadata remains unverified.',
@@ -248,6 +256,9 @@ describe('proxy TTN dashboard', () => {
               },
             },
           ],
+          total_matching: 2,
+          points_returned: 2,
+          downsampling_applied: false,
           quality_warnings: [],
         }),
       ),

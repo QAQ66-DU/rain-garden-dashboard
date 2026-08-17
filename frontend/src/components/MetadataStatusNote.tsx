@@ -1,10 +1,12 @@
+import { StatusLabel } from './StatusLabel';
+
 interface MetadataStatusNoteProps {
   status: string;
 }
 
 export function MetadataStatusNote({ status }: MetadataStatusNoteProps) {
   if (status === 'unverified') {
-    return <span className="unit-status unit-status--pending">Metadata pending</span>;
+    return <StatusLabel tone="warning">Metadata pending</StatusLabel>;
   }
-  return <span className="unit-status unit-status--confirmed">Metadata catalogued</span>;
+  return <StatusLabel tone="success">Metadata catalogued</StatusLabel>;
 }

@@ -3,10 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useDevices, useSites } from '../api/queries';
 import type { ConnectivityStatus } from '../api/types';
+import { ConfigurationStatus } from '../components/ConfigurationStatus';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
+import { IngestionSource } from '../components/IngestionSource';
+import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
-import { formatDateTime, formatStatusBasis, humanizeCode } from '../utils/format';
+import { UnitStatusNote } from '../components/UnitStatusNote';
+import { formatDateTime, humanizeCode } from '../utils/format';
 
 export function DevicesPage() {
   const location = useLocation();
@@ -46,18 +50,13 @@ export function DevicesPage() {
                 : 'synthetic'
         }
       />
-      <header className="page-hero">
-        <div>
-          <p className="eyebrow">Technical inventory</p>
-          <h1>Devices</h1>
-          <p>
-            Review the confirmed public inventory by monitoring feature, sensor type, and data
-            freshness.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Technical inventory"
+        title="Devices"
+        description="Review device source, operational freshness, configuration completeness and unit interpretation as separate system properties."
+      />
 
-      <section className="filter-bar" aria-label="Device filters">
+      <section className="toolbar filter-bar" aria-label="Device filters">
         <label className="filter-field filter-field--search">
           <span>Search devices</span>
           <input
@@ -152,77 +151,79 @@ export function DevicesPage() {
       ) : null}
       {devices.data && devices.data.items.length > 0 ? (
         <>
-          <div className="device-list" aria-label="Devices">
-            {devices.data.items.map((device) => (
-              <article className="device-card" key={device.id}>
-                <div className="device-card__identity">
-                  <div className="device-icon" aria-hidden="true">
-                    {device.device_type === 'weather_station'
-                      ? 'WS'
-                      : device.device_type === 'soil_moisture_sensor'
-                        ? 'SM'
-                        : device.device_type === 'water_level_sensor'
-                          ? 'WL'
-                          : device.device_type === 'multi_depth_soil_probe'
-                            ? 'MD'
-                            : 'TT'}
-                  </div>
-                  <div>
-                    <p>{humanizeCode(device.device_type)}</p>
-                    <h2>{device.display_name}</h2>
-                    <span>
-                      {device.monitoring_feature?.display_name ?? 'Feature not assigned'} ·{' '}
-                      {device.site_name}
-                    </span>
-                    {device.is_test_device ? (
-                      <div className="provenance-tags" aria-label="Data provenance">
-                        <span className="provenance-tag">
-                          {device.provenance === 'proxy' ? 'Proxy sensor' : 'Testbed'}
+          <section className="panel inventory-panel" aria-labelledby="device-inventory-title">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Current result set</p>
+                <h2 id="device-inventory-title">Device inventory</h2>
+              </div>
+              <span className="count-chip">{devices.data.items.length} devices</span>
+            </div>
+            <div className="table-scroll">
+              <table className="data-table data-table--responsive">
+                <thead>
+                  <tr>
+                    <th>Device</th>
+                    <th>Type / location</th>
+                    <th>Source</th>
+                    <th>Operational status</th>
+                    <th>Last received</th>
+                    <th>Configuration</th>
+                    <th>Units</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {devices.data.items.map((device) => (
+                    <tr key={device.id}>
+                      <td data-label="Device">
+                        <strong className="data-table__primary">{device.display_name}</strong>
+                      </td>
+                      <td data-label="Type / location">
+                        <span className="data-table__primary">
+                          {humanizeCode(device.device_type)}
                         </span>
-                        <span className="provenance-tag">
-                          {device.ingestion_mode === 'live_mqtt' ? 'Live MQTT' : 'Replay data'}
-                        </span>
-                        <span className="provenance-tag provenance-tag--warning">
-                          Metadata pending
-                        </span>
-                        <span className="provenance-tag provenance-tag--warning">
-                          Unit unverified
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="device-card__status">
-                  <StatusBadge status={device.freshness.calculated_status} />
-                  <small>As of {formatDateTime(device.freshness.reference_time)}</small>
-                </div>
-                <dl className="device-facts">
-                  <div>
-                    <dt>Last seen</dt>
-                    <dd>
-                      {device.last_seen_at === null
-                        ? 'Never seen / No data'
-                        : formatDateTime(device.last_seen_at)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Configuration</dt>
-                    <dd>{humanizeCode(device.sensor_configuration_status)}</dd>
-                  </div>
-                  <div>
-                    <dt>Status basis</dt>
-                    <dd>{formatStatusBasis(device.freshness.status_basis)}</dd>
-                  </div>
-                </dl>
-                <Link
-                  className="button-link"
-                  to={{ pathname: `/devices/${device.id}`, search: location.search }}
-                >
-                  View device details <span aria-hidden="true">→</span>
-                </Link>
-              </article>
-            ))}
-          </div>
+                        <small className="data-table__secondary">
+                          {device.monitoring_feature?.display_name ?? 'Feature not assigned'} ·{' '}
+                          {device.site_name}
+                        </small>
+                      </td>
+                      <td data-label="Source">
+                        <IngestionSource
+                          compact
+                          ingestionMode={device.ingestion_mode}
+                          provenance={device.provenance}
+                          sourceSystem={device.source_system}
+                        />
+                      </td>
+                      <td data-label="Operational status">
+                        <StatusBadge status={device.freshness.calculated_status} />
+                      </td>
+                      <td data-label="Last received">
+                        {device.last_seen_at === null
+                          ? 'Never received'
+                          : formatDateTime(device.last_seen_at)}
+                      </td>
+                      <td data-label="Configuration">
+                        <ConfigurationStatus compact status={device.sensor_configuration_status} />
+                      </td>
+                      <td data-label="Units">
+                        <UnitStatusNote compact status={device.unit_confirmation_summary} />
+                      </td>
+                      <td data-label="Action">
+                        <Link
+                          className="text-link"
+                          to={{ pathname: `/devices/${device.id}`, search: location.search }}
+                        >
+                          View details <span aria-hidden="true">→</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
           {devices.data.next_cursor ? (
             <button
               className="secondary-button"

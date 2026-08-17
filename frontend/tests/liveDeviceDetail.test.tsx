@@ -33,55 +33,68 @@ describe('live Outflow A device detail', () => {
     const channelOne = replayMeasurementsFixture.items[0];
     const channelTwo = replayMeasurementsFixture.items[1];
     if (!channelOne || !channelTwo) throw new Error('Live test measurements are required');
+    const initialObservedAt = '2026-08-04T18:38:53Z';
+    const nextObservedAt = '2026-08-04T18:39:53.442Z';
+    const initialStart = '2026-07-28T18:38:54Z';
+    const initialEnd = '2026-08-04T18:38:54Z';
 
     let deviceRequests = 0;
     let selectedChannelRequests = 0;
+    let failNextSelectedChannelRequest = false;
     server.use(
       http.get('*/api/v1/devices/:deviceId', ({ params }) => {
         if (params['deviceId'] !== replayDeviceId) return HttpResponse.json(null, { status: 404 });
         deviceRequests += 1;
+        const observedAt = deviceRequests >= 3 ? nextObservedAt : initialObservedAt;
         return HttpResponse.json({
           ...replayDeviceDetailFixture,
           ingestion_mode: 'live_mqtt',
           provenance: 'live_ttn_mqtt',
-          last_seen_at: '2026-08-04T18:38:53Z',
+          last_seen_at: observedAt,
           freshness: {
             ...replayDeviceDetailFixture.freshness,
-            reference_time: '2026-08-04T18:38:53Z',
+            reference_time: observedAt,
             status_basis: 'live_mqtt_reference_time',
           },
           telemetry: replayDeviceDetailFixture.telemetry
             ? {
                 ...replayDeviceDetailFixture.telemetry,
-                observed_at: '2026-08-04T18:38:53Z',
+                observed_at: observedAt,
                 gateway: 'TTN gateway (identifier withheld)',
               }
             : null,
         });
       }),
-      http.get('*/api/v1/devices/:deviceId/measurements', ({ params, request }) => {
+      http.get('*/api/v1/devices/:deviceId/measurements/chart', ({ params, request }) => {
         if (params['deviceId'] !== replayDeviceId) return HttpResponse.json(null, { status: 404 });
-        const selected = new URL(request.url).searchParams.get('sensor_channel_id');
+        const query = new URL(request.url).searchParams;
+        const selected = query.get('sensor_channel_id');
+        const start = query.get('start') ?? initialStart;
+        const end = query.get('end') ?? initialEnd;
+        const includesNextObservation = Date.parse(end) > Date.parse(nextObservedAt);
         if (selected === replayChannelTwoId) {
           selectedChannelRequests += 1;
-          if (selectedChannelRequests === 2) {
+          if (failNextSelectedChannelRequest) {
+            failNextSelectedChannelRequest = false;
             return HttpResponse.json({ detail: 'Temporary refresh failure.' }, { status: 503 });
           }
-          const items =
-            selectedChannelRequests >= 3
-              ? [
-                  channelTwo,
-                  {
-                    ...channelTwo,
-                    numeric_value: 201,
-                    measured_at: '2026-08-04T18:39:53Z',
-                  },
-                ]
-              : [channelTwo];
+          const items = includesNextObservation
+            ? [
+                channelTwo,
+                {
+                  ...channelTwo,
+                  numeric_value: 201,
+                  measured_at: nextObservedAt,
+                },
+              ]
+            : [channelTwo];
           return HttpResponse.json({
             ...replayMeasurementsFixture,
             items,
             total_matching: items.length,
+            points_returned: items.length,
+            start,
+            end,
             provenance: 'live_ttn_mqtt',
           });
         }
@@ -89,35 +102,43 @@ describe('live Outflow A device detail', () => {
           ...replayMeasurementsFixture,
           items: selected === replayChannelOneId ? [channelOne] : [],
           total_matching: selected === replayChannelOneId ? 1 : 0,
+          points_returned: selected === replayChannelOneId ? 1 : 0,
+          start,
+          end,
           provenance: 'live_ttn_mqtt',
         });
       }),
     );
 
-    renderRoute(
-      `/devices/${replayDeviceId}?start=2026-07-27T16%3A11%3A01Z&end=2026-08-03T16%3A11%3A01Z&preset=7d`,
-    );
+    const { router } = renderRoute(`/devices/${replayDeviceId}`);
 
     expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
     expect(screen.getByText('Live TTN testbed data')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Live ingestion provenance' })).toBeInTheDocument();
-    expect(screen.getByText('TTN application uplink')).toBeInTheDocument();
+    expect(screen.getAllByText('Live MQTT').length).toBeGreaterThan(0);
     expect(screen.getByText('Live MQTT reference time')).toBeInTheDocument();
-    expect(screen.queryByText('TTN console export')).not.toBeInTheDocument();
+    expect(screen.queryByText('Offline replay')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(new URLSearchParams(router.state.location.search).get('preset')).toBe('7d');
+    });
 
     const controls = screen.getByRole('region', { name: 'Chart controls' });
     const channelSelect = within(controls).getByRole('combobox', { name: 'Sensor channel' });
+    const rangeSelect = within(controls).getByRole('combobox', { name: 'Time range' });
     await user.selectOptions(channelSelect, replayChannelTwoId);
     expect(channelSelect).toHaveValue(replayChannelTwoId);
+    expect(rangeSelect).toHaveValue('7d');
     expect(await screen.findByText(/1 raw observations/)).toBeInTheDocument();
+    failNextSelectedChannelRequest = true;
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
     await waitFor(() => {
-      expect(selectedChannelRequests).toBe(2);
+      expect(selectedChannelRequests).toBeGreaterThanOrEqual(2);
     });
     expect(channelSelect).toHaveValue(replayChannelTwoId);
+    expect(rangeSelect).toHaveValue('7d');
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
     expect(screen.getByText(/1 raw observations/)).toBeInTheDocument();
 
@@ -125,10 +146,15 @@ describe('live Outflow A device detail', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
     await waitFor(() => {
-      expect(selectedChannelRequests).toBe(3);
+      expect(selectedChannelRequests).toBeGreaterThanOrEqual(3);
     });
     expect(await screen.findByText(/2 raw observations/)).toBeInTheDocument();
     expect(channelSelect).toHaveValue(replayChannelTwoId);
+    expect(rangeSelect).toHaveValue('7d');
+    expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
+    expect(new URLSearchParams(router.state.location.search).get('end')).toBe(
+      '2026-08-04T18:39:53.443Z',
+    );
     expect(deviceRequests).toBeGreaterThanOrEqual(3);
   });
 });
