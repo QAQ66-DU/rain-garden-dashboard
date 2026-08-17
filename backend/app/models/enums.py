@@ -32,6 +32,14 @@ class UnitConfirmationStatus(StrEnum):
     SYNTHETIC_DEMO_ONLY = "synthetic_demo_only"
 
 
+class UnitConfirmationSummary(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    SYNTHETIC_DEMO_ONLY = "synthetic_demo_only"
+    MIXED = "mixed"
+    NO_ACTIVE_CHANNELS = "no_active_channels"
+
+
 class MetricGroup(StrEnum):
     HYDROLOGY = "hydrology"
     SOIL = "soil"

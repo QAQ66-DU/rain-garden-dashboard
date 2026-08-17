@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{device_id}/measurements/chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chart Measurements */
+        get: operations["chart_measurements_api_v1_devices__device_id__measurements_chart_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/{device_id}/measurements/export.csv": {
         parameters: {
             query?: never;
@@ -227,6 +244,7 @@ export interface components {
             /** Source System */
             source_system: string | null;
             telemetry: components["schemas"]["DeviceTelemetryPublic"] | null;
+            unit_confirmation_summary: components["schemas"]["UnitConfirmationSummary"];
         };
         /** DeviceList */
         DeviceList: {
@@ -283,6 +301,7 @@ export interface components {
             site_name: string;
             /** Source System */
             source_system: string | null;
+            unit_confirmation_summary: components["schemas"]["UnitConfirmationSummary"];
         };
         /** DeviceStatusCounts */
         DeviceStatusCounts: {
@@ -477,6 +496,8 @@ export interface components {
             available_devices: components["schemas"]["ExploreDevice"][];
             /** Display Timezone */
             display_timezone: string;
+            /** Downsampling Applied */
+            downsampling_applied: boolean;
             /**
              * End
              * Format: date-time
@@ -486,6 +507,8 @@ export interface components {
             feature: string | null;
             /** Metric Group */
             metric_group: string;
+            /** Points Returned */
+            points_returned: number;
             /** Quality Warnings */
             quality_warnings: components["schemas"]["QualityWarning"][];
             /**
@@ -513,14 +536,22 @@ export interface components {
             synthetic: boolean;
             /** Time Window Semantics */
             time_window_semantics: string;
+            /** Total Matching */
+            total_matching: number;
         };
         /** ExploreSeries */
         ExploreSeries: {
             channel: components["schemas"]["ExploreChannel"];
             coverage: components["schemas"]["ExploreCoverage"];
+            /** Downsampling Applied */
+            downsampling_applied: boolean;
             /** Points */
             points: components["schemas"]["ExplorePoint"][];
+            /** Points Returned */
+            points_returned: number;
             summary: components["schemas"]["ExploreSummary"];
+            /** Total Matching */
+            total_matching: number;
         };
         /** ExploreSummary */
         ExploreSummary: {
@@ -577,6 +608,38 @@ export interface components {
             timestamp: string;
             /** Version */
             version: string;
+        };
+        /** MeasurementChartSeries */
+        MeasurementChartSeries: {
+            /** Default Range Applied */
+            default_range_applied: boolean;
+            /** Downsampling Applied */
+            downsampling_applied: boolean;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Items */
+            items: components["schemas"]["MeasurementValue"][];
+            /** Points Returned */
+            points_returned: number;
+            /** Provenance */
+            provenance: string | null;
+            /**
+             * Reference Time
+             * Format: date-time
+             */
+            reference_time: string;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** Synthetic */
+            synthetic: boolean;
+            /** Total Matching */
+            total_matching: number;
         };
         /** MeasurementPage */
         MeasurementPage: {
@@ -883,6 +946,11 @@ export interface components {
             /** Unit Symbol */
             unit_symbol: string | null;
         };
+        /**
+         * UnitConfirmationSummary
+         * @enum {string}
+         */
+        UnitConfirmationSummary: "pending" | "confirmed" | "synthetic_demo_only" | "mixed" | "no_active_channels";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -998,6 +1066,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeasurementPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chart_measurements_api_v1_devices__device_id__measurements_chart_get: {
+        parameters: {
+            query: {
+                sensor_channel_id: string;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasurementChartSeries"];
                 };
             };
             /** @description Validation Error */

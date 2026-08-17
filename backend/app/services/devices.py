@@ -8,7 +8,7 @@ from app.db.repositories import devices as device_repository
 from app.db.repositories import sites as site_repository
 from app.db.repositories.measurements import current_reference_time
 from app.metric_catalog import METRICS_BY_CODE, get_unit
-from app.models.enums import DeviceType
+from app.models.enums import DeviceType, UnitConfirmationStatus, UnitConfirmationSummary
 from app.schemas.device import (
     DeviceDetail,
     DeviceList,
@@ -37,12 +37,23 @@ def _validate_device_type(device_type: str | None) -> str | None:
     return device_type
 
 
+def summarize_unit_confirmation(statuses: list[str]) -> UnitConfirmationSummary:
+    resolved = {UnitConfirmationStatus(status) for status in statuses}
+    if not resolved:
+        return UnitConfirmationSummary.NO_ACTIVE_CHANNELS
+    if len(resolved) > 1:
+        return UnitConfirmationSummary.MIXED
+    status = next(iter(resolved))
+    return UnitConfirmationSummary(status.value)
+
+
 def _device_public(
     row: device_repository.DeviceWithSite,
     latest: list[device_repository.LatestMeasurement],
     *,
     reference_time: datetime,
     settings: Settings,
+    unit_confirmation_summary: UnitConfirmationSummary,
 ) -> DevicePublic:
     freshness = calculate_freshness(
         row.device.last_seen_at,
@@ -81,6 +92,7 @@ def _device_public(
         display_name=row.device.display_name,
         device_type=row.device.device_type,
         sensor_configuration_status=row.device.sensor_configuration_status,
+        unit_confirmation_summary=unit_confirmation_summary,
         operational_override=row.device.operational_override,
         last_seen_at=row.device.last_seen_at,
         location_disclosure=row.device.location_disclosure,
@@ -139,6 +151,9 @@ def list_devices(
     latest = device_repository.latest_measurements_by_channel(
         session, [row.device.id for row in rows]
     )
+    unit_statuses = device_repository.active_unit_confirmation_statuses(
+        session, [row.device.id for row in rows]
+    )
     contains_replay_data = any(row.device.is_test_device for row in rows)
     next_cursor = None
     if has_more and rows:
@@ -162,6 +177,7 @@ def list_devices(
                     else row.site_reference_time or reference_time
                 ),
                 settings=settings,
+                unit_confirmation_summary=summarize_unit_confirmation(unit_statuses[row.device.id]),
             )
             for row in rows
         ],
@@ -187,7 +203,14 @@ def get_device(session: Session, settings: Settings, device_id: UUID) -> DeviceD
     latest = device_repository.latest_measurements_by_channel(session, [device_id]).get(
         device_id, []
     )
-    base = _device_public(row, latest, reference_time=reference_time, settings=settings)
+    unit_statuses = device_repository.active_unit_confirmation_statuses(session, [device_id])
+    base = _device_public(
+        row,
+        latest,
+        reference_time=reference_time,
+        settings=settings,
+        unit_confirmation_summary=summarize_unit_confirmation(unit_statuses[device_id]),
+    )
     channels = [
         SensorChannelPublic(
             id=channel.id,

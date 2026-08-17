@@ -3,7 +3,7 @@ import type {
   DeviceList,
   DevicePublic,
   ExploreResponse,
-  MeasurementPage,
+  MeasurementChartSeries,
   MeasurementValue,
   Overview,
   SiteList,
@@ -140,6 +140,7 @@ function device(
     display_name: displayName,
     device_type: deviceType,
     sensor_configuration_status: status === 'unknown' ? 'pending' : 'configured',
+    unit_confirmation_summary: status === 'unknown' ? 'no_active_channels' : 'synthetic_demo_only',
     operational_override: null,
     last_seen_at: status === 'unknown' ? null : referenceTime,
     location_disclosure: 'private',
@@ -177,6 +178,7 @@ export const devicesFixture: DeviceList = {
       site_id: '00000000-0000-4000-8000-000000000099',
       site_name: 'TTN Testbed',
       sensor_configuration_status: 'pending',
+      unit_confirmation_summary: 'pending',
       environment: 'test',
       source_system: 'ttn',
       ingestion_mode: 'offline_replay',
@@ -352,10 +354,11 @@ export const replayDeviceDetailFixture: DeviceDetail = {
   },
 };
 
-export const replayMeasurementsFixture: MeasurementPage = {
+export const replayMeasurementsFixture: MeasurementChartSeries = {
   items: [replayMeasurement, replayMeasurementTwo],
-  next_cursor: null,
   total_matching: 2,
+  points_returned: 2,
+  downsampling_applied: false,
   start: '2026-07-27T16:11:01Z',
   end: '2026-08-03T16:11:01Z',
   reference_time: '2026-08-03T16:11:01Z',
@@ -364,14 +367,15 @@ export const replayMeasurementsFixture: MeasurementPage = {
   provenance: 'exported_live_data',
 };
 
-export const measurementsFixture: MeasurementPage = {
+export const measurementsFixture: MeasurementChartSeries = {
   items: [
     { ...rainfallMeasurement, measured_at: '2026-05-30T12:00:00Z', numeric_value: 1.2 },
     { ...rainfallMeasurement, measured_at: '2026-05-31T12:00:00Z', numeric_value: 0 },
     { ...rainfallMeasurement, measured_at: referenceTime, numeric_value: 3.4 },
   ],
-  next_cursor: null,
   total_matching: 3,
+  points_returned: 3,
+  downsampling_applied: false,
   start: '2026-05-25T12:00:00Z',
   end: referenceTime,
   reference_time: referenceTime,
@@ -486,6 +490,9 @@ export const exploreFixture: ExploreResponse = {
         explorePoint('00000000-0000-4000-8000-000000000062', '2026-05-31T12:00:00Z', 1.4),
         explorePoint('00000000-0000-4000-8000-000000000063', '2026-06-01T11:00:00Z', 0),
       ],
+      total_matching: 3,
+      points_returned: 3,
+      downsampling_applied: false,
       summary: {
         status: 'available',
         status_detail: 'Valid unique schedule slots only.',
@@ -525,6 +532,9 @@ export const exploreFixture: ExploreResponse = {
         explorePoint('00000000-0000-4000-8000-000000000071', '2026-05-30T12:00:00Z', 74),
         explorePoint('00000000-0000-4000-8000-000000000072', '2026-06-01T11:00:00Z', 78),
       ],
+      total_matching: 2,
+      points_returned: 2,
+      downsampling_applied: false,
       summary: {
         status: 'available',
         status_detail: 'Valid unique schedule slots only.',
@@ -554,6 +564,9 @@ export const exploreFixture: ExploreResponse = {
       coverage: exploreCoverage,
     },
   ],
+  total_matching: 5,
+  points_returned: 5,
+  downsampling_applied: false,
   quality_warnings: [
     {
       measurement_id: '00000000-0000-4000-8000-000000000081',

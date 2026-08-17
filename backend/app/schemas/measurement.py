@@ -35,3 +35,16 @@ class MeasurementPage(ApiModel):
     default_range_applied: bool
     synthetic: bool
     provenance: str | None
+
+
+class MeasurementChartSeries(ApiModel):
+    items: list[MeasurementValue]
+    total_matching: int
+    points_returned: int
+    downsampling_applied: bool
+    start: datetime
+    end: datetime
+    reference_time: datetime
+    default_range_applied: bool
+    synthetic: bool
+    provenance: str | None

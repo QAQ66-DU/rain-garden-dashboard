@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     default_measurement_range_days: int = Field(default=7, ge=1, le=31)
     max_measurement_range_days: int = Field(default=31, ge=1, le=31)
     max_measurement_result_rows: int = Field(default=5_000, ge=1, le=5_000)
+    chart_measurement_target_points: int = Field(default=2_000, ge=500, le=5_000)
 
     @property
     def cors_origins(self) -> list[str]:

@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
+from app.models.enums import UnitConfirmationSummary
 from app.schemas.common import ApiModel, Freshness
 from app.schemas.measurement import MeasurementValue
 
@@ -55,6 +56,7 @@ class DevicePublic(ApiModel):
     display_name: str
     device_type: str
     sensor_configuration_status: str
+    unit_confirmation_summary: UnitConfirmationSummary
     operational_override: str | None
     last_seen_at: datetime | None
     location_disclosure: str

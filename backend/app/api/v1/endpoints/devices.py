@@ -2,11 +2,12 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query
+from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import AppSettings, DatabaseSession
 from app.schemas.device import DeviceDetail, DeviceList
-from app.schemas.measurement import MeasurementPage
+from app.schemas.measurement import MeasurementChartSeries, MeasurementPage
 from app.services import devices as device_service
 from app.services import measurements as measurement_service
 from app.services.status import ConnectivityStatus
@@ -69,9 +70,28 @@ def list_measurements(
     )
 
 
+@router.get("/{device_id}/measurements/chart", response_model=MeasurementChartSeries)
+def chart_measurements(
+    device_id: UUID,
+    session: DatabaseSession,
+    settings: AppSettings,
+    sensor_channel_id: UUID,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> MeasurementChartSeries:
+    return measurement_service.chart_measurements(
+        session,
+        settings,
+        device_id,
+        start=start,
+        end=end,
+        sensor_channel_id=sensor_channel_id,
+    )
+
+
 @router.get(
     "/{device_id}/measurements/export.csv",
-    response_class=Response,
+    response_class=StreamingResponse,
     responses={
         200: {
             "content": {"text/csv": {"schema": {"type": "string"}}},
@@ -86,7 +106,7 @@ def export_measurements_csv(
     start: datetime,
     end: datetime,
     sensor_channel_id: UUID,
-) -> Response:
+) -> StreamingResponse:
     exported = measurement_service.export_measurements_csv(
         session,
         settings,
@@ -95,7 +115,7 @@ def export_measurements_csv(
         end=end,
         sensor_channel_id=sensor_channel_id,
     )
-    return Response(
+    return StreamingResponse(
         content=exported.content,
         media_type="text/csv",
         headers={

@@ -1,6 +1,7 @@
 import csv
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from io import StringIO
 from typing import Any, Protocol, cast
 from uuid import UUID
@@ -9,9 +10,12 @@ import pytest
 from app.core.config import Settings
 from app.db.seed import SITE_ID, seed_session
 from app.db.synthetic import stable_uuid
+from app.models.measurement import Measurement
 from app.models.sensor_channel import SensorChannel
+from app.models.uplink_event import UplinkEvent
 from app.services.errors import ServiceError
 from app.services.measurements import list_measurements
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
@@ -140,6 +144,117 @@ def test_measurement_cursor_is_deterministic(api_client: TestClient) -> None:
     assert datetime.fromisoformat(
         second.json()["items"][0]["measured_at"]
     ) > datetime.fromisoformat(first_body["items"][-1]["measured_at"])
+
+
+def test_measurement_chart_returns_every_point_below_display_threshold(
+    api_client: TestClient,
+) -> None:
+    channel_id = _weather_channel_id(api_client)
+    response = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements/chart",
+        params={
+            "start": "2026-05-31T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "sensor_channel_id": channel_id,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_matching"] == 24
+    assert body["points_returned"] == 24
+    assert body["downsampling_applied"] is False
+    assert len(body["items"]) == 24
+
+
+def test_large_chart_is_bounded_shape_preserving_and_csv_remains_complete(
+    api_client: TestClient, db_session: Session
+) -> None:
+    channel_id = UUID(_weather_channel_id(api_client))
+    start = datetime(2026, 6, 2, tzinfo=UTC)
+    count = 5_001
+    timestamps = [start + timedelta(seconds=index * 5) for index in range(count)]
+    event_ids = [stable_uuid(f"chart-sampling-event:{index}") for index in range(count)]
+    values = [
+        Decimal("999")
+        if index == 1_111
+        else Decimal("-999")
+        if index == 3_333
+        else Decimal(index % 23)
+        for index in range(count)
+    ]
+    db_session.execute(
+        insert(UplinkEvent),
+        [
+            {
+                "id": event_id,
+                "device_id": WEATHER_DEVICE_ID,
+                "source": "chart-sampling-test",
+                "idempotency_key": f"chart-sampling-{index}",
+                "received_at": timestamp,
+                "measured_at": timestamp,
+                "raw_payload": {},
+                "ingestion_status": "accepted",
+                "ingestion_mode": "live_mqtt",
+                "provenance": "proxy",
+            }
+            for index, (event_id, timestamp) in enumerate(zip(event_ids, timestamps, strict=True))
+        ],
+    )
+    db_session.execute(
+        insert(Measurement),
+        [
+            {
+                "id": stable_uuid(f"chart-sampling-measurement:{index}"),
+                "uplink_event_id": event_id,
+                "device_id": WEATHER_DEVICE_ID,
+                "sensor_channel_id": channel_id,
+                "numeric_value": value,
+                "measured_at": timestamp,
+                "quality_flag": "valid",
+            }
+            for index, (event_id, timestamp, value) in enumerate(
+                zip(event_ids, timestamps, values, strict=True)
+            )
+        ],
+    )
+    db_session.flush()
+    end = timestamps[-1] + timedelta(microseconds=1)
+    params = {
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "sensor_channel_id": str(channel_id),
+    }
+
+    raw = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements",
+        params={**params, "page_size": 500},
+    )
+    chart = api_client.get(f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements/chart", params=params)
+    exported = api_client.get(
+        f"/api/v1/devices/{WEATHER_DEVICE_ID}/measurements/export.csv", params=params
+    )
+
+    assert raw.status_code == 422
+    assert raw.json()["error_code"] == "result_set_too_large"
+    assert chart.status_code == 200
+    body = chart.json()
+    assert body["total_matching"] == count
+    assert body["points_returned"] == len(body["items"])
+    assert body["points_returned"] <= 2_000
+    assert body["downsampling_applied"] is True
+    assert {item["channel_id"] for item in body["items"]} == {str(channel_id)}
+    observed_times = [item["measured_at"] for item in body["items"]]
+    assert observed_times == sorted(observed_times)
+    assert observed_times[0] == timestamps[0].isoformat().replace("+00:00", "Z")
+    assert observed_times[-1] == timestamps[-1].isoformat().replace("+00:00", "Z")
+    assert {item["numeric_value"] for item in body["items"]}.issuperset({-999.0, 999.0})
+
+    assert exported.status_code == 200
+    exported_rows = list(csv.DictReader(StringIO(exported.text)))
+    assert len(exported_rows) == count
+    assert exported_rows[0]["observed_at"] == observed_times[0]
+    assert exported_rows[-1]["observed_at"] == observed_times[-1]
 
 
 @pytest.mark.parametrize(
@@ -380,6 +495,9 @@ def test_explorer_uses_half_open_periods_and_schedule_aligned_coverage(
     assert response.status_code == 200
     body = response.json()
     assert body["time_window_semantics"].startswith("Half-open UTC interval [start, end)")
+    assert body["total_matching"] == sum(item["total_matching"] for item in body["series"])
+    assert body["points_returned"] == sum(item["points_returned"] for item in body["series"])
+    assert body["downsampling_applied"] is False
     assert len(body["available_devices"]) == 8
     assert len(body["available_channels"]) == 4
     assert len(body["series"]) == 4
@@ -387,6 +505,9 @@ def test_explorer_uses_half_open_periods_and_schedule_aligned_coverage(
         item for item in body["series"] if item["channel"]["metric_code"] == "rainfall_intensity"
     )
     assert len(rainfall["points"]) == 168
+    assert rainfall["total_matching"] == 168
+    assert rainfall["points_returned"] == 168
+    assert rainfall["downsampling_applied"] is False
     assert rainfall["coverage"] == {
         "status": "available",
         "status_detail": (
@@ -435,6 +556,118 @@ def test_explorer_uses_half_open_periods_and_schedule_aligned_coverage(
         (item["measured_at"], item["numeric_value"], item["quality_flag"])
         for item in rainfall["points"]
     }
+
+
+def test_explorer_samples_large_series_independently_without_mixing(
+    api_client: TestClient, db_session: Session
+) -> None:
+    catalogue = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": "2026-05-25T12:00:00Z",
+            "end": "2026-06-01T12:00:00Z",
+            "metric_group": "soil",
+            "site_id": str(SITE_ID),
+        },
+    )
+    assert catalogue.status_code == 200
+    selected_channels: list[dict[str, str]] = []
+    selected_devices: set[str] = set()
+    for channel in catalogue.json()["available_channels"]:
+        if channel["device_id"] in selected_devices:
+            continue
+        selected_channels.append(channel)
+        selected_devices.add(channel["device_id"])
+        if len(selected_channels) == 2:
+            break
+    assert len(selected_channels) == 2
+
+    start = datetime(2026, 6, 3, tzinfo=UTC)
+    observations_per_series = 5_001
+    event_rows: list[dict[str, object]] = []
+    measurement_rows: list[dict[str, object]] = []
+    expected_ids: dict[str, set[str]] = {}
+    for series_index, channel in enumerate(selected_channels):
+        channel_id = UUID(channel["channel_id"])
+        device_id = UUID(channel["device_id"])
+        series_ids: set[str] = set()
+        for observation_index in range(observations_per_series):
+            observed_at = start + timedelta(seconds=observation_index * 5)
+            event_id = stable_uuid(f"explorer-sampling-event:{channel_id}:{observation_index}")
+            measurement_id = stable_uuid(
+                f"explorer-sampling-measurement:{channel_id}:{observation_index}"
+            )
+            numeric_value = (
+                Decimal(1_000 + series_index)
+                if observation_index == 1_111
+                else Decimal(-1_000 - series_index)
+                if observation_index == 3_333
+                else Decimal((observation_index % 23) + series_index * 100)
+            )
+            event_rows.append(
+                {
+                    "id": event_id,
+                    "device_id": device_id,
+                    "source": "explorer-sampling-test",
+                    "idempotency_key": f"{channel_id}:{observation_index}",
+                    "received_at": observed_at,
+                    "measured_at": observed_at,
+                    "raw_payload": {},
+                    "ingestion_status": "accepted",
+                    "ingestion_mode": "live_mqtt",
+                    "provenance": "proxy",
+                }
+            )
+            measurement_rows.append(
+                {
+                    "id": measurement_id,
+                    "uplink_event_id": event_id,
+                    "device_id": device_id,
+                    "sensor_channel_id": channel_id,
+                    "numeric_value": numeric_value,
+                    "measured_at": observed_at,
+                    "quality_flag": "valid",
+                }
+            )
+            series_ids.add(str(measurement_id))
+        expected_ids[str(channel_id)] = series_ids
+
+    db_session.execute(insert(UplinkEvent), event_rows)
+    db_session.execute(insert(Measurement), measurement_rows)
+    db_session.flush()
+    end = start + timedelta(seconds=(observations_per_series - 1) * 5, microseconds=1)
+    response = api_client.get(
+        "/api/v1/explore",
+        params={
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "metric_group": "soil",
+            "channels": ",".join(channel["channel_id"] for channel in selected_channels),
+            "site_id": str(SITE_ID),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_matching"] == observations_per_series * 2
+    assert body["points_returned"] == sum(item["points_returned"] for item in body["series"])
+    assert body["downsampling_applied"] is True
+    assert len(body["series"]) == 2
+    assert {item["channel"]["device_id"] for item in body["series"]} == selected_devices
+    for series_index, series in enumerate(body["series"]):
+        assert series["total_matching"] == observations_per_series
+        assert series["points_returned"] == len(series["points"])
+        assert series["points_returned"] <= 2_000
+        assert series["downsampling_applied"] is True
+        channel_id = series["channel"]["channel_id"]
+        assert {point["measurement_id"] for point in series["points"]} <= expected_ids[channel_id]
+        observed_times = [point["measured_at"] for point in series["points"]]
+        assert observed_times == sorted(observed_times)
+        assert observed_times[0] == start.isoformat().replace("+00:00", "Z")
+        assert observed_times[-1] == end.isoformat().replace("+00:00", "Z").replace(".000001Z", "Z")
+        assert {point["numeric_value"] for point in series["points"]}.issuperset(
+            {-1_000.0 - series_index, 1_000.0 + series_index}
+        )
 
 
 def test_explorer_feature_and_channel_selection_are_explicit(api_client: TestClient) -> None:

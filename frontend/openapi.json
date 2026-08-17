@@ -160,6 +160,9 @@
                 "type": "null"
               }
             ]
+          },
+          "unit_confirmation_summary": {
+            "$ref": "#/components/schemas/UnitConfirmationSummary"
           }
         },
         "required": [
@@ -170,6 +173,7 @@
           "display_name",
           "device_type",
           "sensor_configuration_status",
+          "unit_confirmation_summary",
           "operational_override",
           "last_seen_at",
           "location_disclosure",
@@ -356,6 +360,9 @@
               }
             ],
             "title": "Source System"
+          },
+          "unit_confirmation_summary": {
+            "$ref": "#/components/schemas/UnitConfirmationSummary"
           }
         },
         "required": [
@@ -366,6 +373,7 @@
           "display_name",
           "device_type",
           "sensor_configuration_status",
+          "unit_confirmation_summary",
           "operational_override",
           "last_seen_at",
           "location_disclosure",
@@ -962,6 +970,10 @@
             "title": "Display Timezone",
             "type": "string"
           },
+          "downsampling_applied": {
+            "title": "Downsampling Applied",
+            "type": "boolean"
+          },
           "end": {
             "format": "date-time",
             "title": "End",
@@ -981,6 +993,10 @@
           "metric_group": {
             "title": "Metric Group",
             "type": "string"
+          },
+          "points_returned": {
+            "title": "Points Returned",
+            "type": "integer"
           },
           "quality_warnings": {
             "items": {
@@ -1030,6 +1046,10 @@
           "time_window_semantics": {
             "title": "Time Window Semantics",
             "type": "string"
+          },
+          "total_matching": {
+            "title": "Total Matching",
+            "type": "integer"
           }
         },
         "required": [
@@ -1045,6 +1065,9 @@
           "available_devices",
           "available_channels",
           "series",
+          "total_matching",
+          "points_returned",
+          "downsampling_applied",
           "quality_warnings",
           "reference_time",
           "synthetic"
@@ -1060,6 +1083,10 @@
           "coverage": {
             "$ref": "#/components/schemas/ExploreCoverage"
           },
+          "downsampling_applied": {
+            "title": "Downsampling Applied",
+            "type": "boolean"
+          },
           "points": {
             "items": {
               "$ref": "#/components/schemas/ExplorePoint"
@@ -1067,13 +1094,24 @@
             "title": "Points",
             "type": "array"
           },
+          "points_returned": {
+            "title": "Points Returned",
+            "type": "integer"
+          },
           "summary": {
             "$ref": "#/components/schemas/ExploreSummary"
+          },
+          "total_matching": {
+            "title": "Total Matching",
+            "type": "integer"
           }
         },
         "required": [
           "channel",
           "points",
+          "total_matching",
+          "points_returned",
+          "downsampling_applied",
           "summary",
           "coverage"
         ],
@@ -1227,6 +1265,77 @@
           "timestamp"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "MeasurementChartSeries": {
+        "properties": {
+          "default_range_applied": {
+            "title": "Default Range Applied",
+            "type": "boolean"
+          },
+          "downsampling_applied": {
+            "title": "Downsampling Applied",
+            "type": "boolean"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementValue"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "points_returned": {
+            "title": "Points Returned",
+            "type": "integer"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "total_matching": {
+            "title": "Total Matching",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_matching",
+          "points_returned",
+          "downsampling_applied",
+          "start",
+          "end",
+          "reference_time",
+          "default_range_applied",
+          "synthetic",
+          "provenance"
+        ],
+        "title": "MeasurementChartSeries",
         "type": "object"
       },
       "MeasurementPage": {
@@ -2162,6 +2271,17 @@
         "title": "SoilMoistureSummary",
         "type": "object"
       },
+      "UnitConfirmationSummary": {
+        "enum": [
+          "pending",
+          "confirmed",
+          "synthetic_demo_only",
+          "mixed",
+          "no_active_channels"
+        ],
+        "title": "UnitConfirmationSummary",
+        "type": "string"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2535,6 +2655,93 @@
           }
         },
         "summary": "List Measurements",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/v1/devices/{device_id}/measurements/chart": {
+      "get": {
+        "operationId": "chart_measurements_api_v1_devices__device_id__measurements_chart_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sensor_channel_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sensor Channel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementChartSeries"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chart Measurements",
         "tags": [
           "devices"
         ]

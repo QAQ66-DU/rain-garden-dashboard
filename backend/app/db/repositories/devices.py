@@ -208,6 +208,23 @@ def list_channels(
     return [(cast(SensorChannel, row[0]), cast(MetricDefinition, row[1])) for row in rows]
 
 
+def active_unit_confirmation_statuses(
+    session: Session, device_ids: list[UUID]
+) -> dict[UUID, list[str]]:
+    statuses: dict[UUID, list[str]] = {device_id: [] for device_id in device_ids}
+    if not device_ids:
+        return statuses
+    rows = session.execute(
+        select(SensorChannel.device_id, SensorChannel.unit_confirmation_status).where(
+            SensorChannel.device_id.in_(device_ids),
+            SensorChannel.active.is_(True),
+        )
+    )
+    for device_id, status in rows:
+        statuses[cast(UUID, device_id)].append(cast(str, status))
+    return statuses
+
+
 def latest_measurements_by_channel(
     session: Session, device_ids: list[UUID]
 ) -> dict[UUID, list[LatestMeasurement]]:

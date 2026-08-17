@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.analytics.chart_downsampling import time_bucket_min_max
 from app.analytics.explorer import (
     PeriodObservation,
     calculate_coverage,
@@ -134,19 +135,6 @@ def get_explorer(
             "invalid_channel_selection",
         )
     selected_records = [available_by_id[identifier] for identifier in selected_ids]
-    total = explorer_repository.count_observations(
-        session, channel_ids=selected_ids, start=start, end=end
-    )
-    if total > settings.max_measurement_result_rows:
-        raise ServiceError(
-            422,
-            "Explorer result set too large",
-            (
-                f"The request matches {total} observations; the maximum is "
-                f"{settings.max_measurement_result_rows}. Narrow the period or channel selection."
-            ),
-            "result_set_too_large",
-        )
     observation_records = explorer_repository.list_observations(
         session, channel_ids=selected_ids, start=start, end=end
     )
@@ -155,8 +143,26 @@ def get_explorer(
         by_channel[observation.channel_id].append(observation)
 
     series: list[ExploreSeries] = []
+    total_matching = 0
+    points_returned = 0
+    downsampling_applied = False
     for channel in selected_records:
         records = by_channel[channel.channel_id]
+        series_total = len(records)
+        series_downsampled = series_total > settings.chart_measurement_target_points
+        display_records = (
+            time_bucket_min_max(
+                records,
+                start=start,
+                end=end,
+                target_points=settings.chart_measurement_target_points,
+            )
+            if series_downsampled
+            else records
+        )
+        total_matching += series_total
+        points_returned += len(display_records)
+        downsampling_applied = downsampling_applied or series_downsampled
         period_observations = [
             PeriodObservation(
                 measurement_id=item.measurement_id,
@@ -183,7 +189,7 @@ def get_explorer(
         )
         timing_by_id = {item.measurement_id: item for item in coverage.observation_timing}
         points = []
-        for item in records:
+        for item in display_records:
             timing = timing_by_id[item.measurement_id]
             points.append(
                 ExplorePoint(
@@ -202,6 +208,9 @@ def get_explorer(
             ExploreSeries(
                 channel=_channel_schema(channel),
                 points=points,
+                total_matching=series_total,
+                points_returned=len(points),
+                downsampling_applied=series_downsampled,
                 summary=ExploreSummary(
                     status=summary.status,
                     status_detail=summary.status_detail,
@@ -296,6 +305,9 @@ def get_explorer(
         ],
         available_channels=[_channel_schema(item) for item in channel_records],
         series=series,
+        total_matching=total_matching,
+        points_returned=points_returned,
+        downsampling_applied=downsampling_applied,
         quality_warnings=[
             QualityWarning(
                 measurement_id=item.measurement_id,

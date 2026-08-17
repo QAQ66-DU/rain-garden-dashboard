@@ -1,7 +1,8 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
@@ -114,7 +115,29 @@ def list_measurements(
                 and_(Measurement.measured_at == timestamp, Measurement.id > identifier),
             )
         )
-    rows = session.execute(
+    statement = _measurement_statement(conditions).limit(page_size + 1)
+    return [_measurement_record(row) for row in session.execute(statement)]
+
+
+def iter_measurements(
+    session: Session,
+    *,
+    device_id: UUID,
+    start: datetime,
+    end: datetime,
+    metric_code: str | None,
+    sensor_channel_id: UUID | None,
+    batch_size: int = 1_000,
+) -> Iterator[MeasurementRecord]:
+    statement = _measurement_statement(
+        _conditions(device_id, start, end, metric_code, sensor_channel_id)
+    ).execution_options(yield_per=batch_size)
+    for row in session.execute(statement):
+        yield _measurement_record(row)
+
+
+def _measurement_statement(conditions: list[ColumnElement[bool]]) -> Any:
+    return (
         select(
             Measurement.id,
             Measurement.sensor_channel_id,
@@ -142,32 +165,31 @@ def list_measurements(
         .join(UplinkEvent, UplinkEvent.id == Measurement.uplink_event_id)
         .where(*conditions)
         .order_by(Measurement.measured_at, Measurement.id)
-        .limit(page_size + 1)
-    ).all()
-    return [
-        MeasurementRecord(
-            measurement_id=cast(UUID, row[0]),
-            channel_id=cast(UUID, row[1]),
-            channel_code=cast(str, row[2]),
-            channel_name=cast(str, row[3]),
-            metric_code=cast(str, row[4]),
-            metric_name=cast(str, row[5]),
-            unit_code=cast(str | None, row[6]),
-            unit_symbol=cast(str | None, row[7]),
-            unit_confirmation_status=cast(str, row[8]),
-            verification_status=cast(str, row[9]),
-            timestamp_basis=cast(str | None, row[10]),
-            depth_cm=cast(float | None, row[11]),
-            position_label=cast(str | None, row[12]),
-            value=cast(Decimal, row[13]),
-            measured_at=cast(datetime, row[14]),
-            quality_flag=cast(str, row[15]),
-            quality_notes=cast(str | None, row[16]),
-            ingestion_mode=cast(str | None, row[17]),
-            provenance=cast(str | None, row[18]),
-        )
-        for row in rows
-    ]
+    )
+
+
+def _measurement_record(row: Any) -> MeasurementRecord:
+    return MeasurementRecord(
+        measurement_id=cast(UUID, row[0]),
+        channel_id=cast(UUID, row[1]),
+        channel_code=cast(str, row[2]),
+        channel_name=cast(str, row[3]),
+        metric_code=cast(str, row[4]),
+        metric_name=cast(str, row[5]),
+        unit_code=cast(str | None, row[6]),
+        unit_symbol=cast(str | None, row[7]),
+        unit_confirmation_status=cast(str, row[8]),
+        verification_status=cast(str, row[9]),
+        timestamp_basis=cast(str | None, row[10]),
+        depth_cm=cast(float | None, row[11]),
+        position_label=cast(str | None, row[12]),
+        value=cast(Decimal, row[13]),
+        measured_at=cast(datetime, row[14]),
+        quality_flag=cast(str, row[15]),
+        quality_notes=cast(str | None, row[16]),
+        ingestion_mode=cast(str | None, row[17]),
+        provenance=cast(str | None, row[18]),
+    )
 
 
 def current_reference_time(session: Session, *, demo_mode: bool) -> datetime:

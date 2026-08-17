@@ -443,6 +443,20 @@ def test_replay_and_live_mqtt_share_chronological_utc_history(
     assert timestamps == sorted(timestamps)
     assert timestamps[-1] == "2025-08-04T18:38:53.442428Z"
 
+    chart = api_client.get(
+        f"/api/v1/devices/{outflow.id}/measurements/chart",
+        params={
+            "start": "2025-08-03T00:00:00Z",
+            "end": "2025-08-05T00:00:00Z",
+            "sensor_channel_id": channel_id,
+        },
+    )
+    assert chart.status_code == 200
+    chart_body = chart.json()
+    assert chart_body["total_matching"] == chart_body["points_returned"] == 2
+    assert chart_body["downsampling_applied"] is False
+    assert [item["measured_at"] for item in chart_body["items"]] == timestamps
+
     recent = api_client.get(
         f"/api/v1/devices/{outflow.id}/measurements",
         params={

@@ -87,6 +87,9 @@ class ExploreSummary(ApiModel):
 class ExploreSeries(ApiModel):
     channel: ExploreChannel
     points: list[ExplorePoint]
+    total_matching: int
+    points_returned: int
+    downsampling_applied: bool
     summary: ExploreSummary
     coverage: ExploreCoverage
 
@@ -115,6 +118,9 @@ class ExploreResponse(ApiModel):
     available_devices: list[ExploreDevice]
     available_channels: list[ExploreChannel]
     series: list[ExploreSeries]
+    total_matching: int
+    points_returned: int
+    downsampling_applied: bool
     quality_warnings: list[QualityWarning]
     reference_time: datetime
     synthetic: bool

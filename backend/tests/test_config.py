@@ -13,6 +13,7 @@ def test_default_phase_one_limits_are_bounded() -> None:
     assert settings.default_measurement_range_days == 7
     assert settings.max_measurement_range_days == 31
     assert settings.max_measurement_result_rows == 5_000
+    assert settings.chart_measurement_target_points == 2_000
     assert settings.webhook_body_limit_bytes == 262_144
 
 

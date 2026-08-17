@@ -64,6 +64,11 @@ class ExploreMeasurementRecord:
     numeric_value: Decimal
     quality_flag: str
 
+    @property
+    def value(self) -> Decimal:
+        """Expose the canonical chart-sampling value without changing stored semantics."""
+        return self.numeric_value
+
 
 @dataclass(frozen=True, slots=True)
 class ExploreQualityWarningRecord:
@@ -185,23 +190,6 @@ def list_channels(
             )
         )
     ]
-
-
-def count_observations(
-    session: Session, *, channel_ids: list[UUID], start: datetime, end: datetime
-) -> int:
-    if not channel_ids:
-        return 0
-    value = session.scalar(
-        select(func.count())
-        .select_from(Measurement)
-        .where(
-            Measurement.sensor_channel_id.in_(channel_ids),
-            Measurement.measured_at >= start,
-            Measurement.measured_at < end,
-        )
-    )
-    return int(value or 0)
 
 
 def list_observations(
