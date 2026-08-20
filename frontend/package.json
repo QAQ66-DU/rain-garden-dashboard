@@ -20,7 +20,7 @@
     "check:api": "npm run generate:api && git diff --exit-code -- openapi.json src/api/generated.d.ts"
   },
   "dependencies": {
-    "@tanstack/react-query": "5.101.2",
+    "@tanstack/react-query": "5.101.4",
     "leaflet": "1.9.4",
     "openapi-fetch": "0.17.0",
     "react": "19.2.7",
