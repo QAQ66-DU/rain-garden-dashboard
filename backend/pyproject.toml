@@ -5,7 +5,7 @@ description = "FastAPI backend for the Rain Garden Monitoring Dashboard"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic==1.18.5",
-    "fastapi==0.139.2",
+    "fastapi==0.141.1",
     "paho-mqtt==2.1.0",
     "psycopg[binary]==3.3.4",
     "pydantic-settings==2.14.2",
