@@ -33,7 +33,7 @@ jobs:
       TTN_WEBHOOK_SECRET: test-only-webhook-secret
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: 0.11.29
           enable-cache: true
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: 0.11.29
       - uses: actions/setup-node@v4
