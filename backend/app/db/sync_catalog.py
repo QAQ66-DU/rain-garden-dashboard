@@ -43,6 +43,9 @@ def sync_metric_catalog(session: Session) -> None:
         unit_row.unit_symbol = unit.unit_symbol
         unit_row.meaning = unit.meaning
 
+    # Existing channels may reference newly added catalogue rows immediately after this returns.
+    session.flush()
+
 
 def main() -> None:
     with SessionLocal.begin() as session:

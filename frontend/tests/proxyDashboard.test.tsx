@@ -29,6 +29,16 @@ const proxyIds = [
   'ph-sensor',
   'soilmoisture-temp-sensor',
 ];
+const proxyUnitSummaries = [
+  'confirmed',
+  'pending',
+  'no_active_channels',
+  'mixed',
+  'mixed',
+  'no_active_channels',
+  'pending',
+  'confirmed',
+] as const;
 const proxyDevices = devicesFixture.items.slice(0, 8).map((device, index) => ({
   ...device,
   site_id: proxySiteId,
@@ -36,8 +46,7 @@ const proxyDevices = devicesFixture.items.slice(0, 8).map((device, index) => ({
   monitoring_feature: proxyFeature,
   display_name: proxyIds[index] ?? 'missing-proxy-id',
   sensor_configuration_status: 'pending',
-  unit_confirmation_summary:
-    index === 2 || index === 5 ? ('no_active_channels' as const) : ('pending' as const),
+  unit_confirmation_summary: proxyUnitSummaries[index] ?? ('pending' as const),
   environment: 'proxy',
   source_system: 'ttn',
   ingestion_mode: index === 0 ? 'live_mqtt' : null,
@@ -63,7 +72,7 @@ beforeEach(() => {
         public_location_label: 'Proxy network; not Orchard Park',
         synthetic: false,
         synthetic_notice:
-          'Live proxy sensor data — these devices are not deployed at Orchard Park; physical units remain unverified.',
+          'Live proxy sensor data — these devices are not deployed at Orchard Park; units are confirmed only for supplied measurement-ID mappings.',
         reference_time: '2026-08-05T12:00:00Z',
         last_data_update: '2026-08-05T12:00:00Z',
         devices: { total: 8, online: 1, stale: 0, offline: 0, unknown: 7 },
@@ -165,7 +174,7 @@ describe('proxy TTN dashboard', () => {
     expect(screen.queryByRole('option', { name: 'Swale' })).not.toBeInTheDocument();
   });
 
-  it('separates valid observations from pending channel metadata', async () => {
+  it('shows confirmed Outflow metadata without creating quality warnings', async () => {
     const outflow = proxyDevices[0];
     if (!outflow) throw new Error('outflow-a fixture is required');
     server.use(
@@ -188,8 +197,8 @@ describe('proxy TTN dashboard', () => {
     renderRoute(`/devices/${outflow.id}`);
 
     expect(await screen.findByRole('heading', { name: 'outflow-a' })).toBeInTheDocument();
-    expect(screen.getAllByText('Metadata pending').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Metadata catalogued').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThan(0);
     expect(screen.queryByText(/flagged observations/iu)).not.toBeInTheDocument();
   });
 

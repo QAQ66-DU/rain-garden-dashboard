@@ -113,9 +113,12 @@ def test_replay_is_deterministic_idempotent_and_isolated(
         "outflow_measurement_1",
         "outflow_measurement_2",
     ]
-    assert all(channel.unit_code is None for channel in channels)
-    assert all(channel.unit_confirmation_status == "pending" for channel in channels)
-    assert all(channel.verification_status == "unverified" for channel in channels)
+    assert {channel.channel_code: channel.unit_code for channel in channels} == {
+        "outflow_measurement_1": "ml",
+        "outflow_measurement_2": "ml_h",
+    }
+    assert all(channel.unit_confirmation_status == "confirmed" for channel in channels)
+    assert all(channel.verification_status == "catalogued" for channel in channels)
     assert (
         db_session.scalar(
             select(func.count()).select_from(UplinkEvent).where(UplinkEvent.device_id == outflow.id)
@@ -185,8 +188,9 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
     assert detail.status_code == 200
     body = detail.json()
     assert len(body["channels"]) == 2
-    assert {channel["verification_status"] for channel in body["channels"]} == {"unverified"}
-    assert all(channel["unit_code"] is None for channel in body["channels"])
+    assert {channel["verification_status"] for channel in body["channels"]} == {"catalogued"}
+    assert {channel["unit_code"] for channel in body["channels"]} == {"ml", "ml_h"}
+    selected_channel = body["channels"][0]
     assert body["telemetry"]["gateway"] == "Replay gateway (identifier withheld)"
     assert body["telemetry"]["firmware_version"] == "3.0"
     serialized = detail.text.lower()
@@ -205,7 +209,7 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
         params={
             "start": "2099-08-03T00:00:00Z",
             "end": "2099-08-04T00:00:00Z",
-            "sensor_channel_id": body["channels"][0]["id"],
+            "sensor_channel_id": selected_channel["id"],
             "page_size": 500,
         },
     )
@@ -214,8 +218,10 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
     assert measurement_body["synthetic"] is False
     assert measurement_body["provenance"] == "exported_live_data"
     assert measurement_body["total_matching"] == 2
-    assert all(item["unit_code"] is None for item in measurement_body["items"])
-    assert all(item["verification_status"] == "unverified" for item in measurement_body["items"])
+    assert all(
+        item["unit_code"] == selected_channel["unit_code"] for item in measurement_body["items"]
+    )
+    assert all(item["verification_status"] == "catalogued" for item in measurement_body["items"])
     assert all(item["quality_flag"] == "valid" for item in measurement_body["items"])
     assert all(item["quality_notes"] is None for item in measurement_body["items"])
 
@@ -224,15 +230,15 @@ def test_replay_device_is_publicly_labelled_without_private_payload_fields(
         params={
             "start": "2099-08-03T00:00:00Z",
             "end": "2099-08-04T00:00:00Z",
-            "sensor_channel_id": body["channels"][0]["id"],
+            "sensor_channel_id": selected_channel["id"],
         },
     )
     assert exported.status_code == 200
     exported_rows = list(csv.DictReader(StringIO(exported.text)))
     assert len(exported_rows) == 2
-    assert all(row["unit_code"] == "" for row in exported_rows)
-    assert all(row["unit_confirmation_status"] == "pending" for row in exported_rows)
-    assert all(row["verification_status"] == "unverified" for row in exported_rows)
+    assert all(row["unit_code"] == selected_channel["unit_code"] for row in exported_rows)
+    assert all(row["unit_confirmation_status"] == "confirmed" for row in exported_rows)
+    assert all(row["verification_status"] == "catalogued" for row in exported_rows)
     assert all(row["ingestion_mode"] == "offline_replay" for row in exported_rows)
     assert all(row["provenance"] == "exported_live_data" for row in exported_rows)
     for forbidden in ("raw_payload", "session_key_id", "external_device_id", "gateway"):

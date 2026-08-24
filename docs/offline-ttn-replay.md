@@ -45,13 +45,12 @@ counts, availability, quality warnings, and summaries remain site-scoped and unc
 
 ## Measurement and timestamp semantics
 
-Decoder measurement IDs 1 and 2 map only to `Measurement 1` and `Measurement 2`. Their stored
-`unit_code` and `scientific_meaning` are null, unit confirmation is `pending`, and verification is
-`unverified`. Successfully decoded, mapped, finite numeric values are marked `valid`; scientific
-uncertainty remains separate as `Metadata pending` and `Unit unverified` rather than becoming a
-data-quality warning. Basic count, latest, minimum, median, and maximum summaries remain numeric
-descriptions only. No physical quantity, scale, calibration, unit, or hydrological meaning is
-inferred from the decoder.
+Decoder measurement ID 1 maps to `Outflow A (Total)` in mL and ID 2 maps to `Outflow A` in mL/hour,
+using the supplied sensor metadata rather than the decoder label alone. Their stored unit
+confirmation and verification statuses are `confirmed` and `catalogued`. Successfully decoded,
+mapped, finite numeric values are marked `valid`. Basic count, latest, minimum, median, and maximum
+summaries remain numeric descriptions only; the replay performs no calibration, unit conversion,
+or hydrological performance interpretation.
 
 Normalized values are created only when the decoder says `valid: true` and `err: 0`. Invalid or
 malformed decoded content is still preserved privately but creates no normalized measurements. The

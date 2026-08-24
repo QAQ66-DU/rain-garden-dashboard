@@ -88,7 +88,7 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByText('Proxy sensor', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
   await expect(page.getByText('Configuration pending').first()).toBeVisible();
-  await expect(page.getByText('Unit unverified').first()).toBeVisible();
+  await expect(page.getByText('Deployment unit confirmed').first()).toBeVisible();
 
   expect(browserErrors).toEqual([]);
 });
@@ -113,12 +113,8 @@ test('desktop Explore loads proxy channels without failed API requests', async (
       .filter({ has: page.locator('svg') })
       .first(),
   ).toBeVisible();
-  await expect(
-    page.getByLabel('weather-station, Air Temperature, measured in unit pending'),
-  ).toBeVisible();
-  await expect(
-    page.getByLabel('weather-station-2, Air Temperature, measured in unit pending'),
-  ).toBeVisible();
+  await expect(page.getByLabel('weather-station, Air Temperature, measured in °C')).toBeVisible();
+  await expect(page.getByLabel('weather-station-2, Air Temperature, measured in °C')).toBeVisible();
 
   const aggregateStatus = page.locator('.channel-selector').getByRole('status');
   await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
@@ -174,7 +170,7 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
 
   const channelSelect = page.getByRole('combobox', { name: 'Sensor channel' });
   const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
-  await channelSelect.selectOption({ label: 'Measurement 2 · unit not verified' });
+  await channelSelect.selectOption({ label: 'Outflow A · mL/hour' });
   await rangeSelect.selectOption('24h');
   await expect(page).toHaveURL(/preset=24h/);
   const selectedUrl = new URL(page.url());
@@ -204,7 +200,7 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   await rangeSelect.selectOption('30d');
   await expect(page).toHaveURL(/preset=30d/);
   await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
-  await expect(page.getByRole('heading', { name: 'Measurement 2 · Last 30 days' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Outflow A · Last 30 days' })).toBeVisible();
   await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
   const thirtyDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^\d{1,2} [A-Z][a-z]{2}$/.test(label),

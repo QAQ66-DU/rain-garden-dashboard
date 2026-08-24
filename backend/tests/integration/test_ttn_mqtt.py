@@ -70,6 +70,41 @@ def test_proxy_inventory_seed_is_idempotent_and_creates_no_observations(
     assert db_session.scalar(select(func.count()).select_from(UplinkEvent)) == raw_before
     assert db_session.scalar(select(func.count()).select_from(Measurement)) == measurements_before
 
+    confirmed = {
+        (device.external_device_id, int(channel.channel_metadata["ttn_measurement_id"])): (
+            channel.metric_code,
+            channel.unit_code,
+            channel.unit_confirmation_status,
+        )
+        for channel, device in db_session.execute(
+            select(SensorChannel, Device)
+            .join(Device, Device.id == SensorChannel.device_id)
+            .where(
+                Device.environment == "proxy",
+                SensorChannel.active.is_(True),
+                SensorChannel.unit_confirmation_status == "confirmed",
+            )
+        )
+    }
+    assert confirmed[("outflow-a", 1)] == ("outflow_total", "ml", "confirmed")
+    assert confirmed[("outflow-a", 2)] == ("outflow_rate", "ml_h", "confirmed")
+    assert confirmed[("soilmoisture-temp-sensor", 4102)] == (
+        "soil_temperature",
+        "deg_c",
+        "confirmed",
+    )
+    assert confirmed[("soilmoisture-temp-sensor", 4103)] == (
+        "soil_moisture",
+        "pct",
+        "confirmed",
+    )
+    assert confirmed[("soilmoisture-temp-sensor", 4108)] == (
+        "soil_electrical_conductivity",
+        "ds_m",
+        "confirmed",
+    )
+    assert len(confirmed) == 19
+
 
 @pytest.mark.parametrize(
     ("device_id", "measurement_count"),
@@ -194,7 +229,7 @@ def test_default_api_exposes_exactly_the_eight_proxy_devices(
             .join(Device, Device.id == SensorChannel.device_id)
             .where(Device.environment == "proxy", SensorChannel.unit_code.is_not(None))
         )
-        == 0
+        == 19
     )
 
     orchard = api_client.get("/api/v1/overview", params={"site_id": str(SITE_ID)})
@@ -352,7 +387,7 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
         params={
             "start": "2098-08-03T16:00:00Z",
             "end": "2098-08-03T17:00:00Z",
-            "metric_group": "operational",
+            "metric_group": "hydrology",
         },
     )
     assert explorer.status_code == 200
@@ -362,8 +397,10 @@ def test_mocked_live_mqtt_uplink_is_idempotent_and_isolated(
         item for item in explorer_body["series"] if item["channel"]["device_name"] == "outflow-a"
     ]
     assert len(outflow_series) == 2
-    assert all(item["channel"]["verification_status"] == "unverified" for item in outflow_series)
-    assert all(item["channel"]["unit_confirmation_status"] == "pending" for item in outflow_series)
+    assert all(item["channel"]["verification_status"] == "catalogued" for item in outflow_series)
+    assert all(
+        item["channel"]["unit_confirmation_status"] == "confirmed" for item in outflow_series
+    )
     assert all(
         [statistic["code"] for statistic in item["summary"]["statistics"]]
         == ["latest", "count", "minimum", "median", "maximum"]

@@ -209,8 +209,10 @@ def ensure_ttn_proxy_inventory(
                 session.add(stored_channel)
             stored_channel.display_name = channel_mapping.display_name
             stored_channel.metric_code = channel_mapping.metric_code
-            stored_channel.unit_code = None
-            stored_channel.unit_confirmation_status = "pending"
+            stored_channel.unit_code = channel_mapping.unit_code
+            stored_channel.unit_confirmation_status = (
+                "confirmed" if channel_mapping.unit_code is not None else "pending"
+            )
             stored_channel.depth_cm = None
             stored_channel.position_label = None
             stored_channel.expected_reporting_interval_seconds = None
@@ -225,9 +227,13 @@ def ensure_ttn_proxy_inventory(
                 "ttn_measurement_id": channel_mapping.measurement_id,
                 "decoded_type": channel_mapping.decoded_type,
                 "interpretation_status": (
-                    "decoder_label_known_unit_pending"
-                    if channel_mapping.scientific_meaning
-                    else "unverified"
+                    "confirmed_metric_and_unit"
+                    if channel_mapping.unit_code is not None
+                    else (
+                        "decoder_label_known_unit_pending"
+                        if channel_mapping.scientific_meaning
+                        else "unverified"
+                    )
                 ),
             }
         devices[mapping.device_id] = device

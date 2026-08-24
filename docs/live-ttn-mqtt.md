@@ -80,18 +80,19 @@ session identifiers, DevEUIs, gateway IDs, or credentials.
 The approved public IDs are `outflow-a`, `soil-moisture-1`, `prototype-board-1`,
 `weather-station-2`, `weather-station`, `vision-ai`, `ph-sensor`, and
 `soilmoisture-temp-sensor`. `vision-ai` has no supplied formatter or uplink evidence and remains
-`Never seen / No data` with zero channels. No physical unit is confirmed by this integration.
+`Never seen / No data` with zero channels. Physical units are confirmed only for the supplied
+device-and-measurement-ID mappings listed below.
 
-| Device                     | Evidence-backed measurement mapping                                                                                                                                  | Remaining uncertainty          |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `outflow-a`                | IDs 1 and 2, generic `Measurement` fields                                                                                                                            | Meaning and units pending      |
-| `soil-moisture-1`          | ID 1, generic `Measurement` field                                                                                                                                    | Meaning and unit pending       |
-| `prototype-board-1`        | No observed uplink; zero channels                                                                                                                                    | Payload and channels pending   |
-| `weather-station-2`        | Air Temperature 4097, Air Humidity 4098, Light Intensity 4099, UV Index 4190, Wind Speed 4105, Wind Direction Sensor 4104, Rain Gauge 4113, Barometric Pressure 4101 | All physical units pending     |
-| `weather-station`          | Same eight decoder-labelled fields as `weather-station-2`                                                                                                            | All physical units pending     |
-| `vision-ai`                | No formatter or observed uplink; zero channels                                                                                                                       | Entire payload mapping pending |
-| `ph-sensor`                | Generic telemetry IDs 4097 and 4106                                                                                                                                  | Meanings and units pending     |
-| `soilmoisture-temp-sensor` | Generic telemetry IDs 4102, 4103, and 4108                                                                                                                           | Meanings and units pending     |
+| Device                     | Evidence-backed measurement mapping                                                                                                                                                                           | Remaining uncertainty                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `outflow-a`                | ID 1 Outflow A total (mL); ID 2 Outflow A rate (mL/hour)                                                                                                                                                      | Confirmed for IDs 1 and 2                               |
+| `soil-moisture-1`          | ID 1, generic `Measurement` field                                                                                                                                                                             | Meaning and unit pending                                |
+| `prototype-board-1`        | No observed uplink; zero channels                                                                                                                                                                             | Payload and channels pending                            |
+| `weather-station-2`        | Air Temperature 4097 (°C), Air Humidity 4098 (%), Light Intensity 4099 (lux), Wind Speed 4105 (m/s), Wind Direction 4104 (°), Rainfall Intensity 4113 (mm/hour), Barometric Pressure 4101 (Pa), UV Index 4190 | UV Index remains unit-pending                           |
+| `weather-station`          | Same eight measurement-ID mappings as `weather-station-2`                                                                                                                                                     | UV Index remains unit-pending                           |
+| `vision-ai`                | No formatter or observed uplink; zero channels                                                                                                                                                                | Entire payload mapping pending                          |
+| `ph-sensor`                | ID 4106 is mapped to dimensionless pH; ID 4097 remains generic                                                                                                                                                | No confirmed-unitless model state; units remain pending |
+| `soilmoisture-temp-sensor` | Soil Temperature 4102 (°C), Soil Moisture 4103 (%), Electrical Conductivity 4108 (dS/m)                                                                                                                       | Confirmed for IDs 4102, 4103, and 4108                  |
 
 This integration does not configure TTN, alter the existing Google Sheets webhook, send downlinks,
 use the TTN Storage API, or backfill the supplied console exports.

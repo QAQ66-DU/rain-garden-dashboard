@@ -2,7 +2,7 @@ from os import environ
 from pathlib import Path
 
 import pytest
-from app.metric_catalog import METRICS, UNITS, get_metric, render_data_dictionary
+from app.metric_catalog import METRICS, UNITS, get_metric, get_unit, render_data_dictionary
 
 
 def test_metric_codes_and_units_are_unique() -> None:
@@ -22,6 +22,35 @@ def test_metric_codes_and_units_are_unique() -> None:
 def test_unknown_metric_is_rejected() -> None:
     with pytest.raises(ValueError, match="Unsupported metric"):
         get_metric("invented_metric")
+
+
+def test_confirmed_proxy_physical_units_are_canonical() -> None:
+    assert {
+        unit_code: get_unit(unit_code).unit_symbol
+        for unit_code in (
+            "deg_c",
+            "pct",
+            "ds_m",
+            "lux",
+            "m_s",
+            "degree",
+            "mm_h",
+            "pa",
+            "ml",
+            "ml_h",
+        )
+    } == {
+        "deg_c": "°C",
+        "pct": "%",
+        "ds_m": "dS/m",
+        "lux": "lx",
+        "m_s": "m/s",
+        "degree": "°",
+        "mm_h": "mm/h",
+        "pa": "Pa",
+        "ml": "mL",
+        "ml_h": "mL/hour",
+    }
 
 
 def test_documented_dictionary_is_generated_from_catalog() -> None:

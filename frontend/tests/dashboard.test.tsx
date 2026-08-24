@@ -136,7 +136,7 @@ describe('monitoring dashboard', () => {
     expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10);
     expect(screen.getByText(/Testbed · TTN Testbed/)).toBeInTheDocument();
     expect(screen.getByText('Offline replay')).toBeInTheDocument();
-    expect(screen.getByText('Unit unverified')).toBeInTheDocument();
+    expect(screen.getByText('Unit confirmed')).toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Site' }), siteId);
     await waitFor(() => {
@@ -183,20 +183,20 @@ describe('monitoring dashboard', () => {
     expect(screen.queryByRole('region', { name: 'Chart controls' })).not.toBeInTheDocument();
   });
 
-  it('labels the isolated TTN replay device without inventing units or exposing raw IDs', async () => {
+  it('labels the isolated TTN replay device with confirmed units and no raw IDs', async () => {
     renderRoute(`/devices/${replayDeviceId}`);
 
     expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
     expect(screen.getByText('Offline TTN replay data')).toBeInTheDocument();
-    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThan(0);
     expect(screen.getByText('Replay dataset reference time')).toBeInTheDocument();
     expect(screen.getAllByText('Offline replay').length).toBeGreaterThan(0);
     expect(screen.getByText('Replay gateway (identifier withheld)')).toBeInTheDocument();
     expect(screen.getByText('840')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
-    expect(screen.getByText('Measurement 2')).toBeInTheDocument();
-    expect(screen.getAllByText('Metadata pending').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('Unit unverified').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Outflow A').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Metadata catalogued').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThanOrEqual(2);
     expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
     expect(document.body).not.toHaveTextContent('session_key_id');
   });

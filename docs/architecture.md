@@ -86,9 +86,10 @@ Installation depth and position never alter the controlled metric code. Channels
 `unit_confirmation_status` is independent of `unit_code`: pending channels may have no unit, while
 deterministic demonstration channels use documented demo-normalised units with
 `synthetic_demo_only`. A real TTN observation may be retained as a valid numeric observation when
-its device/channel structure is explicitly mapped, even while its scientific metadata remains
-pending. The UI labels that distinction as `Metadata pending` and `Unit unverified`; it does not
-perform domain interpretation. The same separation applies to schedule metadata: coverage is
+its device/channel structure is explicitly mapped. Its physical unit is marked `confirmed` only
+where supplied device-and-measurement-ID metadata establishes that mapping; unresolved channels
+remain `pending`. The UI labels pending states as `Metadata pending` and `Unit unverified`; it does
+not infer units from values or device names. The same separation applies to schedule metadata: coverage is
 unavailable unless interval and anchor are explicitly configured.
 
 Device list and detail responses expose `unit_confirmation_summary` as a read-time derivative of

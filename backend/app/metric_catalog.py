@@ -40,6 +40,12 @@ UNITS: tuple[UnitSpec, ...] = (
         "µS/cm",
         "Electrical conductivity expressed in microsiemens per centimetre.",
     ),
+    UnitSpec(
+        "ds_m",
+        "decisiemens per metre",
+        "dS/m",
+        "Electrical conductivity expressed in decisiemens per metre.",
+    ),
     UnitSpec("m_s", "metres per second", "m/s", "Speed expressed in metres per second."),
     UnitSpec("degree", "degrees", "°", "Angular direction in degrees."),
     UnitSpec(
@@ -48,6 +54,14 @@ UNITS: tuple[UnitSpec, ...] = (
     UnitSpec("lux", "lux", "lx", "Illuminance expressed in lux."),
     UnitSpec("uv_index", "UV index", "UV index", "Dimensionless ultraviolet index."),
     UnitSpec("hpa", "hectopascals", "hPa", "Pressure expressed in hectopascals."),
+    UnitSpec("pa", "pascals", "Pa", "Pressure expressed in pascals."),
+    UnitSpec("ml", "millilitres", "mL", "Volume expressed in millilitres."),
+    UnitSpec(
+        "ml_h",
+        "millilitres per hour",
+        "mL/hour",
+        "Volumetric rate expressed in millilitres per hour.",
+    ),
     UnitSpec("v", "volts", "V", "Electric potential expressed in volts."),
     UnitSpec("dbm", "decibel-milliwatts", "dBm", "Power ratio referenced to one milliwatt."),
     UnitSpec("db", "decibels", "dB", "Dimensionless logarithmic ratio."),
@@ -190,6 +204,33 @@ METRICS: tuple[MetricSpec, ...] = (
         "Barometric pressure measurement.",
         "hpa",
         metric_group="weather",
+    ),
+    _metric(
+        "outflow_total",
+        "Outflow A (Total)",
+        "Total outflow volume reported by the Outflow A channel.",
+        None,
+        metric_group="hydrology",
+        source="Confirmed from supplied Outflow A sensor metadata.",
+    ),
+    _metric(
+        "outflow_rate",
+        "Outflow A",
+        "Outflow volumetric rate reported by the Outflow A channel.",
+        None,
+        metric_group="hydrology",
+        source="Confirmed from supplied Outflow A sensor metadata.",
+    ),
+    _metric(
+        "ph",
+        "pH",
+        "Dimensionless pH measurement.",
+        None,
+        metric_group="operational",
+        source=(
+            "Confirmed from supplied pH sensor metadata; unitless confirmation is pending model "
+            "support."
+        ),
     ),
     # Compatibility vocabulary retained for existing Phase 1 rows. The confirmed inventory does
     # not use these metric codes.

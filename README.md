@@ -3,8 +3,9 @@
 A portable browser dashboard for an MSc Data Science project investigating LoRaWAN monitoring of rain gardens and related urban green infrastructure.
 
 Phase 0 and Phase 1 are complete. The normal dashboard now presents eight approved TTN proxy
-devices from the `rain-garden` application. They are not deployed at Orchard Park, and their physical
-units remain pending. The confirmed Orchard Park inventory and deterministic synthetic observations
+devices from the `rain-garden` application. They are not deployed at Orchard Park. Physical units
+are confirmed only for the supplied measurement-ID mappings; all other channel units remain pending.
+The confirmed Orchard Park inventory and deterministic synthetic observations
 remain available through the explicit demo seed/test workflow, but are hidden from normal live
 dashboard responses. The application does not calculate hydrological performance scores.
 
@@ -120,8 +121,9 @@ is reported as a skipped duplicate. This compatibility workflow does not create 
 devices unless the live worker inventory initialiser runs.
 
 This workflow needs no TTN API key and makes no TTN request. It did not alter the TTN application,
-devices, payload formatter, downlinks, MQTT configuration, or Google Sheets webhook. Measurement 1
-and Measurement 2 intentionally retain null units and unverified scientific meanings. See the
+devices, payload formatter, downlinks, MQTT configuration, or Google Sheets webhook. Outflow A
+measurement ID 1 is mapped to total volume in mL and ID 2 to volumetric rate in mL/hour from the
+supplied sensor metadata. See the
 [offline replay design and privacy notes](docs/offline-ttn-replay.md).
 
 The separately started live MQTT preparation is documented in the
@@ -179,12 +181,12 @@ is nullable while `unit_confirmation_status` records `pending`, `confirmed`, or
 `backend/app/metric_catalog.py` remains the only editable metric and unit vocabulary, and the
 database catalog plus generated `docs/data-dictionary.md` are checked against it.
 
-The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Live proxy channels remain `pending` with nullable units; a channel requires explicit physical-unit evidence before it can become `confirmed`.
+The one-hour synthetic generator cadence, fixed UTC schedule anchor, and five-minute jitter tolerance are test settings, not confirmed deployed-sensor properties. Their values, seed, and expected record counts are recorded in `sample-data/synthetic/seed-manifest.json`. Live proxy channels are `confirmed` only where the supplied measurement-ID metadata establishes a physical unit; all other channels retain nullable units with `pending` status.
 
 Historical queries use half-open UTC windows `[start, end)`, with display times converted to the site's `Europe/London` timezone. Coverage counts schedule-aligned slots from the explicit interval, anchor, and jitter tolerance; it is unavailable rather than inferred when any schedule input is missing. Duplicate-slot observations do not increase received coverage, flagged slots are received but not valid, and missing never means numeric zero. Rainfall duration above zero is shown only with complete valid scheduled coverage.
 
 For explicitly mapped TTN proxy channels, successfully decoded finite numbers are valid
-observations even while their scientific metadata and unit remain pending. The UI keeps those
+observations. The UI displays confirmed units from stored channel metadata and keeps unresolved
 states visible as `Metadata pending` and `Unit unverified`; unverified channels receive only basic
 descriptive summaries and no hydrological interpretation.
 

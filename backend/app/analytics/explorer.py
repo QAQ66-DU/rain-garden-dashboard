@@ -274,7 +274,7 @@ def calculate_period_summary(
     included = frozenset(item.measurement_id for item in valid)
     statistics: list[SummaryStatistic]
 
-    if metric_code == "unverified_numeric_output":
+    if metric_code in {"unverified_numeric_output", "outflow_total", "outflow_rate", "ph"}:
         statistics = [
             _statistic("latest", "Latest", latest),
             SummaryStatistic("count", "Count", float(len(valid))),

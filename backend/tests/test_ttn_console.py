@@ -8,6 +8,7 @@ from app.ingestion.ttn_console import (
     normalise_application_up,
     parse_console_export_event,
 )
+from app.ingestion.ttn_devices import TTN_DEVICE_MAPPINGS
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ttn" / "outflow-a-redacted.json"
 
@@ -115,3 +116,47 @@ def test_no_uplink_exports_remain_explicitly_empty(device_id: str) -> None:
     path = FIXTURE.parent / f"{device_id}-redacted.json"
 
     assert json.loads(path.read_text(encoding="utf-8")) == []
+
+
+def test_confirmed_units_are_bound_to_device_and_measurement_id() -> None:
+    expected = {
+        "outflow-a": {1: ("outflow_total", "ml"), 2: ("outflow_rate", "ml_h")},
+        "soilmoisture-temp-sensor": {
+            4102: ("soil_temperature", "deg_c"),
+            4103: ("soil_moisture", "pct"),
+            4108: ("soil_electrical_conductivity", "ds_m"),
+        },
+        "weather-station": {
+            4097: ("air_temperature", "deg_c"),
+            4098: ("relative_humidity", "pct"),
+            4099: ("light_intensity", "lux"),
+            4105: ("wind_speed", "m_s"),
+            4104: ("wind_direction", "degree"),
+            4113: ("rainfall_intensity", "mm_h"),
+            4101: ("barometric_pressure", "pa"),
+        },
+    }
+    expected["weather-station-2"] = expected["weather-station"]
+
+    for device_id, measurement_mappings in expected.items():
+        actual = {
+            channel.measurement_id: (channel.metric_code, channel.unit_code)
+            for channel in TTN_DEVICE_MAPPINGS[device_id].channels
+            if channel.measurement_id in measurement_mappings
+        }
+        assert actual == measurement_mappings
+
+    assert TTN_DEVICE_MAPPINGS["soil-moisture-1"].channels[0].unit_code is None
+    ph_channels = {
+        channel.measurement_id: channel for channel in TTN_DEVICE_MAPPINGS["ph-sensor"].channels
+    }
+    assert ph_channels[4106].metric_code == "ph"
+    assert ph_channels[4106].unit_code is None
+    for device_id in ("weather-station", "weather-station-2"):
+        uv = next(
+            channel
+            for channel in TTN_DEVICE_MAPPINGS[device_id].channels
+            if channel.measurement_id == 4190
+        )
+        assert uv.metric_code == "uv_index"
+        assert uv.unit_code is None
