@@ -3,13 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useDevices, useSites } from '../api/queries';
 import type { ConnectivityStatus } from '../api/types';
-import { ConfigurationStatus } from '../components/ConfigurationStatus';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { IngestionSource } from '../components/IngestionSource';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
-import { UnitStatusNote } from '../components/UnitStatusNote';
 import { formatDateTime, humanizeCode } from '../utils/format';
 
 export function DevicesPage() {
@@ -53,7 +51,7 @@ export function DevicesPage() {
       <PageHeader
         eyebrow="Technical inventory"
         title="Devices"
-        description="Review device source, operational freshness, configuration completeness and unit interpretation as separate system properties."
+        description="Review device connectivity, source and latest received data."
       />
 
       <section className="toolbar filter-bar" aria-label="Device filters">
@@ -168,8 +166,6 @@ export function DevicesPage() {
                     <th>Source</th>
                     <th>Operational status</th>
                     <th>Last received</th>
-                    <th>Configuration</th>
-                    <th>Units</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -203,12 +199,6 @@ export function DevicesPage() {
                         {device.last_seen_at === null
                           ? 'Never received'
                           : formatDateTime(device.last_seen_at)}
-                      </td>
-                      <td data-label="Configuration">
-                        <ConfigurationStatus compact status={device.sensor_configuration_status} />
-                      </td>
-                      <td data-label="Units">
-                        <UnitStatusNote compact status={device.unit_confirmation_summary} />
                       </td>
                       <td data-label="Action">
                         <Link

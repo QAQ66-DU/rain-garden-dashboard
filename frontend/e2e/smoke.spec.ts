@@ -51,7 +51,7 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
-  await expect(page.getByText('Live proxy sensor data')).toBeVisible();
+  await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
   await expect(page.getByText('Proxy network; not Orchard Park')).toBeVisible();
   const map = page.getByRole('region', {
     name: 'Interactive map of Orchard Park monitoring locations',
@@ -85,10 +85,11 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await weather.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('link', { name: '← Back to devices' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'weather-station-2', exact: true })).toBeVisible();
-  await expect(page.getByText('Proxy sensor', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Live MQTT', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Proxy sensor', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
-  await expect(page.getByText('Configuration pending').first()).toBeVisible();
-  await expect(page.getByText('Deployment unit confirmed').first()).toBeVisible();
+  await expect(page.getByText('Configuration pending')).toHaveCount(0);
+  await expect(page.getByText('Deployment unit confirmed')).toHaveCount(0);
 
   expect(browserErrors).toEqual([]);
 });
@@ -98,7 +99,7 @@ test('desktop Explore loads proxy channels without failed API requests', async (
 
   await page.goto('/explore');
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
-  await expect(page.getByText('Live proxy sensor data')).toBeVisible();
+  await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
   await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
   const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
   await rangeSelect.selectOption('24h');
@@ -178,7 +179,7 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   expect(selectedUrl.searchParams.get('end')).toBeTruthy();
   await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
   const chart = page.getByTestId('time-series-chart');
-  await expect(chart).toContainText(/raw observations/);
+  await expect(chart).toContainText(/observations/);
   const hourLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^(?:\d{1,2} [A-Z][a-z]{2}, )?\d{2}:\d{2}$/.test(label),
   );
@@ -189,7 +190,7 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
   await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
   await expect(chart).toContainText(
-    'Chart downsampled for display. Full raw data remains available for export.',
+    'Chart downsampled for display. The full observation series remains available for export.',
   );
   const sevenDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^\d{1,2} [A-Z][a-z]{2}$/.test(label),

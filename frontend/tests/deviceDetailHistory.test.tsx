@@ -23,7 +23,9 @@ vi.mock('../src/components/TimeSeriesChart', () => ({
       <h2>{title}</h2>
       <p>{subtitle}</p>
       {downsamplingApplied ? (
-        <p>Chart downsampled for display. Full raw data remains available for export.</p>
+        <p>
+          Chart downsampled for display. The full observation series remains available for export.
+        </p>
       ) : null}
     </section>
   ),
@@ -83,7 +85,7 @@ describe('Device Detail history controls and CSV export', () => {
     expect(
       await screen.findByRole('heading', { name: 'Rainfall intensity · Last 24 hours' }),
     ).toBeVisible();
-    expect(screen.getByText(/1 raw observations/)).toBeVisible();
+    expect(screen.getByText(/1 observations/)).toBeVisible();
     expect(screen.getByTestId('time-series-chart')).toHaveAttribute('data-range-preset', '24h');
     expect(channelSelect).toHaveValue(selectedChannel);
 
@@ -96,7 +98,7 @@ describe('Device Detail history controls and CSV export', () => {
     expect(
       await screen.findByRole('heading', { name: 'Rainfall intensity · Last 30 days' }),
     ).toBeVisible();
-    expect(screen.getByText(/3 raw observations/)).toBeVisible();
+    expect(screen.getByText(/3 observations/)).toBeVisible();
     expect(screen.getByTestId('time-series-chart')).toHaveAttribute('data-range-preset', '30d');
     expect(channelSelect).toHaveValue(selectedChannel);
 
@@ -127,7 +129,7 @@ describe('Device Detail history controls and CSV export', () => {
     expect(await screen.findByText(/9,614 observations · 2,000 displayed/)).toBeVisible();
     expect(
       screen.getByText(
-        'Chart downsampled for display. Full raw data remains available for export.',
+        'Chart downsampled for display. The full observation series remains available for export.',
       ),
     ).toBeVisible();
     expect(screen.queryByText(/maximum raw result size is 5000/i)).not.toBeInTheDocument();
@@ -156,7 +158,10 @@ describe('Device Detail history controls and CSV export', () => {
     );
     expect(screen.getByLabelText('Custom end (Europe/London)')).toHaveValue('31/05/2026 15:00');
     expect(screen.getByLabelText('Custom start (Europe/London)')).toHaveAttribute('lang', 'en-GB');
-    expect(screen.getAllByText('Format: DD/MM/YYYY HH:mm · 24-hour time')).toHaveLength(2);
+    expect(screen.queryByText('Format: DD/MM/YYYY HH:mm · 24-hour time')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Selected period: Custom range · Times shown in Europe/London.'),
+    ).toBeInTheDocument();
     await user.click(
       screen.getByRole('button', {
         name: 'Custom start (Europe/London): open English calendar',

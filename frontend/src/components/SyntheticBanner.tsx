@@ -3,6 +3,8 @@ interface SyntheticBannerProps {
 }
 
 export function SyntheticBanner({ mode = 'synthetic' }: SyntheticBannerProps) {
+  if (mode === 'proxy') return null;
+
   const content = {
     synthetic: {
       label: 'Synthetic demonstration data',
@@ -27,11 +29,6 @@ export function SyntheticBanner({ mode = 'synthetic' }: SyntheticBannerProps) {
       label: 'Mixed local data',
       message:
         'Orchard Park remains synthetic. TTN Testbed includes live Outflow A MQTT data with explicitly mapped channel units.',
-    },
-    proxy: {
-      label: 'Live proxy sensor data',
-      message:
-        'These eight TTN devices are not deployed at Orchard Park. Confirmed channel units are shown only for supplied measurement-ID mappings; remaining units stay pending.',
     },
   }[mode];
   return (

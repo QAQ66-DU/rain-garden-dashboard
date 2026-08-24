@@ -138,7 +138,8 @@ describe('proxy TTN dashboard', () => {
   it('shows exactly the eight public TTN IDs and hides synthetic site filters', async () => {
     renderRoute('/devices');
 
-    expect(await screen.findByText('Live proxy sensor data')).toBeInTheDocument();
+    expect(await screen.findByText('outflow-a')).toBeInTheDocument();
+    expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
     for (const deviceId of proxyIds) {
       expect(screen.getByText(deviceId)).toBeInTheDocument();
     }
@@ -160,21 +161,22 @@ describe('proxy TTN dashboard', () => {
     expect(screen.queryByRole('region', { name: 'Chart controls' })).not.toBeInTheDocument();
   });
 
-  it('uses proxy provenance on Overview and Explore', async () => {
+  it('uses the proxy inventory without presenting a proxy banner', async () => {
     const { router } = renderRoute('/');
 
     expect(await screen.findByRole('heading', { name: 'TTN proxy network' })).toBeInTheDocument();
-    expect(screen.getByText('Live proxy sensor data')).toBeInTheDocument();
+    expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
 
     await router.navigate(
       '/explore?start=2026-08-04T12%3A00%3A00Z&end=2026-08-05T12%3A00%3A00Z&preset=24h&feature=all&group=weather',
     );
     expect(await screen.findByRole('heading', { name: 'Explore' })).toBeInTheDocument();
+    expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Proxy sensors' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Swale' })).not.toBeInTheDocument();
   });
 
-  it('shows confirmed Outflow metadata without creating quality warnings', async () => {
+  it('shows confirmed Outflow units without governance badges or quality warnings', async () => {
     const outflow = proxyDevices[0];
     if (!outflow) throw new Error('outflow-a fixture is required');
     server.use(
@@ -197,8 +199,9 @@ describe('proxy TTN dashboard', () => {
     renderRoute(`/devices/${outflow.id}`);
 
     expect(await screen.findByRole('heading', { name: 'outflow-a' })).toBeInTheDocument();
-    expect(screen.getAllByText('Metadata catalogued').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThan(0);
+    expect(screen.getByRole('option', { name: 'Outflow A · mL/hour' })).toBeInTheDocument();
+    expect(screen.queryByText('Metadata catalogued')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deployment unit confirmed')).not.toBeInTheDocument();
     expect(screen.queryByText(/flagged observations/iu)).not.toBeInTheDocument();
   });
 

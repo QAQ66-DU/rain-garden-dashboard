@@ -114,9 +114,13 @@ describe('live Outflow A device detail', () => {
 
     expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
     expect(screen.getByText('Live TTN testbed data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Live ingestion provenance' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Live ingestion provenance' }),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText('Live MQTT').length).toBeGreaterThan(0);
-    expect(screen.getByText('Live MQTT reference time')).toBeInTheDocument();
+    expect(screen.queryByText('Live MQTT reference time')).not.toBeInTheDocument();
+    expect(screen.getByText('TTN gateway')).toBeInTheDocument();
+    expect(screen.queryByText(/identifier withheld/iu)).not.toBeInTheDocument();
     expect(screen.queryByText('Offline replay')).not.toBeInTheDocument();
     await waitFor(() => {
       expect(new URLSearchParams(router.state.location.search).get('preset')).toBe('7d');
@@ -128,7 +132,7 @@ describe('live Outflow A device detail', () => {
     await user.selectOptions(channelSelect, replayChannelTwoId);
     expect(channelSelect).toHaveValue(replayChannelTwoId);
     expect(rangeSelect).toHaveValue('7d');
-    expect(await screen.findByText(/1 raw observations/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 observations/)).toBeInTheDocument();
     failNextSelectedChannelRequest = true;
 
     await act(async () => {
@@ -140,7 +144,7 @@ describe('live Outflow A device detail', () => {
     expect(channelSelect).toHaveValue(replayChannelTwoId);
     expect(rangeSelect).toHaveValue('7d');
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
-    expect(screen.getByText(/1 raw observations/)).toBeInTheDocument();
+    expect(screen.getByText(/1 observations/)).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
@@ -148,7 +152,7 @@ describe('live Outflow A device detail', () => {
     await waitFor(() => {
       expect(selectedChannelRequests).toBeGreaterThanOrEqual(3);
     });
-    expect(await screen.findByText(/2 raw observations/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 observations/)).toBeInTheDocument();
     expect(channelSelect).toHaveValue(replayChannelTwoId);
     expect(rangeSelect).toHaveValue('7d');
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();

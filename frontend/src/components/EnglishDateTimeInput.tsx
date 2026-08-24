@@ -167,7 +167,6 @@ export function EnglishDateTimeInput({
           <span aria-hidden="true">▦</span>
         </button>
       </div>
-      <small>Format: DD/MM/YYYY HH:mm · 24-hour time</small>
       {open ? (
         <div
           className="date-time-picker"

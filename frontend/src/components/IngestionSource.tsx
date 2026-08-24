@@ -14,7 +14,6 @@ const ingestionLabels: Record<string, string> = {
 
 const provenanceLabels: Record<string, string> = {
   exported_live_data: 'Exported test data',
-  proxy: 'Proxy sensor',
 };
 
 function sourceLabel(value: string): string {
@@ -32,11 +31,14 @@ export function IngestionSource({
     : sourceSystem
       ? sourceLabel(sourceSystem)
       : 'Not reported';
-  const secondary = provenance
-    ? (provenanceLabels[provenance] ?? humanizeCode(provenance))
-    : ingestionMode && sourceSystem
-      ? sourceLabel(sourceSystem)
-      : null;
+  const secondary =
+    provenance === 'proxy'
+      ? null
+      : provenance
+        ? (provenanceLabels[provenance] ?? humanizeCode(provenance))
+        : ingestionMode && sourceSystem
+          ? sourceLabel(sourceSystem)
+          : null;
 
   return (
     <span className={`source-summary${compact ? ' source-summary--compact' : ''}`}>

@@ -177,7 +177,7 @@ export function ExplorePage() {
               <dd>
                 {formatDateTime(start, timeZone)} → {formatDateTime(end, timeZone)}
               </dd>
-              <small>[start, end) in UTC · displayed in {timeZone}</small>
+              <small>Times shown in {timeZone}</small>
             </div>
           </dl>
         }
@@ -319,7 +319,7 @@ export function ExplorePage() {
             </p>
             <p className="chart-note">
               {explorer.data.downsampling_applied
-                ? 'Chart sampling is applied independently per series and affects display only; raw observations remain preserved.'
+                ? 'Chart sampling is applied independently per series and affects display only; summaries use all observations.'
                 : 'All matching observations are displayed.'}
             </p>
           </section>
@@ -393,8 +393,7 @@ export function ExplorePage() {
                             )}
                             {series.downsampling_applied ? (
                               <p className="chart-note">
-                                Chart sampling affects display only; raw observations remain
-                                preserved.
+                                Chart sampling affects display only; summaries use all observations.
                               </p>
                             ) : null}
                             <div className="explore-summary" aria-label="Period summary">

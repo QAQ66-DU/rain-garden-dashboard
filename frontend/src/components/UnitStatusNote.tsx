@@ -7,6 +7,7 @@ interface UnitStatusNoteProps {
 }
 
 export function UnitStatusNote({ compact = false, status }: UnitStatusNoteProps) {
+  if (status === 'confirmed') return null;
   const presentation = unitStatusPresentation(status);
   return (
     <StatusLabel compact={compact} tone={presentation.tone}>

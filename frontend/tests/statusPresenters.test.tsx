@@ -15,7 +15,7 @@ describe('shared status presenters', () => {
     expect(unitStatusPresentation('no_active_channels').compactLabel).toBe('No active channels');
   });
 
-  it('keeps source, configuration and unit interpretation visually separate', () => {
+  it('keeps the useful source label without repeating proxy presentation', () => {
     render(
       <div>
         <IngestionSource ingestionMode="live_mqtt" provenance="proxy" sourceSystem="ttn" />
@@ -25,7 +25,7 @@ describe('shared status presenters', () => {
     );
 
     expect(screen.getByText('Live MQTT')).toBeInTheDocument();
-    expect(screen.getByText('Proxy sensor')).toBeInTheDocument();
+    expect(screen.queryByText('Proxy sensor')).not.toBeInTheDocument();
     expect(screen.getByText('Configuration pending')).toBeInTheDocument();
     expect(screen.getByText('Unit unverified')).toBeInTheDocument();
   });

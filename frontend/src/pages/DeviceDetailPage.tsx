@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { useDevice, useMeasurementExport, useMeasurements } from '../api/queries';
-import { ConfigurationStatus } from '../components/ConfigurationStatus';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { EnglishDateTimeInput } from '../components/EnglishDateTimeInput';
 import { IngestionSource } from '../components/IngestionSource';
@@ -16,7 +15,6 @@ import { UnitStatusNote } from '../components/UnitStatusNote';
 import {
   formatDateTime,
   formatNumber,
-  formatStatusBasis,
   fromDateTimeLocalInput,
   humanizeCode,
   presetWindow,
@@ -281,37 +279,16 @@ export function DeviceDetailPage() {
                 {data.last_seen_at === null ? 'Never received' : formatDateTime(data.last_seen_at)}
               </dd>
             </div>
-            <div>
-              <dt>Configuration</dt>
-              <dd>
-                <ConfigurationStatus compact status={data.sensor_configuration_status} />
-              </dd>
-            </div>
-            <div>
-              <dt>Units</dt>
-              <dd>
-                <UnitStatusNote compact status={data.unit_confirmation_summary} />
-              </dd>
-            </div>
-            <div>
-              <dt>Status basis</dt>
-              <dd>{formatStatusBasis(data.freshness.status_basis)}</dd>
-              <small>Reference {formatDateTime(data.freshness.reference_time)}</small>
-            </div>
           </dl>
         }
       />
 
-      {data.is_test_device ? (
+      {data.ingestion_mode === 'offline_replay' ? (
         <section className="panel" aria-labelledby="ingestion-provenance-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                {isLiveMqtt ? 'Private-source live ingestion' : 'Private-source replay'}
-              </p>
-              <h2 id="ingestion-provenance-heading">
-                {isLiveMqtt ? 'Live ingestion provenance' : 'Replay provenance'}
-              </h2>
+              <p className="eyebrow">Private-source replay</p>
+              <h2 id="ingestion-provenance-heading">Replay provenance</h2>
               <p>
                 Raw events are preserved privately. Public views expose only selected normalised
                 fields and never expose network identifiers, session material, tokens, or raw JSON.
@@ -368,14 +345,6 @@ export function DeviceDetailPage() {
               <dd>{data.telemetry.hardware_version ?? 'Not available'}</dd>
             </div>
             <div>
-              <dt>Measurement interval</dt>
-              <dd>
-                {data.telemetry.measurement_interval_value === null
-                  ? 'Not available'
-                  : `${formatNumber(data.telemetry.measurement_interval_value)} · unit not verified`}
-              </dd>
-            </div>
-            <div>
               <dt>Latest RSSI</dt>
               <dd>
                 {data.telemetry.latest_rssi_dbm === null
@@ -393,11 +362,10 @@ export function DeviceDetailPage() {
             </div>
             <div>
               <dt>Gateway</dt>
-              <dd>{data.telemetry.gateway ?? 'Not available'}</dd>
-            </div>
-            <div>
-              <dt>Status observed</dt>
-              <dd>{formatDateTime(data.telemetry.observed_at)}</dd>
+              <dd>
+                {data.telemetry.gateway?.replace(/\s*\(identifier withheld\)\s*$/iu, '') ??
+                  'Not available'}
+              </dd>
             </div>
           </dl>
         </section>
@@ -475,11 +443,9 @@ export function DeviceDetailPage() {
                   ))}
                 </select>
               </label>
-              <p className="device-control-helper">
-                Each selection plots one channel only. Depth and position are not merged or assumed
-                comparable.
-              </p>
-              {selectedChannel ? (
+              {selectedChannel &&
+              (selectedChannel.verification_status === 'unverified' ||
+                selectedChannel.unit_confirmation_status !== 'confirmed') ? (
                 <div className="device-control-badges" aria-label="Selected channel metadata">
                   <MetadataStatusNote status={selectedChannel.verification_status} />
                   <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
@@ -500,8 +466,7 @@ export function DeviceDetailPage() {
                 </select>
               </label>
               <p className="device-control-helper">
-                Selected period: {presetLabel(selectedPreset)} · [start, end) in UTC · displayed in{' '}
-                {SITE_TIME_ZONE}.
+                Selected period: {presetLabel(selectedPreset)} · Times shown in {SITE_TIME_ZONE}.
               </p>
               {selectedPreset === 'custom' ? (
                 <div className="device-custom-time-fields">
@@ -569,7 +534,7 @@ export function DeviceDetailPage() {
               subtitle={`${
                 measurements.data.downsampling_applied
                   ? `${formatNumber(measurements.data.total_matching)} observations · ${formatNumber(measurements.data.points_returned)} displayed`
-                  : `${formatNumber(measurements.data.total_matching)} raw observations`
+                  : `${formatNumber(measurements.data.total_matching)} observations`
               } · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
               unit={selectedChannel.unit_symbol ?? 'Unit not verified'}
               points={points}

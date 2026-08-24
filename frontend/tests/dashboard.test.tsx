@@ -50,8 +50,10 @@ describe('monitoring dashboard', () => {
     expect(
       within(table).getByRole('columnheader', { name: 'Operational status' }),
     ).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: 'Configuration' })).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: 'Units' })).toBeInTheDocument();
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Configuration' }),
+    ).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'Units' })).not.toBeInTheDocument();
     expect(screen.getAllByText('Online')).not.toHaveLength(0);
     expect(screen.getAllByText('Stale')).not.toHaveLength(0);
     expect(screen.getAllByText('Offline')).not.toHaveLength(0);
@@ -63,7 +65,7 @@ describe('monitoring dashboard', () => {
     expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
   });
 
-  it('renders inventory columns from separate source, operational, configuration and unit fields', async () => {
+  it('keeps operational inventory fields while hiding governance columns', async () => {
     const livePending = {
       ...devicesFixture.items[0],
       display_name: 'Live pending device',
@@ -114,18 +116,16 @@ describe('monitoring dashboard', () => {
     const liveRow = within(table).getByRole('row', { name: /Live pending device/ });
     expect(within(liveRow).getByText('Live MQTT')).toBeInTheDocument();
     expect(within(liveRow).getByText('Online')).toBeInTheDocument();
-    expect(within(liveRow).getByText('Configuration pending')).toBeInTheDocument();
-    expect(within(liveRow).getByText('Unit unverified')).toBeInTheDocument();
+    expect(within(liveRow).queryByText('Proxy sensor')).not.toBeInTheDocument();
 
     const replayRow = within(table).getByRole('row', { name: /Replay mixed device/ });
     expect(within(replayRow).getByText('Offline replay')).toBeInTheDocument();
     expect(within(replayRow).getByText('Offline')).toBeInTheDocument();
-    expect(within(replayRow).getByText('Mixed unit status')).toBeInTheDocument();
 
     const emptyRow = within(table).getByRole('row', { name: /No-channel device/ });
     expect(within(emptyRow).getByText('Unknown')).toBeInTheDocument();
     expect(within(emptyRow).getByText('Never received')).toBeInTheDocument();
-    expect(within(emptyRow).getByText('No active channels')).toBeInTheDocument();
+    expect(within(emptyRow).getByRole('link', { name: /View details/ })).toBeInTheDocument();
   });
 
   it('keeps the eight Orchard devices isolated from the ninth TTN Testbed row', async () => {
@@ -136,7 +136,7 @@ describe('monitoring dashboard', () => {
     expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10);
     expect(screen.getByText(/Testbed · TTN Testbed/)).toBeInTheDocument();
     expect(screen.getByText('Offline replay')).toBeInTheDocument();
-    expect(screen.getByText('Unit confirmed')).toBeInTheDocument();
+    expect(screen.queryByText('Unit confirmed')).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Site' }), siteId);
     await waitFor(() => {
@@ -183,20 +183,20 @@ describe('monitoring dashboard', () => {
     expect(screen.queryByRole('region', { name: 'Chart controls' })).not.toBeInTheDocument();
   });
 
-  it('labels the isolated TTN replay device with confirmed units and no raw IDs', async () => {
+  it('shows replay measurements and privacy-safe operational metadata', async () => {
     renderRoute(`/devices/${replayDeviceId}`);
 
     expect(await screen.findByRole('heading', { name: 'Outflow A' })).toBeInTheDocument();
     expect(screen.getByText('Offline TTN replay data')).toBeInTheDocument();
-    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThan(0);
-    expect(screen.getByText('Replay dataset reference time')).toBeInTheDocument();
+    expect(screen.queryByText('Deployment unit confirmed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Replay dataset reference time')).not.toBeInTheDocument();
     expect(screen.getAllByText('Offline replay').length).toBeGreaterThan(0);
-    expect(screen.getByText('Replay gateway (identifier withheld)')).toBeInTheDocument();
+    expect(screen.getByText('Replay gateway')).toBeInTheDocument();
+    expect(screen.queryByText(/identifier withheld/iu)).not.toBeInTheDocument();
     expect(screen.getByText('840')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
     expect(screen.getAllByText('Outflow A').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Metadata catalogued').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('Deployment unit confirmed').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Metadata catalogued')).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(['Dev', 'EUI'].join(''));
     expect(document.body).not.toHaveTextContent('session_key_id');
   });

@@ -108,8 +108,8 @@ export function TimeSeriesChart({
       <p className="chart-note">
         Missing records are not converted to zero.{' '}
         {downsamplingApplied
-          ? 'Chart downsampled for display. Full raw data remains available for export.'
-          : 'All matching raw observations are displayed.'}
+          ? 'Chart downsampled for display. The full observation series remains available for export.'
+          : 'All matching observations are displayed.'}
       </p>
     </section>
   );
