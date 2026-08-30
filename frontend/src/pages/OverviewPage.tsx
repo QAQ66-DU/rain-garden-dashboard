@@ -47,16 +47,15 @@ export function OverviewPage() {
       {isProxy ? <SyntheticBanner mode="proxy" /> : data.synthetic ? <SyntheticBanner /> : null}
       <PageHeader
         eyebrow="Site overview"
-        title={data.site_name}
-        description={data.public_location_label}
+        title={isProxy ? 'Overview' : data.site_name}
+        description={isProxy ? undefined : data.public_location_label}
         meta={
-          <dl className="page-header__facts">
+          <div className="page-header__facts">
             <div>
-              <dt>Reference time</dt>
-              <dd>{formatDateTime(data.reference_time)}</dd>
+              <span className="page-header__fact-value">{formatDateTime(data.reference_time)}</span>
               <small>{isProxy ? 'Current UTC time' : 'Deterministic dataset reference'}</small>
             </div>
-          </dl>
+          </div>
         }
       />
 
@@ -117,10 +116,6 @@ export function OverviewPage() {
               </div>
             ))}
           </div>
-          <p className="panel-note">
-            Status uses {isProxy ? 'current UTC time' : 'the dataset reference time'}. It is
-            operational context, not a stored device claim.
-          </p>
         </article>
 
         <article className="panel quality-panel">

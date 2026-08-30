@@ -50,9 +50,25 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Orchard Park Monitor home' })).toBeVisible();
+  await expect(page.locator('.brand-mark')).toHaveCount(0);
+  await expect(page.locator('.site-footer')).toHaveCount(0);
+  await expect(page.getByText('TTN proxy network')).toHaveCount(0);
   await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
-  await expect(page.getByText('Proxy network; not Orchard Park')).toBeVisible();
+  await expect(page.getByText('Proxy network; not Orchard Park')).toHaveCount(0);
+  await expect(page.getByText('Operations workspace')).toHaveCount(0);
+  await expect(page.getByText('Europe/London display')).toHaveCount(0);
+  await expect(page.getByText('Reference time')).toHaveCount(0);
+  await expect(page.getByText('Current UTC time')).toBeVisible();
+  await expect(page.getByText('Site reference')).toHaveCount(0);
+  await expect(
+    page.getByText('Sensor locations across the swale and tree-pit monitoring network.'),
+  ).toHaveCount(0);
+  await expect(page.getByText(/Status uses current UTC time/)).toHaveCount(0);
+  await expect(
+    page.getByText('Rain Garden Monitoring · provenance-labelled data · UTC storage'),
+  ).toHaveCount(0);
   await expect(page.getByText('Data-quality flags')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Flagged observations' })).toBeVisible();
   await expect(page.getByText('Data-quality warnings')).toHaveCount(0);
@@ -66,6 +82,15 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(map.getByRole('link', { name: 'OpenStreetMap' })).toBeVisible();
   await map.getByRole('button', { name: 'Weather station', exact: true }).click();
   await expect(map.getByText('55.955312, -3.238602')).toBeVisible();
+  const overviewPanelWidths = await page.evaluate(() => {
+    const statusPanel = document.querySelector('.status-panel');
+    const qualityPanel = document.querySelector('.quality-panel');
+    return {
+      quality: Math.round(qualityPanel?.getBoundingClientRect().width ?? -1),
+      status: Math.round(statusPanel?.getBoundingClientRect().width ?? -1),
+    };
+  });
+  expect(overviewPanelWidths.quality).toBe(overviewPanelWidths.status);
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
@@ -96,6 +121,36 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByText('Configuration pending')).toHaveCount(0);
   await expect(page.getByText('Deployment unit confirmed')).toHaveCount(0);
 
+  expect(browserErrors).toEqual([]);
+});
+
+test('Overview panels retain responsive desktop and mobile layout', async ({ page }) => {
+  const browserErrors = collectBrowserAndApiErrors(page);
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Flagged observations' })).toBeVisible();
+  const desktopPanels = await page.locator('.overview-grid > .panel').evaluateAll((panels) =>
+    panels.map((panel) => ({
+      left: Math.round(panel.getBoundingClientRect().left),
+      top: Math.round(panel.getBoundingClientRect().top),
+      width: Math.round(panel.getBoundingClientRect().width),
+    })),
+  );
+  expect(desktopPanels).toHaveLength(2);
+  expect(desktopPanels[0]?.width).toBe(desktopPanels[1]?.width);
+  expect(desktopPanels[0]?.top).toBe(desktopPanels[1]?.top);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobilePanels = await page.locator('.overview-grid > .panel').evaluateAll((panels) =>
+    panels.map((panel) => ({
+      left: Math.round(panel.getBoundingClientRect().left),
+      top: Math.round(panel.getBoundingClientRect().top),
+    })),
+  );
+  expect(mobilePanels).toHaveLength(2);
+  expect(mobilePanels[0]?.left).toBe(mobilePanels[1]?.left);
+  expect(mobilePanels[1]?.top).toBeGreaterThan(mobilePanels[0]?.top ?? 0);
+  await expectNoHorizontalOverflow(page);
   expect(browserErrors).toEqual([]);
 });
 
@@ -262,7 +317,7 @@ test('mobile Overview, Explore, Devices, and Device Detail have no horizontal ov
   await page.setViewportSize({ width: 390, height: 844 });
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole('link', { name: 'Explore', exact: true }).click();

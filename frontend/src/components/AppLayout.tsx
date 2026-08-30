@@ -14,15 +14,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         <NavLink
           className="brand"
           to={{ pathname: '/', search: preservedSearch }}
-          aria-label="Rain Garden Dashboard home"
+          aria-label="Orchard Park Monitor home"
         >
-          <span className="brand-mark" aria-hidden="true">
-            RG
-          </span>
-          <span>
-            <strong>Rain Garden</strong>
-            <small>Operations workspace</small>
-          </span>
+          <strong>Orchard Park Monitor</strong>
         </NavLink>
         <nav aria-label="Primary navigation">
           <NavLink to={{ pathname: '/', search: preservedSearch }} end>
@@ -33,13 +27,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         </nav>
         <div className="site-sidebar__context">
           <span>Monitoring system</span>
-          <small>Europe/London display</small>
         </div>
       </aside>
       <main className="page-shell">{children}</main>
-      <footer className="site-footer">
-        Rain Garden Monitoring · provenance-labelled data · UTC storage
-      </footer>
     </div>
   );
 }

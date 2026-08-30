@@ -30,6 +30,15 @@ describe('monitoring dashboard', () => {
     expect(
       await screen.findByRole('heading', { name: 'Orchard Park monitoring site' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Orchard Park Monitor home' })).toBeInTheDocument();
+    expect(screen.getByText('Orchard Park Monitor')).toBeInTheDocument();
+    expect(screen.queryByText('Operations workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Europe/London display')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Rain Garden Monitoring · provenance-labelled data · UTC storage'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Reference time')).not.toBeInTheDocument();
+    expect(screen.getByText('Deterministic dataset reference')).toBeInTheDocument();
     expect(screen.getByText('Synthetic demonstration data')).toBeInTheDocument();
     expect(screen.getByText('Data-quality flags')).toBeInTheDocument();
     expect(screen.queryByText('Data-quality warnings')).not.toBeInTheDocument();
@@ -57,6 +66,11 @@ describe('monitoring dashboard', () => {
     expect(
       screen.getByRole('region', { name: 'Interactive map of Orchard Park monitoring locations' }),
     ).toBeInTheDocument();
+    expect(screen.queryByText('Site reference')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Sensor locations across the swale and tree-pit monitoring network.'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Status uses .* operational context/)).not.toBeInTheDocument();
     expect(screen.queryByText('Minimum')).not.toBeInTheDocument();
     expect(screen.queryByText('Median')).not.toBeInTheDocument();
     expect(screen.queryByText('Maximum')).not.toBeInTheDocument();

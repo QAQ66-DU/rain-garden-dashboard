@@ -164,7 +164,11 @@ describe('proxy TTN dashboard', () => {
   it('uses the proxy inventory without presenting a proxy banner', async () => {
     const { router } = renderRoute('/');
 
-    expect(await screen.findByRole('heading', { name: 'TTN proxy network' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.queryByText('TTN proxy network')).not.toBeInTheDocument();
+    expect(screen.queryByText('Proxy network; not Orchard Park')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reference time')).not.toBeInTheDocument();
+    expect(screen.getByText('Current UTC time')).toBeInTheDocument();
     expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
 
     await router.navigate(

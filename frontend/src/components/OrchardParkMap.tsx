@@ -111,9 +111,7 @@ export function OrchardParkMap() {
     <section className="panel sensor-map-section" aria-labelledby="orchard-park-map-title">
       <div className="section-heading sensor-map-heading">
         <div>
-          <p className="eyebrow">Site reference</p>
           <h2 id="orchard-park-map-title">Orchard Park monitoring layout</h2>
-          <p>Sensor locations across the swale and tree-pit monitoring network.</p>
         </div>
         <span className="sensor-map-count">8 locations</span>
       </div>
