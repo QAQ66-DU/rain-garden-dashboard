@@ -284,6 +284,6 @@ describe('proxy TTN dashboard', () => {
     expect(screen.getByText('Metadata pending')).toBeVisible();
     expect(screen.getByText('Unit unverified')).toBeVisible();
     expect(screen.getByText('Count').nextElementSibling).toHaveTextContent('2');
-    expect(screen.getByText('No flagged observations in this selected period.')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Quality warnings' })).not.toBeInTheDocument();
   });
 });

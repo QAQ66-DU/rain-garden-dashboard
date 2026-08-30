@@ -491,49 +491,6 @@ export function ExplorePage() {
               })}
             </div>
           )}
-
-          <section className="panel quality-drilldown" id="quality-warnings">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Read-only drill-down</p>
-                <h2>Quality warnings</h2>
-              </div>
-              <span className="count-chip">{explorer.data.quality_warnings.length}</span>
-            </div>
-            {explorer.data.quality_warnings.length === 0 ? (
-              <p className="missing-value">No flagged observations in this selected period.</p>
-            ) : (
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Device and channel</th>
-                      <th>Observation time</th>
-                      <th>Flag</th>
-                      <th>Safe explanation</th>
-                      <th>Summary treatment</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {explorer.data.quality_warnings.map((warning) => (
-                      <tr key={warning.measurement_id}>
-                        <td>
-                          <strong>{warning.device_name}</strong>
-                          <span>{warning.channel_name}</span>
-                        </td>
-                        <td>
-                          {formatDateTime(warning.observation_time, explorer.data.display_timezone)}
-                        </td>
-                        <td>{warning.quality_flag.replaceAll('_', ' ')}</td>
-                        <td>{warning.explanation}</td>
-                        <td>{warning.excluded_from_summaries ? 'Excluded' : 'Included'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
         </>
       ) : null}
     </div>

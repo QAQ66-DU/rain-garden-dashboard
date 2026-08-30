@@ -53,6 +53,11 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByRole('heading', { name: 'TTN proxy network' })).toBeVisible();
   await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
   await expect(page.getByText('Proxy network; not Orchard Park')).toBeVisible();
+  await expect(page.getByText('Data-quality flags')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flagged observations' })).toBeVisible();
+  await expect(page.getByText('Data-quality warnings')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Active warnings' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Soil-moisture spread' })).toHaveCount(0);
   const map = page.getByRole('region', {
     name: 'Interactive map of Orchard Park monitoring locations',
   });
@@ -105,7 +110,7 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await rangeSelect.selectOption('24h');
   await page.getByRole('combobox', { name: 'Metric group' }).selectOption('weather');
   await expect(page.getByRole('heading', { name: 'Sensor channels' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Quality warnings' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quality warnings' })).toHaveCount(0);
   const charts = page.getByTestId('explore-series-chart');
   await expect(charts).toHaveCount(14);
   await expect(

@@ -7,6 +7,7 @@ import { MeasurementDisplay } from '../src/components/MeasurementDisplay';
 import {
   devicesFixture,
   exploreFixture,
+  overviewFixture,
   replayDeviceId,
   siteId,
   treeProbeId,
@@ -16,28 +17,102 @@ import { renderRoute, renderWithQueryClient } from './render';
 import { server } from './server';
 
 describe('monitoring dashboard', () => {
-  it('shows a provenance-labelled, summary-first overview without hiding sensor channels', async () => {
+  it('shows a summary-first overview with site-level quality exceptions', async () => {
+    let warningRequest: URLSearchParams | undefined;
+    server.use(
+      http.get('*/api/v1/explore', ({ request }) => {
+        warningRequest = new URL(request.url).searchParams;
+        return HttpResponse.json(exploreFixture);
+      }),
+    );
     renderRoute();
 
     expect(
       await screen.findByRole('heading', { name: 'Orchard Park monitoring site' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Synthetic demonstration data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Soil-moisture spread' })).toBeInTheDocument();
-    expect(screen.getByText('Soil moisture sensor 1')).toBeInTheDocument();
-    expect(screen.getByText('Soil moisture sensor 3')).toBeInTheDocument();
-    expect(screen.getByText('Median')).toBeInTheDocument();
+    expect(screen.getByText('Data-quality flags')).toBeInTheDocument();
+    expect(screen.queryByText('Data-quality warnings')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Soil-moisture spread' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Active warnings' })).not.toBeInTheDocument();
+    const warningCard = screen
+      .getByRole('heading', { name: 'Flagged observations' })
+      .closest('article');
+    expect(warningCard).not.toBeNull();
+    expect(within(warningCard as HTMLElement).getByText('1')).toBeInTheDocument();
+    expect(await screen.findByText('Swale weather station')).toBeInTheDocument();
+    expect(screen.getByText('Relative humidity · out of range')).toBeInTheDocument();
+    expect(
+      screen.getByText('Observation falls outside a controlled definition-level validity bound.'),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(warningRequest?.get('start')).toBe(overviewFixture.data_quality.start);
+      expect(warningRequest?.get('end')).toBe(overviewFixture.data_quality.end);
+    });
+    expect(warningRequest?.has('feature')).toBe(false);
+    expect(warningRequest?.has('channels')).toBe(false);
     expect(
       screen.getByRole('heading', { name: 'Orchard Park monitoring layout' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: 'Interactive map of Orchard Park monitoring locations' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Demo-normalised unit · not deployment-confirmed')).toBeInTheDocument();
-    expect(screen.queryByText('Average')).not.toBeInTheDocument();
+    expect(screen.queryByText('Minimum')).not.toBeInTheDocument();
+    expect(screen.queryByText('Median')).not.toBeInTheDocument();
+    expect(screen.queryByText('Maximum')).not.toBeInTheDocument();
+  });
+
+  it('shows a compact Overview empty state when the warning count is zero', async () => {
+    server.use(
+      http.get('*/api/v1/overview', () =>
+        HttpResponse.json({
+          ...overviewFixture,
+          data_quality: { ...overviewFixture.data_quality, warning_count: 0 },
+        }),
+      ),
+    );
+    renderRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Flagged observations' });
+    const warningCard = heading.closest('article');
+    expect(warningCard).not.toBeNull();
+    expect(within(warningCard as HTMLElement).getByText('0')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /Review quality warnings in Time Explorer/ }),
-    ).toHaveAttribute('href', expect.stringContaining('/explore?'));
+      within(warningCard as HTMLElement).getByText('No flagged observations'),
+    ).toBeInTheDocument();
+    expect(within(warningCard as HTMLElement).queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('keeps the Overview warning card compact while reconciling to the KPI count', async () => {
+    const warnings = Array.from({ length: 4 }, (_, index) => ({
+      ...exploreFixture.quality_warnings[0],
+      measurement_id: `00000000-0000-4000-8000-00000000008${String(index + 1)}`,
+      device_name: `Warning device ${String(index + 1)}`,
+    }));
+    server.use(
+      http.get('*/api/v1/overview', () =>
+        HttpResponse.json({
+          ...overviewFixture,
+          data_quality: { ...overviewFixture.data_quality, warning_count: warnings.length },
+        }),
+      ),
+      http.get('*/api/v1/explore', () =>
+        HttpResponse.json({ ...exploreFixture, quality_warnings: warnings }),
+      ),
+    );
+    renderRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Flagged observations' });
+    const warningCard = heading.closest('article');
+    expect(warningCard).not.toBeNull();
+    expect(await within(warningCard as HTMLElement).findByText('Warning device 1')).toBeVisible();
+    expect(within(warningCard as HTMLElement).getByText('Warning device 3')).toBeVisible();
+    expect(
+      within(warningCard as HTMLElement).queryByText('Warning device 4'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(warningCard as HTMLElement).getByText('+ 1 more flagged observation'),
+    ).toBeVisible();
   });
 
   it('lists all status states and filters devices by public display name', async () => {
@@ -217,9 +292,7 @@ describe('monitoring dashboard', () => {
     ).toHaveLength(2);
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('98.81%')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Quality warnings' })).toBeInTheDocument();
-    expect(screen.getByText('Relative humidity')).toBeInTheDocument();
-    expect(screen.getByText('Excluded')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Quality warnings' })).not.toBeInTheDocument();
   });
 
   it('renders sampled 24-hour, 7-day, 30-day and custom Explore ranges without a raw-limit error', async () => {

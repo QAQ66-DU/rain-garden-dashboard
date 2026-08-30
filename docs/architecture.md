@@ -107,8 +107,9 @@ channel's visualization points independently reuse the canonical configurable ti
 selector: smaller series are unchanged, while larger series preserve real first, last, minimum, and
 maximum observations without mixing devices or channels. Response-level counts are sums of explicit
 per-series total/displayed metadata. Browser URLs retain `start`, `end`, feature, metric group, and
-explicit channel selection so the same analytical view can be shared or carried between Overview,
-Explore, and Devices. The separate quality-warning drill-down retains its raw-result ceiling.
+explicit channel selection so the same analytical view can be shared or carried between Explore and
+Devices. The Overview quality-flag card reuses the KPI's site-wide quality window and the existing
+bounded quality-flag source without inheriting Explore filter state.
 
 The scientific time axis is `measured_at`; `received_at` is returned separately for transmission-delay assessment. Expected observations are schedule-aligned slots inside `[start, end)`, calculated from the channel's explicit expected interval and schedule anchor—not from rounded window duration. A configurable jitter tolerance assigns at most one accepted observation to a slot. Duplicate-slot observations do not increase received count; flagged observations are received but not valid; out-of-tolerance and late observations retain explicit timing labels; absent slots remain missing rather than zero. “Late” means reception occurred more than one expected reporting interval after `measured_at`; it does not reuse timestamp-jitter tolerance. If interval, anchor, or tolerance is absent, precise coverage is unavailable.
 

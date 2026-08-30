@@ -74,7 +74,8 @@ The Rain Garden Monitoring Dashboard is a portable browser application for unive
   provide only count, latest, minimum, median, and maximum while retaining explicit metadata/unit
   warnings. Do not average wind direction or infer hydrological meaning. Report rainfall-intensity
   duration above zero only when cadence and complete valid coverage are sufficient.
-- Keep current device freshness separate from selected-period coverage and provide a bounded privacy-reviewed quality-warning drill-down from Overview and Explore.
+- Keep current device freshness separate from selected-period coverage and provide a bounded,
+  privacy-reviewed quality-flag summary on Overview using the same window as its quality KPI.
 
 ## Soil-moisture summary
 

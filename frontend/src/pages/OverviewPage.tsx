@@ -1,17 +1,28 @@
 import { Link, useLocation } from 'react-router-dom';
 
-import { useOverview } from '../api/queries';
+import { useExplorer, useOverview } from '../api/queries';
 import { ErrorState, LoadingState } from '../components/DataState';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { MetricCard } from '../components/MetricCard';
 import { OrchardParkMap } from '../components/OrchardParkMap';
 import { PageHeader } from '../components/PageHeader';
 import { SyntheticBanner } from '../components/SyntheticBanner';
-import { UnitStatusNote } from '../components/UnitStatusNote';
-import { formatDateTime, formatNumber } from '../utils/format';
+import { formatDateTime } from '../utils/format';
+
+const MAX_VISIBLE_WARNINGS = 3;
 
 export function OverviewPage() {
   const overview = useOverview();
+  const warningWindow = overview.data?.data_quality;
+  const warningDetails = useExplorer(
+    warningWindow?.start && warningWindow.end && warningWindow.warning_count > 0
+      ? {
+          start: warningWindow.start,
+          end: warningWindow.end,
+          metricGroup: 'hydrology',
+        }
+      : undefined,
+  );
   const location = useLocation();
 
   if (overview.isLoading) {
@@ -23,16 +34,14 @@ export function OverviewPage() {
 
   const data = overview.data;
   const isProxy = !data.synthetic && data.synthetic_notice?.startsWith('Live proxy') === true;
-  const soil = data.soil_moisture;
-  const warningParams = new URLSearchParams(location.search);
-  if (data.data_quality.start && data.data_quality.end) {
-    warningParams.set('start', data.data_quality.start);
-    warningParams.set('end', data.data_quality.end);
-  }
-  warningParams.set('preset', 'custom');
-  warningParams.set('feature', 'all');
-  warningParams.set('group', 'weather');
-  warningParams.delete('channels');
+  const visibleWarnings = (warningDetails.data?.quality_warnings ?? []).slice(
+    0,
+    Math.min(MAX_VISIBLE_WARNINGS, data.data_quality.warning_count),
+  );
+  const additionalWarningCount = Math.max(
+    0,
+    data.data_quality.warning_count - visibleWarnings.length,
+  );
   return (
     <div className="page-stack">
       {isProxy ? <SyntheticBanner mode="proxy" /> : data.synthetic ? <SyntheticBanner /> : null}
@@ -72,7 +81,7 @@ export function OverviewPage() {
           }
         />
         <MetricCard
-          label="Data-quality warnings"
+          label="Data-quality flags"
           value={data.data_quality.warning_count}
           note={
             isProxy
@@ -87,15 +96,6 @@ export function OverviewPage() {
           note={isProxy ? 'Latest proxy uplink receipt' : 'Latest synthetic uplink receipt'}
         />
       </section>
-      <div className="overview-actions">
-        <Link
-          className="button-link"
-          to={{ pathname: '/explore', search: warningParams.toString(), hash: 'quality-warnings' }}
-        >
-          Review quality warnings in Time Explorer <span aria-hidden="true">→</span>
-        </Link>
-      </div>
-
       <OrchardParkMap />
 
       <section className="overview-grid">
@@ -123,67 +123,43 @@ export function OverviewPage() {
           </p>
         </article>
 
-        <article className="panel soil-panel">
+        <article className="panel quality-panel">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Latest valid observations</p>
-              <h2>Soil-moisture spread</h2>
+              <p className="eyebrow">Data quality</p>
+              <h2>Flagged observations</h2>
             </div>
-            {soil ? (
-              <span className="unit-chip">Unit · {soil.unit_symbol ?? 'mapping pending'}</span>
-            ) : null}
           </div>
-          {soil ? (
+          <strong className="metric-card__value">{data.data_quality.warning_count}</strong>
+          {data.data_quality.warning_count === 0 ? (
+            <p className="missing-value">No flagged observations</p>
+          ) : warningDetails.isLoading ? (
+            <p className="missing-value">Loading flagged observations…</p>
+          ) : warningDetails.isError || visibleWarnings.length === 0 ? (
+            <p className="missing-value">Flagged observations unavailable.</p>
+          ) : (
             <>
-              <div className="soil-summary" aria-label="Soil moisture summary">
-                <div>
-                  <span>Minimum</span>
-                  <strong>
-                    {formatNumber(soil.minimum)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
-                  </strong>
-                </div>
-                <div>
-                  <span>Median</span>
-                  <strong>
-                    {formatNumber(soil.median)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
-                  </strong>
-                </div>
-                <div>
-                  <span>Maximum</span>
-                  <strong>
-                    {formatNumber(soil.maximum)} <small>{soil.unit_symbol ?? 'unit pending'}</small>
-                  </strong>
-                </div>
-              </div>
-              <UnitStatusNote status={soil.unit_confirmation_status} />
-              <p className="comparability-note">{soil.comparability_note}</p>
-              <div className="channel-list">
-                {soil.contributing_channels.map((channel) => (
-                  <div key={channel.channel_id} className="channel-row">
+              <div className="channel-list" aria-label="Flagged observations">
+                {visibleWarnings.map((warning) => (
+                  <div key={warning.measurement_id} className="channel-row">
                     <div>
-                      <strong>{channel.channel_name}</strong>
+                      <strong>{warning.device_name}</strong>
                       <span>
-                        {channel.installation_depth_cm === null
-                          ? 'Depth not supplied'
-                          : `${String(channel.installation_depth_cm)} cm`}
-                        {channel.position_label ? ` · ${channel.position_label}` : ''}
+                        {warning.channel_name} · {warning.quality_flag.replaceAll('_', ' ')}
                       </span>
+                      <span>{warning.explanation}</span>
+                      <span>{formatDateTime(warning.observation_time, data.display_timezone)}</span>
                     </div>
-                    <MeasurementDisplay
-                      value={channel.numeric_value}
-                      unit={channel.unit_symbol}
-                      compact
-                    />
                   </div>
                 ))}
               </div>
-              <small className="timestamp-range">
-                Contributing channels: {soil.contributing_channel_count} · timestamps{' '}
-                {formatDateTime(soil.timestamp_start)} to {formatDateTime(soil.timestamp_end)}
-              </small>
+              {additionalWarningCount > 0 ? (
+                <p className="panel-note">
+                  + {additionalWarningCount} more flagged{' '}
+                  {additionalWarningCount === 1 ? 'observation' : 'observations'}
+                </p>
+              ) : null}
             </>
-          ) : (
-            <p className="missing-value">No valid soil-moisture observations are available.</p>
           )}
         </article>
       </section>
