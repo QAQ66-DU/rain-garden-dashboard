@@ -15,7 +15,8 @@ flowchart LR
     Sensors[LoRaWAN sensors] --> Gateway[LoRaWAN gateway]
     Gateway --> TTN[The Things Stack]
     TTN -->|TLS MQTT; opt-in live profile| Worker[MQTT ingestion worker]
-    Worker --> Normalise[Validation and normalization]
+    Worker --> Map[Explicit device and channel mapping]
+    Map --> Normalise[Validation and normalization]
     Normalise --> DB[(PostgreSQL 16)]
     DB --> API[FastAPI]
     API --> UI[React dashboard]
@@ -43,18 +44,16 @@ Historical queries use half-open UTC windows `[start, end)`. Human-facing timest
 in `Europe/London`; exported timestamps remain explicit UTC values. Missing observations are never
 converted to numeric zero.
 
-## Data sources and interpretation
+## Data and privacy boundaries
 
-The repository supports three deliberately separate contexts:
+Live observations enter through the profile-gated TTN MQTT worker using explicitly reviewed device
+and measurement mappings. Valid TTN credentials are private and are not included in the repository.
+Redacted fixtures and deterministic sample data remain only for automated testing and safe local
+development; they are not Orchard Park field observations or the dissertation's primary evaluation
+dataset.
 
-| Context                     | Purpose                                                                | Interpretation                                                                       |
-| --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Live TTN proxy inventory    | Profile-gated MQTT ingestion for eight reviewed device IDs             | Real proxy/testbed observations; the devices are **not deployed at Orchard Park**    |
-| Offline replay              | Deterministic replay of a private local `outflow-a` TTN console export | Historical testbed evidence used to verify ingestion and idempotency                 |
-| Orchard Park synthetic demo | Deterministic seeded inventory and observations                        | Demonstration data only; not field observations or hydrological-performance evidence |
-
-Only units established by the reviewed device-and-measurement-ID metadata are marked confirmed.
-Other channels retain pending unit metadata. The dashboard does not infer calibration, reporting
+Only units established by reviewed device-and-measurement-ID metadata are marked confirmed. Other
+channels retain pending unit metadata, and the dashboard does not infer calibration, reporting
 cadence, or hydrological meaning from numeric values.
 
 ## Repository structure
@@ -70,10 +69,7 @@ docker-compose.yml    Local PostgreSQL, backend, frontend, and opt-in MQTT worke
 .env.example          Placeholder-only local configuration template
 ```
 
-`docs/CURRENT_PROJECT_STATE.md` is an intentionally dated historical handoff, not a live source of
-truth. Current code and configuration take precedence.
-
-## Run the local demonstration
+## Run locally with Docker
 
 ### Prerequisites
 
@@ -82,15 +78,16 @@ truth. Current code and configuration take precedence.
 
 Host Python and Node.js are needed only for contributor checks.
 
-1. Create the ignored local environment file and replace each `CHANGE_ME` placeholder with a unique
-   local value. Do not commit this file.
+1. Create the ignored local environment file and replace every placeholder with an appropriate local
+   value. Do not commit this file.
 
    ```bash
    cp .env.example .env
    ```
 
-2. Build the images, start PostgreSQL, apply all migrations, and load the deterministic Orchard Park
-   demonstration data.
+2. Build the images, start PostgreSQL, and apply all migrations. To inspect the interface without
+   private TTN credentials, load the deterministic development sample data; it is not field or
+   dissertation-evaluation data.
 
    ```bash
    docker compose build
@@ -118,8 +115,9 @@ survives ordinary container and Compose restarts when volumes are not explicitly
 
 ## Live TTN ingestion
 
-Live ingestion is intentionally excluded from normal Compose startup. It requires the reviewed
-inventory and a read-only TTN API key stored only in the ignored repository-root `.env`.
+Live ingestion uses The Things Stack and TLS MQTT and is intentionally excluded from normal Compose
+startup. It requires the reviewed inventory and valid private TTN credentials stored only in the
+ignored repository-root `.env`; those credentials are not committed.
 
 On a clean, migrated, inventory-only database, load the approved proxy catalogue and start the
 profile-gated worker:
@@ -196,4 +194,6 @@ dependency-audit, and secret-scanning gates. The complete policy is in
 
 This repository accompanies an MSc Data Science dissertation and provides the inspectable software
 artefact, automated tests, architecture records, and reproducible local runtime used in the project.
-It should be interpreted within the prototype and data-source boundaries stated above.
+The dissertation and accompanying screen recording provide evidence of the implemented platform and
+dashboard operation. The planned long-term Orchard Park field deployment was not completed within
+the dissertation timeframe, and the artefact was evaluated as a local, containerised prototype.
