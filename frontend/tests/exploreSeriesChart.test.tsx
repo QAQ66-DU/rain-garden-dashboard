@@ -73,7 +73,9 @@ describe('ExploreSeriesChart', () => {
     expect(chartProbe.syncId).toBe('site-time-explorer');
     expect(chartProbe.syncMethod).toBe('value');
     expect(chartProbe.tooltipPosition).toBe('relative');
-    expect(screen.getByText('Hover or focus the chart to inspect a point.')).toBeVisible();
+    expect(
+      screen.queryByText('Hover or focus the chart to inspect a point.'),
+    ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(chartProbe.portalTestId).toBe('explore-tooltip-slot');
     });

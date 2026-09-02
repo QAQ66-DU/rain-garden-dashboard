@@ -167,9 +167,7 @@ export function ExplorePage() {
     <div className="page-stack">
       <SyntheticBanner mode={isProxy ? 'proxy' : 'synthetic'} />
       <PageHeader
-        eyebrow="Site-wide history"
         title="Explore"
-        description="Inspect channel-specific conditions on a shared time axis. Current operational status remains separate from historical availability."
         meta={
           <dl className="page-header__facts">
             <div>
@@ -177,7 +175,6 @@ export function ExplorePage() {
               <dd>
                 {formatDateTime(start, timeZone)} → {formatDateTime(end, timeZone)}
               </dd>
-              <small>Times shown in {timeZone}</small>
             </div>
           </dl>
         }
@@ -198,25 +195,21 @@ export function ExplorePage() {
             <option value="custom">Custom</option>
           </select>
         </label>
-        <label className="filter-field">
-          <span>Feature</span>
-          <select
-            value={featureParam}
-            onChange={(event) => {
-              updateParams({ feature: event.target.value, channels: undefined });
-            }}
-          >
-            <option value="all">All features</option>
-            {isProxy ? (
-              <option value="proxy-sensors">Proxy sensors</option>
-            ) : (
-              <>
-                <option value="swale">Swale</option>
-                <option value="tree-pit">Tree pit</option>
-              </>
-            )}
-          </select>
-        </label>
+        {!isProxy ? (
+          <label className="filter-field">
+            <span>Feature</span>
+            <select
+              value={featureParam}
+              onChange={(event) => {
+                updateParams({ feature: event.target.value, channels: undefined });
+              }}
+            >
+              <option value="all">All features</option>
+              <option value="swale">Swale</option>
+              <option value="tree-pit">Tree pit</option>
+            </select>
+          </label>
+        ) : null}
         <label className="filter-field">
           <span>Metric group</span>
           <select
@@ -262,7 +255,6 @@ export function ExplorePage() {
           <section className="panel channel-selector" aria-labelledby="channel-selector-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Explicit selection</p>
                 <h2 id="channel-selector-title">Sensor channels</h2>
               </div>
               <div className="inline-actions">
@@ -312,16 +304,6 @@ export function ExplorePage() {
                 No configured channels match this feature and metric group.
               </p>
             )}
-            <p className="chart-note" role="status">
-              {explorer.data.downsampling_applied
-                ? `${formatNumber(explorer.data.total_matching)} observations · ${formatNumber(explorer.data.points_returned)} displayed across ${formatNumber(explorer.data.series.length)} series.`
-                : `${formatNumber(explorer.data.total_matching)} observations.`}
-            </p>
-            <p className="chart-note">
-              {explorer.data.downsampling_applied
-                ? 'Chart sampling is applied independently per series and affects display only; summaries use all observations.'
-                : 'All matching observations are displayed.'}
-            </p>
           </section>
 
           {unitGroups.length === 0 ? (
@@ -347,7 +329,6 @@ export function ExplorePage() {
                   >
                     <div className="section-heading">
                       <div>
-                        <p className="eyebrow">Compatible unit panel</p>
                         <h2>{first.channel.metric_name}</h2>
                       </div>
                       <span className="unit-chip">
@@ -364,19 +345,14 @@ export function ExplorePage() {
                           <article className="explore-series-card" key={series.channel.channel_id}>
                             <header>
                               <div>
-                                <p>{series.channel.feature_name}</p>
+                                {!isProxy ? <p>{series.channel.feature_name}</p> : null}
                                 <h3>{series.channel.device_name}</h3>
                                 <span>{series.channel.channel_name}</span>
                               </div>
                               {current ? <StatusBadge status={current.calculated_status} /> : null}
                             </header>
-                            <p className="status-separation-note">
-                              Current status above · historical availability below
-                            </p>
                             <p className="chart-note">
-                              {series.downsampling_applied
-                                ? `${formatNumber(series.total_matching)} observations · ${formatNumber(series.points_returned)} displayed`
-                                : `${formatNumber(series.total_matching)} observations`}
+                              {formatNumber(series.total_matching)} observations
                             </p>
                             {series.points.length > 0 ? (
                               <ExploreSeriesChart
@@ -391,11 +367,6 @@ export function ExplorePage() {
                                 No observations in this period; numeric zero is not substituted.
                               </p>
                             )}
-                            {series.downsampling_applied ? (
-                              <p className="chart-note">
-                                Chart sampling affects display only; summaries use all observations.
-                              </p>
-                            ) : null}
                             <div className="explore-summary" aria-label="Period summary">
                               {series.summary.statistics.map((statistic) => (
                                 <div key={statistic.code}>

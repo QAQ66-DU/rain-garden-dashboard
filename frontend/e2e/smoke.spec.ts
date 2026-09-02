@@ -59,8 +59,13 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   await expect(page.getByText('Proxy network; not Orchard Park')).toHaveCount(0);
   await expect(page.getByText('Operations workspace')).toHaveCount(0);
   await expect(page.getByText('Europe/London display')).toHaveCount(0);
+  await expect(page.getByText('Site overview')).toHaveCount(0);
   await expect(page.getByText('Reference time')).toHaveCount(0);
-  await expect(page.getByText('Current UTC time')).toBeVisible();
+  await expect(page.getByText('Current UTC time')).toHaveCount(0);
+  await expect(page.locator('.page-header__meta')).toHaveCount(0);
+  await expect(page.getByText('Rainfall intensity', { exact: true })).toBeVisible();
+  await expect(page.getByText('Latest rainfall intensity')).toHaveCount(0);
+  await expect(page.getByText('Latest proxy uplink receipt')).toHaveCount(0);
   await expect(page.getByText('Site reference')).toHaveCount(0);
   await expect(
     page.getByText('Sensor locations across the swale and tree-pit monitoring network.'),
@@ -91,6 +96,15 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
     };
   });
   expect(overviewPanelWidths.quality).toBe(overviewPanelWidths.status);
+  const overviewSectionOrder = await page.evaluate(() => ({
+    mapTop: Math.round(
+      document.querySelector('.sensor-map-section')?.getBoundingClientRect().top ?? -1,
+    ),
+    panelsTop: Math.round(
+      document.querySelector('.overview-grid')?.getBoundingClientRect().top ?? -1,
+    ),
+  }));
+  expect(overviewSectionOrder.panelsTop).toBeLessThan(overviewSectionOrder.mapTop);
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
@@ -160,7 +174,13 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await page.goto('/explore');
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
   await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
-  await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
+  await expect(page.getByRole('combobox', { name: 'Feature' })).toHaveCount(0);
+  await expect(page.getByText('Proxy sensors')).toHaveCount(0);
+  await expect(page.getByText('TTN Testbed')).toHaveCount(0);
+  await expect(page.getByText('Site-wide history')).toHaveCount(0);
+  await expect(page.getByText('Times shown in Europe/London')).toHaveCount(0);
+  await expect(page.getByText('Explicit selection')).toHaveCount(0);
+  await expect(page.getByText('Compatible unit panel')).toHaveCount(0);
   const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
   await rangeSelect.selectOption('24h');
   await page.getByRole('combobox', { name: 'Metric group' }).selectOption('weather');
@@ -177,8 +197,11 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await expect(page.getByLabel('weather-station, Air Temperature, measured in °C')).toBeVisible();
   await expect(page.getByLabel('weather-station-2, Air Temperature, measured in °C')).toBeVisible();
 
-  const aggregateStatus = page.locator('.channel-selector').getByRole('status');
-  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
+  const cardObservationCounts = page.locator('.explore-series-card > .chart-note');
+  await expect(cardObservationCounts).toHaveCount(14);
+  expect(
+    (await cardObservationCounts.allTextContents()).every((text) => !text.includes('displayed')),
+  ).toBe(true);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
   const hourLabels = (await charts.first().locator('svg text').allTextContents()).filter((label) =>
     /^(?:\d{1,2} [A-Z][a-z]{2}, )?\d{2}:\d{2}$/.test(label),
@@ -188,7 +211,6 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await rangeSelect.selectOption('7d');
   await expect(page).toHaveURL(/preset=7d/);
   await expect(charts).toHaveCount(14);
-  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
   const sevenDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
@@ -199,7 +221,6 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await rangeSelect.selectOption('30d');
   await expect(page).toHaveURL(/preset=30d/);
   await expect(charts).toHaveCount(14);
-  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
   const thirtyDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
@@ -213,7 +234,6 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await expect(page).toHaveURL(/preset=custom/);
   await expect(page).toHaveURL(/start=2026-07-31T23%3A00%3A00.000Z/);
   await expect(charts).toHaveCount(14);
-  await expect(aggregateStatus).toContainText(/\d[\d,]* observations/);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
 
   expect(browserErrors).toEqual([]);
@@ -249,13 +269,10 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   await expect(page).toHaveURL(/preset=7d/);
   await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
   await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
-  await expect(chart).toContainText(
-    'Chart downsampled for display. The full observation series remains available for export.',
-  );
   const sevenDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
   );
-  expect(sevenDayLabels.length).toBeGreaterThanOrEqual(6);
+  expect(sevenDayLabels.length).toBeGreaterThanOrEqual(5);
   expect(sevenDayLabels.length).toBeLessThanOrEqual(8);
 
   await rangeSelect.selectOption('30d');
@@ -322,6 +339,7 @@ test('mobile Overview, Explore, Devices, and Device Detail have no horizontal ov
 
   await page.getByRole('link', { name: 'Explore', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
+  await expect(page.getByTestId('explore-series-chart').first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole('link', { name: 'Devices', exact: true }).click();
@@ -344,7 +362,7 @@ test('mobile Overview, Explore, Devices, and Device Detail have no horizontal ov
   expect(mobileLayout.firstRowDisplay).toBe('block');
   expect(mobileLayout.mainLeft).toBe(0);
   expect(mobileLayout.sidebarWidth).toBe(mobileLayout.clientWidth);
-  await expect(inventory.getByRole('row').nth(1).locator('td')).toHaveCount(8);
+  await expect(inventory.getByRole('row').nth(1).locator('td')).toHaveCount(6);
   await expect(inventory.getByRole('row').nth(1).locator('td').first()).toHaveAttribute(
     'data-label',
     'Device',

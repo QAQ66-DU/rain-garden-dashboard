@@ -167,8 +167,13 @@ describe('proxy TTN dashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.queryByText('TTN proxy network')).not.toBeInTheDocument();
     expect(screen.queryByText('Proxy network; not Orchard Park')).not.toBeInTheDocument();
+    expect(screen.queryByText('Site overview')).not.toBeInTheDocument();
     expect(screen.queryByText('Reference time')).not.toBeInTheDocument();
-    expect(screen.getByText('Current UTC time')).toBeInTheDocument();
+    expect(screen.queryByText('Current UTC time')).not.toBeInTheDocument();
+    expect(document.querySelector('.page-header__meta')).not.toBeInTheDocument();
+    expect(screen.getByText('Rainfall intensity')).toBeInTheDocument();
+    expect(screen.queryByText('Latest rainfall intensity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Latest proxy uplink receipt')).not.toBeInTheDocument();
     expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
 
     await router.navigate(
@@ -176,7 +181,9 @@ describe('proxy TTN dashboard', () => {
     );
     expect(await screen.findByRole('heading', { name: 'Explore' })).toBeInTheDocument();
     expect(screen.queryByText('Live proxy sensor data')).not.toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Proxy sensors' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Feature' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Proxy sensors')).not.toBeInTheDocument();
+    expect(screen.queryByText('TTN Testbed')).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Swale' })).not.toBeInTheDocument();
   });
 

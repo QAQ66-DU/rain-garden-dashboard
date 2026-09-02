@@ -134,9 +134,7 @@ export function ExploreSeriesChart({
         className="explore-tooltip-slot"
         data-testid="explore-tooltip-slot"
         aria-live="polite"
-      >
-        <span className="explore-tooltip-hint">Hover or focus the chart to inspect a point.</span>
-      </div>
+      />
     </div>
   );
 }

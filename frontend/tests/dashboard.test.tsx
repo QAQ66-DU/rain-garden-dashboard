@@ -27,9 +27,7 @@ describe('monitoring dashboard', () => {
     );
     renderRoute();
 
-    expect(
-      await screen.findByRole('heading', { name: 'Orchard Park monitoring site' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Orchard Park Monitor home' })).toBeInTheDocument();
     expect(screen.getByText('Orchard Park Monitor')).toBeInTheDocument();
     expect(screen.queryByText('Operations workspace')).not.toBeInTheDocument();
@@ -37,9 +35,15 @@ describe('monitoring dashboard', () => {
     expect(
       screen.queryByText('Rain Garden Monitoring · provenance-labelled data · UTC storage'),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText('Site overview')).not.toBeInTheDocument();
     expect(screen.queryByText('Reference time')).not.toBeInTheDocument();
-    expect(screen.getByText('Deterministic dataset reference')).toBeInTheDocument();
+    expect(screen.queryByText('Deterministic dataset reference')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 Jun 2026, 12:00 UTC')).not.toBeInTheDocument();
+    expect(document.querySelector('.page-header__meta')).not.toBeInTheDocument();
     expect(screen.getByText('Synthetic demonstration data')).toBeInTheDocument();
+    expect(screen.getByText('Rainfall intensity')).toBeInTheDocument();
+    expect(screen.queryByText('Latest rainfall intensity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Latest synthetic uplink receipt')).not.toBeInTheDocument();
     expect(screen.getByText('Data-quality flags')).toBeInTheDocument();
     expect(screen.queryByText('Data-quality warnings')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Soil-moisture spread' })).not.toBeInTheDocument();
@@ -63,6 +67,18 @@ describe('monitoring dashboard', () => {
     expect(
       screen.getByRole('heading', { name: 'Orchard Park monitoring layout' }),
     ).toBeInTheDocument();
+    const operationalPanels = screen
+      .getByRole('heading', { name: 'Device freshness' })
+      .closest('section');
+    const mapSection = screen
+      .getByRole('heading', { name: 'Orchard Park monitoring layout' })
+      .closest('section');
+    expect(operationalPanels).not.toBeNull();
+    expect(mapSection).not.toBeNull();
+    expect(
+      (operationalPanels as HTMLElement).compareDocumentPosition(mapSection as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
       screen.getByRole('region', { name: 'Interactive map of Orchard Park monitoring locations' }),
     ).toBeInTheDocument();
@@ -257,7 +273,7 @@ describe('monitoring dashboard', () => {
     expect(within(controls).getByRole('combobox', { name: 'Sensor channel' })).toHaveValue(
       '00000000-0000-4000-8000-000000000021',
     );
-    expect(screen.getByText(/Missing records are not converted to zero/)).toBeInTheDocument();
+    expect(screen.queryByText(/Missing records are not converted to zero/)).not.toBeInTheDocument();
   });
 
   it('shows the confirmed tree-pit inventory item as configuration pending', async () => {
@@ -301,9 +317,16 @@ describe('monitoring dashboard', () => {
     expect(screen.getByRole('heading', { name: 'Water level' })).toBeInTheDocument();
     expect(screen.getByText('Unit · mm/h')).toBeInTheDocument();
     expect(screen.getByText('Unit · mm')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Feature' })).toHaveValue('all');
+    expect(screen.getByRole('option', { name: 'Swale' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Tree pit' })).toBeInTheDocument();
+    expect(screen.queryByText('Site-wide history')).not.toBeInTheDocument();
+    expect(screen.queryByText('Times shown in Europe/London')).not.toBeInTheDocument();
+    expect(screen.queryByText('Explicit selection')).not.toBeInTheDocument();
+    expect(screen.queryByText('Compatible unit panel')).not.toBeInTheDocument();
     expect(
-      screen.getAllByText('Current status above · historical availability below'),
-    ).toHaveLength(2);
+      screen.queryByText('Current status above · historical availability below'),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('98.81%')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Quality warnings' })).not.toBeInTheDocument();
@@ -338,10 +361,9 @@ describe('monitoring dashboard', () => {
       '/explore?start=2026-05-31T12%3A00%3A00Z&end=2026-06-01T12%3A00%3A00Z&preset=24h&feature=all&group=hydrology',
     );
 
-    expect(
-      await screen.findByText('11,816 observations · 4,000 displayed across 2 series.'),
-    ).toBeVisible();
-    expect(screen.getAllByText('5,908 observations · 2,000 displayed')).toHaveLength(2);
+    expect(await screen.findAllByText('5,908 observations')).toHaveLength(2);
+    expect(screen.queryByText(/displayed across/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Chart sampling/)).not.toBeInTheDocument();
     expect(screen.queryByText(/maximum.*5000/i)).not.toBeInTheDocument();
     const range = screen.getByRole('combobox', { name: 'Time range' });
     const feature = screen.getByRole('combobox', { name: 'Feature' });
@@ -371,9 +393,8 @@ describe('monitoring dashboard', () => {
     await waitFor(() => {
       expect(router.state.location.search).toContain('preset=custom');
     });
-    expect(
-      await screen.findByText('11,816 observations · 4,000 displayed across 2 series.'),
-    ).toBeVisible();
+    expect(await screen.findAllByText('5,908 observations')).toHaveLength(2);
+    expect(screen.queryByText(/displayed/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(feature).toHaveValue('all');
     expect(group).toHaveValue('hydrology');

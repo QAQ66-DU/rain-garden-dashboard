@@ -45,19 +45,7 @@ export function OverviewPage() {
   return (
     <div className="page-stack">
       {isProxy ? <SyntheticBanner mode="proxy" /> : data.synthetic ? <SyntheticBanner /> : null}
-      <PageHeader
-        eyebrow="Site overview"
-        title={isProxy ? 'Overview' : data.site_name}
-        description={isProxy ? undefined : data.public_location_label}
-        meta={
-          <div className="page-header__facts">
-            <div>
-              <span className="page-header__fact-value">{formatDateTime(data.reference_time)}</span>
-              <small>{isProxy ? 'Current UTC time' : 'Deterministic dataset reference'}</small>
-            </div>
-          </div>
-        }
-      />
+      <PageHeader title="Overview" />
 
       <section className="metric-grid" aria-label="Overview metrics">
         <MetricCard
@@ -66,7 +54,7 @@ export function OverviewPage() {
           note={`${String(data.devices.online)} online · ${String(data.devices.stale)} stale · ${String(data.devices.offline)} offline`}
         />
         <MetricCard
-          label="Latest rainfall intensity"
+          label="Rainfall intensity"
           value={
             <MeasurementDisplay
               value={data.latest_rainfall_intensity?.numeric_value}
@@ -92,10 +80,8 @@ export function OverviewPage() {
         <MetricCard
           label="Last data update"
           value={<span className="date-value">{formatDateTime(data.last_data_update)}</span>}
-          note={isProxy ? 'Latest proxy uplink receipt' : 'Latest synthetic uplink receipt'}
         />
       </section>
-      <OrchardParkMap />
 
       <section className="overview-grid">
         <article className="panel status-panel">
@@ -158,6 +144,8 @@ export function OverviewPage() {
           )}
         </article>
       </section>
+
+      <OrchardParkMap />
     </div>
   );
 }

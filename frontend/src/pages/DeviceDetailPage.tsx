@@ -5,13 +5,11 @@ import { useDevice, useMeasurementExport, useMeasurements } from '../api/queries
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { EnglishDateTimeInput } from '../components/EnglishDateTimeInput';
 import { IngestionSource } from '../components/IngestionSource';
-import { MetadataStatusNote } from '../components/MetadataStatusNote';
 import { MeasurementDisplay } from '../components/MeasurementDisplay';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { SyntheticBanner } from '../components/SyntheticBanner';
 import { TimeSeriesChart, type ChartPoint } from '../components/TimeSeriesChart';
-import { UnitStatusNote } from '../components/UnitStatusNote';
 import {
   formatDateTime,
   formatNumber,
@@ -253,7 +251,11 @@ export function DeviceDetailPage() {
       <PageHeader
         eyebrow={humanizeCode(data.device_type)}
         title={data.display_name}
-        description={`${data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} · ${data.site_name}`}
+        description={
+          isProxy
+            ? undefined
+            : `${data.monitoring_feature?.display_name ?? 'Monitoring feature not assigned'} · ${data.site_name}`
+        }
         meta={
           <dl className="page-header__facts page-header__facts--device">
             <div>
@@ -322,9 +324,7 @@ export function DeviceDetailPage() {
         <section className="panel" aria-labelledby="operational-status-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Decoder status and network context</p>
               <h2 id="operational-status-heading">Latest operational status</h2>
-              <p>Status values are kept separate from scientific measurement channels.</p>
             </div>
           </div>
           <dl className="telemetry-grid">
@@ -406,9 +406,11 @@ export function DeviceDetailPage() {
               {data.latest_measurements.map((item) => (
                 <article key={item.channel_id} className="latest-card">
                   <p>{item.channel_name}</p>
-                  <MeasurementDisplay value={item.numeric_value} unit={item.unit_symbol} />
-                  <MetadataStatusNote status={item.verification_status} />
-                  <UnitStatusNote status={item.unit_confirmation_status} />
+                  <MeasurementDisplay
+                    value={item.numeric_value}
+                    unit={item.unit_symbol}
+                    omitMissingUnit
+                  />
                   <small>
                     {item.installation_depth_cm === null
                       ? ''
@@ -437,20 +439,12 @@ export function DeviceDetailPage() {
                       {channel.display_name}
                       {channel.installation_depth_cm === null
                         ? ''
-                        : ` · ${String(channel.installation_depth_cm)} cm`}{' '}
-                      · {channel.unit_symbol ?? 'unit not verified'}
+                        : ` · ${String(channel.installation_depth_cm)} cm`}
+                      {channel.unit_symbol ? ` · ${channel.unit_symbol}` : ''}
                     </option>
                   ))}
                 </select>
               </label>
-              {selectedChannel &&
-              (selectedChannel.verification_status === 'unverified' ||
-                selectedChannel.unit_confirmation_status !== 'confirmed') ? (
-                <div className="device-control-badges" aria-label="Selected channel metadata">
-                  <MetadataStatusNote status={selectedChannel.verification_status} />
-                  <UnitStatusNote status={selectedChannel.unit_confirmation_status} />
-                </div>
-              ) : null}
               <label>
                 <span>Time range</span>
                 <select
@@ -465,9 +459,6 @@ export function DeviceDetailPage() {
                   <option value="custom">Custom range</option>
                 </select>
               </label>
-              <p className="device-control-helper">
-                Selected period: {presetLabel(selectedPreset)} · Times shown in {SITE_TIME_ZONE}.
-              </p>
               {selectedPreset === 'custom' ? (
                 <div className="device-custom-time-fields">
                   <EnglishDateTimeInput
@@ -508,7 +499,6 @@ export function DeviceDetailPage() {
                 >
                   {measurementExport.isPending ? 'Preparing CSV…' : 'Export CSV'}
                 </button>
-                <p>The CSV contains the selected device, channel and time range only.</p>
               </div>
               {measurementExport.isError ? (
                 <p className="control-error" role="alert">
@@ -536,7 +526,7 @@ export function DeviceDetailPage() {
                   ? `${formatNumber(measurements.data.total_matching)} observations · ${formatNumber(measurements.data.points_returned)} displayed`
                   : `${formatNumber(measurements.data.total_matching)} observations`
               } · ${formatDateTime(measurements.data.start)} to ${formatDateTime(measurements.data.end)}`}
-              unit={selectedChannel.unit_symbol ?? 'Unit not verified'}
+              unit={selectedChannel.unit_symbol}
               points={points}
               rangeStart={measurements.data.start}
               rangeEnd={measurements.data.end}

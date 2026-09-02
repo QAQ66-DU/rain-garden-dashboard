@@ -1286,8 +1286,7 @@ h3 {
 }
 
 .explore-series-card header p,
-.explore-series-card header span,
-.status-separation-note {
+.explore-series-card header span {
   margin: 0;
   color: var(--color-muted);
   font-size: var(--font-xs);
@@ -1295,10 +1294,6 @@ h3 {
 
 .explore-series-card h3 {
   margin: 0.1rem 0;
-}
-
-.status-separation-note {
-  margin-top: var(--space-2);
 }
 
 .explore-chart-shell {
@@ -1315,19 +1310,6 @@ h3 {
 .explore-tooltip-slot {
   position: relative;
   min-height: 5.75rem;
-}
-
-.explore-tooltip-hint {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-muted);
-  background: var(--color-surface-subtle);
-  font-size: var(--font-xs);
-  align-items: center;
 }
 
 .explore-tooltip {

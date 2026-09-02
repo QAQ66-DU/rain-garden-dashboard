@@ -12,21 +12,14 @@ vi.mock('../src/components/TimeSeriesChart', () => ({
     title,
     subtitle,
     rangePreset,
-    downsamplingApplied,
   }: {
     title: string;
     subtitle: string;
     rangePreset: string;
-    downsamplingApplied: boolean;
   }) => (
     <section data-testid="time-series-chart" data-range-preset={rangePreset}>
       <h2>{title}</h2>
       <p>{subtitle}</p>
-      {downsamplingApplied ? (
-        <p>
-          Chart downsampled for display. The full observation series remains available for export.
-        </p>
-      ) : null}
     </section>
   ),
 }));
@@ -127,11 +120,6 @@ describe('Device Detail history controls and CSV export', () => {
     renderRoute(periodUrl('2026-07-13T12:00:00Z', '2026-08-12T12:00:00Z', '30d'));
 
     expect(await screen.findByText(/9,614 observations · 2,000 displayed/)).toBeVisible();
-    expect(
-      screen.getByText(
-        'Chart downsampled for display. The full observation series remains available for export.',
-      ),
-    ).toBeVisible();
     expect(screen.queryByText(/maximum raw result size is 5000/i)).not.toBeInTheDocument();
   });
 
@@ -159,9 +147,7 @@ describe('Device Detail history controls and CSV export', () => {
     expect(screen.getByLabelText('Custom end (Europe/London)')).toHaveValue('31/05/2026 15:00');
     expect(screen.getByLabelText('Custom start (Europe/London)')).toHaveAttribute('lang', 'en-GB');
     expect(screen.queryByText('Format: DD/MM/YYYY HH:mm · 24-hour time')).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Selected period: Custom range · Times shown in Europe/London.'),
-    ).toBeInTheDocument();
+    expect(screen.queryByText('Selected period: Custom range')).not.toBeInTheDocument();
     await user.click(
       screen.getByRole('button', {
         name: 'Custom start (Europe/London): open English calendar',

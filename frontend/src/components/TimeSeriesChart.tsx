@@ -25,7 +25,7 @@ export interface ChartPoint {
 interface TimeSeriesChartProps {
   title: string;
   subtitle: string;
-  unit: string;
+  unit: string | null;
   points: ChartPoint[];
   rangeStart: string;
   rangeEnd: string;
@@ -41,7 +41,6 @@ export function TimeSeriesChart({
   rangeStart,
   rangeEnd,
   rangePreset,
-  downsamplingApplied,
 }: TimeSeriesChartProps) {
   const flagged = points.filter((point) => point.qualityFlag !== 'valid').length;
   const axis = buildChartTimeAxis(rangeStart, rangeEnd, rangePreset);
@@ -57,7 +56,7 @@ export function TimeSeriesChart({
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <span className="unit-chip">Unit · {unit}</span>
+        {unit ? <span className="unit-chip">Unit · {unit}</span> : null}
       </div>
       {flagged > 0 ? (
         <p className="quality-callout" role="status">
@@ -65,7 +64,7 @@ export function TimeSeriesChart({
           data.
         </p>
       ) : null}
-      <div className="chart-frame" aria-label={`${title}, measured in ${unit}`}>
+      <div className="chart-frame" aria-label={unit ? `${title}, measured in ${unit}` : title}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartPoints} margin={{ top: 16, right: 20, bottom: 12, left: 8 }}>
             <CartesianGrid stroke="#dbe4e7" strokeDasharray="3 5" vertical={false} />
@@ -85,11 +84,23 @@ export function TimeSeriesChart({
               stroke="#72817c"
               tick={{ fontSize: 12 }}
               width={68}
-              label={{ value: unit, angle: -90, position: 'insideLeft', fill: '#52645f' }}
+              {...(unit
+                ? {
+                    label: {
+                      value: unit,
+                      angle: -90,
+                      position: 'insideLeft' as const,
+                      fill: '#52645f',
+                    },
+                  }
+                : {})}
             />
             <Tooltip
               labelFormatter={(label) => formatChartTooltipTimestamp(Number(label))}
-              formatter={(value) => [`${formatNumber(Number(value))} ${unit}`, 'Observed value']}
+              formatter={(value) => [
+                `${formatNumber(Number(value))}${unit ? ` ${unit}` : ''}`,
+                'Observed value',
+              ]}
             />
             <Line
               type="monotone"
@@ -105,12 +116,6 @@ export function TimeSeriesChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="chart-note">
-        Missing records are not converted to zero.{' '}
-        {downsamplingApplied
-          ? 'Chart downsampled for display. The full observation series remains available for export.'
-          : 'All matching observations are displayed.'}
-      </p>
     </section>
   );
 }
