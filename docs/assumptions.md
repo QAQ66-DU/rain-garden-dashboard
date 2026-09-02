@@ -4,7 +4,9 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 
 ## Confirmed inventory and demo assumptions
 
-- Orchard Park, Edinburgh, has confirmed Swale and Tree-pit monitoring features and eight sensor/end-device locations. Exact coordinates are stored privately and withheld from public contracts and browser assets.
+- Orchard Park, Edinburgh, has confirmed Swale and Tree-pit monitoring features and eight
+  sensor/end-device reference locations. Their approved reference coordinates are deliberately
+  published in the frontend map, separately from private device records and live proxy identities.
 - The outdoor LoRaWAN gateway is network infrastructure, not a sensor/end device, and is excluded from monitored-device counts.
 - Generated timestamps and values use a fixed UTC anchor, fixed random seed, and one-hour demo cadence.
 - The one-hour cadence is not a claim about real equipment.
@@ -15,15 +17,19 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
   matching observation; complete Device Detail normalized observations remain available through
   streamed CSV export.
 - In-memory rate limiting is acceptable only for a single process; a reverse proxy/shared limiter is required for horizontal scaling.
-- TTN authentication is secret-based and constant-time, but real payload mapping is disabled.
+- The future webhook boundary remains disabled and secret-authenticated. Live MQTT ingestion is an
+  explicit Compose profile with a local ignored API key and an eight-device mapping allowlist.
 - No software licence is added until university and partner intellectual-property ownership is confirmed.
-- The reviewed `outflow-a` console export is approved only for an isolated local replay testbed. Its
-  decoder establishes numeric extraction, not physical quantity, unit, scale interpretation, or
-  scientific timestamp semantics.
+- The reviewed `outflow-a` console export is approved only for an isolated local replay testbed.
+  Supplied metadata confirms ID 1 as total volume in mL and ID 2 as volumetric rate in mL/hour;
+  calibration and scientific timestamp semantics remain unconfirmed.
 
 ## Scientific limits
 
-- Metric names and physical-unit codes are controlled separately. Demo-normalised units are `synthetic_demo_only`; deployed payload/unit mappings, sensor accuracy, calibration, operating ranges, sampling schedules, depth comparability, and performance thresholds are not confirmed.
+- Metric names and physical-unit codes are controlled separately. Demo-normalised units are
+  `synthetic_demo_only`; live units are confirmed only for the reviewed device-and-measurement-ID
+  mappings. Sensor accuracy, calibration, operating ranges, sampling schedules, depth comparability,
+  performance thresholds, and all remaining mappings are not confirmed.
 - Only definition-level physical bounds, such as relative humidity not exceeding 100%, may create an initial out-of-range flag.
 - Synthetic variation is illustrative and is not a rainfall-runoff model or evidence of system performance.
 - Soil-moisture values from different depths or positions are not averaged. Phase 1 reports their spread and channel identities.
@@ -35,9 +41,9 @@ Every assumption is visible and replaceable; none should be mistaken for a confi
 
 ## Unresolved questions for later phases
 
-- Exact device model/specification, confirmed field meanings, scale interpretation, frame-counter
-  reset behavior, reporting schedule, and deployed unit declarations for `outflow-a` and the Orchard
-  devices.
+- Exact device model/specification, remaining field meanings, scale interpretation, frame-counter
+  reset behavior, reporting schedules, and unresolved unit declarations for the live proxy and
+  Orchard Park inventories.
 - The tree-pit probe's number of depth channels, installation depths/spacing, payload mapping, and which channels may be compared scientifically.
 - Water-level reference/datum, confirmed reporting schedules, configurable jitter tolerances for real devices, data retention, backup, and deletion policy.
 - Scientifically justified validity, stale/offline, rainfall-event, response, and recovery thresholds.

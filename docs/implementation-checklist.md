@@ -41,6 +41,8 @@ This checklist incorporates the approved architectural amendments. Unlisted late
 - [x] Repair the reproducible ignored-artifact Prettier workflow and recreate the ignored backend environment from `uv.lock`.
 - [x] Align the confirmed Orchard Park inventory while keeping all observations synthetic and the existing local demo database untouched.
 - [x] Separate nullable physical-unit mapping from `pending`, `confirmed`, and `synthetic_demo_only` provenance.
-- [x] Add the site-wide Time Explorer with URL-persisted periods and filters, synchronized unit-separated small multiples, current-versus-historical status separation, and a safe warning drill-down.
+- [x] Add the site-wide Time Explorer with URL-persisted periods and filters, synchronized
+      unit-separated small multiples, and current-versus-historical status separation; site-wide
+      flagged-observation detail is presented on Overview.
 - [x] Implement schedule-aligned half-open coverage with duplicate, flagged, missing, late, and out-of-tolerance semantics plus an unavailable state for unknown schedules.
 - [x] Restrict rainfall duration above zero to periods with known cadence and complete valid coverage.

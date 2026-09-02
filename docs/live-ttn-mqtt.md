@@ -15,10 +15,11 @@ the FastAPI webhook scaffold, or the separate Orchard Park demo inventory.
    outer TTN Live Data console-export event wrapper.
 4. The ApplicationUp object enters the transport-independent shared normaliser and persistence
    service, which selects the device-specific evidence-backed mapping.
-5. A database transaction privately stores the raw ApplicationUp, creates unverified unitless
-   measurements when decoding is valid, updates testbed telemetry, and applies the existing
-   deterministic idempotency rule. Unsafe mapped JSON is retained in private quarantine; malformed
-   non-JSON messages are discarded without terminating the worker or logging their content.
+5. A database transaction privately stores the raw ApplicationUp, creates normalized measurements
+   when decoding is valid, applies confirmed units only to reviewed measurement-ID mappings, updates
+   testbed telemetry, and enforces deterministic idempotency. Unsafe mapped JSON is retained in
+   private quarantine; malformed non-JSON messages are discarded without terminating the worker or
+   logging their content.
 
 The scientific query axis is UTC `measured_at`. The reviewed payloads have no separate, verified
 device observation timestamp, so the adapter currently uses the TTN ApplicationUp

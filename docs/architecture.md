@@ -24,7 +24,8 @@ flowchart LR
 - Frontend pages compose features and present view models.
 - Curated Orchard Park reference locations are held in one frontend metadata module for the
   Overview map. They are not inferred from, or associated with, live proxy devices.
-- The typed client is generated from OpenAPI and is the only browser network boundary.
+- OpenAPI-generated TypeScript types and the typed `openapi-fetch` wrapper form the browser network
+  boundary.
 - TanStack Query owns server-state fetching and caching.
 - Recharts receives already prepared numeric series; it performs no scientific calculations.
 - API endpoints validate transport input and call services.
@@ -42,7 +43,7 @@ Required dependency direction is `API -> services -> domain/repositories`. Repos
 4. Measurements reference both the event and a `SensorChannel` carrying separate metric, nullable unit, unit-confirmation, installation-depth, position, and schedule metadata.
 5. Successfully decoded, mapped, finite numeric observations are valid measurements; pending
    scientific meaning, units, calibration, and timestamp interpretation remain separate channel
-   metadata and do not create quality warnings.
+   metadata and do not create quality flags.
 6. Public repositories select normalized fields only.
 7. Services apply explicit reference times, quality exclusions, comparability rules, and freshness thresholds.
 8. Pydantic response schemas exclude private coordinates, external identifiers, and raw payloads.
@@ -88,9 +89,10 @@ deterministic demonstration channels use documented demo-normalised units with
 `synthetic_demo_only`. A real TTN observation may be retained as a valid numeric observation when
 its device/channel structure is explicitly mapped. Its physical unit is marked `confirmed` only
 where supplied device-and-measurement-ID metadata establishes that mapping; unresolved channels
-remain `pending`. The UI labels pending states as `Metadata pending` and `Unit unverified`; it does
-not infer units from values or device names. The same separation applies to schedule metadata: coverage is
-unavailable unless interval and anchor are explicitly configured.
+remain `pending`. Public responses retain these states, and Explore identifies unresolved metadata
+where it is necessary to interpret a series; no page infers units from values or device names. The
+same separation applies to schedule metadata: coverage is unavailable unless interval and anchor
+are explicitly configured.
 
 Device list and detail responses expose `unit_confirmation_summary` as a read-time derivative of
 stored `unit_confirmation_status` values on active channels only. A single distinct channel status
@@ -147,8 +149,9 @@ numeric time domain, with Europe/London presentation labels only.
 The CSV endpoint applies the same device, channel, and window rules but streams the complete ordered
 normalized result independently of both display sampling and the raw pagination ceiling. It
 preserves stored decimal values and per-uplink ingestion provenance and returns headers only for an
-empty result. The browser accesses these endpoints through the generated OpenAPI client and TanStack
-Query. CSV fields are explicitly allowlisted; raw JSON, credentials, external device and gateway
+empty result. The browser accesses these endpoints through the typed `openapi-fetch` wrapper,
+OpenAPI-generated types, and TanStack Query. CSV fields are explicitly allowlisted; raw JSON,
+credentials, external device and gateway
 identifiers, coordinates, and private network metadata are never selected.
 
 ## Deployment
