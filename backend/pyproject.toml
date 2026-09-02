@@ -8,7 +8,7 @@ dependencies = [
     "fastapi==0.139.2",
     "paho-mqtt==2.1.0",
     "psycopg[binary]==3.3.4",
-    "pydantic-settings==2.14.2",
+    "pydantic-settings==2.15.0",
     "sqlalchemy==2.0.51",
     "uvicorn==0.51.0",
 ]
