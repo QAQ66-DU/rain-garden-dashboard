@@ -189,11 +189,3 @@ dependency-audit, and secret-scanning gates. The complete policy is in
   devices or their observations.
 - Software licensing remains unresolved pending university and partner confirmation; no licence file
   is included.
-
-## Dissertation
-
-This repository accompanies an MSc Data Science dissertation and provides the inspectable software
-artefact, automated tests, architecture records, and reproducible local runtime used in the project.
-The dissertation and accompanying screen recording provide evidence of the implemented platform and
-dashboard operation. The planned long-term Orchard Park field deployment was not completed within
-the dissertation timeframe, and the artefact was evaluated as a local, containerised prototype.
