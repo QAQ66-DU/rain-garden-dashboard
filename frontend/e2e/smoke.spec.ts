@@ -1,14 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const PROXY_DEVICE_IDS = [
-  'outflow-a',
-  'soil-moisture-1',
-  'prototype-board-1',
-  'weather-station-2',
-  'weather-station',
-  'vision-ai',
-  'ph-sensor',
-  'soilmoisture-temp-sensor',
+const ORCHARD_DEVICE_NAMES = [
+  'Swale soil sensor 1',
+  'Swale soil sensor 2',
+  'Swale soil sensor 3',
+  'Swale water-level sensor 1',
+  'Swale water-level sensor 2',
+  'Swale water-level sensor 3',
+  'Swale weather station',
+  'Tree-pit multi-depth probe',
 ];
 
 function collectBrowserAndApiErrors(page: Page) {
@@ -44,7 +44,7 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(true);
 }
 
-test('desktop Overview, Devices, and Device Detail expose the proxy inventory', async ({
+test('desktop Overview, Devices, and Device Detail expose the Orchard Park inventory', async ({
   page,
 }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
@@ -119,17 +119,20 @@ test('desktop Overview, Devices, and Device Detail expose the proxy inventory', 
   expect(desktopLayout).toEqual({ mainLeft: 224, sidebarWidth: 224 });
   const inventory = page.getByRole('table');
   await expect(inventory.getByRole('row')).toHaveCount(9);
-  for (const deviceId of PROXY_DEVICE_IDS) {
-    await expect(inventory.getByText(deviceId, { exact: true })).toBeVisible();
+  for (const deviceName of ORCHARD_DEVICE_NAMES) {
+    await expect(inventory.getByText(deviceName, { exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('option', { name: 'Proxy sensors' })).toBeAttached();
-  await expect(page.getByRole('option', { name: 'Swale' })).toHaveCount(0);
+  await expect(page.getByRole('option', { name: 'Proxy sensors' })).toHaveCount(0);
+  await expect(page.getByRole('option', { name: 'Swale' })).toBeAttached();
 
-  const weather = inventory.getByRole('row').filter({ hasText: 'weather-station-2' });
+  const weather = inventory.getByRole('row').filter({ hasText: 'Swale weather station' });
   await weather.getByRole('link', { name: /View details/ }).click();
   await expect(page.getByRole('link', { name: '← Back to devices' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'weather-station-2', exact: true })).toBeVisible();
-  await expect(page.getByText('Live MQTT', { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Swale weather station', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Synthetic demonstration data', { exact: true })).toBeVisible();
+  await expect(page.getByText('Live MQTT', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Proxy sensor', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Sensor channel' })).toBeVisible();
   await expect(page.getByText('Configuration pending')).toHaveCount(0);
@@ -168,13 +171,15 @@ test('Overview panels retain responsive desktop and mobile layout', async ({ pag
   expect(browserErrors).toEqual([]);
 });
 
-test('desktop Explore loads proxy channels without failed API requests', async ({ page }) => {
+test('desktop Explore loads Orchard Park channels without failed API requests', async ({
+  page,
+}) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/explore');
   await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible();
   await expect(page.getByText('Live proxy sensor data')).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'Feature' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Feature' })).toBeVisible();
   await expect(page.getByText('Proxy sensors')).toHaveCount(0);
   await expect(page.getByText('TTN Testbed')).toHaveCount(0);
   await expect(page.getByText('Site-wide history')).toHaveCount(0);
@@ -187,18 +192,19 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   await expect(page.getByRole('heading', { name: 'Sensor channels' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Quality warnings' })).toHaveCount(0);
   const charts = page.getByTestId('explore-series-chart');
-  await expect(charts).toHaveCount(14);
+  await expect(charts).toHaveCount(7);
   await expect(
     page
       .getByTestId('explore-series-chart')
       .filter({ has: page.locator('svg') })
       .first(),
   ).toBeVisible();
-  await expect(page.getByLabel('weather-station, Air Temperature, measured in °C')).toBeVisible();
-  await expect(page.getByLabel('weather-station-2, Air Temperature, measured in °C')).toBeVisible();
+  await expect(
+    page.getByLabel('Swale weather station, Air temperature, measured in °C'),
+  ).toBeVisible();
 
   const cardObservationCounts = page.locator('.explore-series-card > .chart-note');
-  await expect(cardObservationCounts).toHaveCount(14);
+  await expect(cardObservationCounts).toHaveCount(7);
   expect(
     (await cardObservationCounts.allTextContents()).every((text) => !text.includes('displayed')),
   ).toBe(true);
@@ -210,7 +216,7 @@ test('desktop Explore loads proxy channels without failed API requests', async (
 
   await rangeSelect.selectOption('7d');
   await expect(page).toHaveURL(/preset=7d/);
-  await expect(charts).toHaveCount(14);
+  await expect(charts).toHaveCount(7);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
   const sevenDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
@@ -220,7 +226,7 @@ test('desktop Explore loads proxy channels without failed API requests', async (
 
   await rangeSelect.selectOption('30d');
   await expect(page).toHaveURL(/preset=30d/);
-  await expect(charts).toHaveCount(14);
+  await expect(charts).toHaveCount(7);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
   const thirtyDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
@@ -228,12 +234,12 @@ test('desktop Explore loads proxy channels without failed API requests', async (
   expect(thirtyDayLabels.length).toBeGreaterThanOrEqual(3);
   expect(thirtyDayLabels.length).toBeLessThanOrEqual(8);
 
-  await page.getByLabel('Custom start (Europe/London)', { exact: true }).fill('01/08/2026 00:00');
-  await page.getByLabel('Custom end (Europe/London)', { exact: true }).fill('13/08/2026 14:00');
+  await page.getByLabel('Custom start (Europe/London)', { exact: true }).fill('25/05/2026 13:00');
+  await page.getByLabel('Custom end (Europe/London)', { exact: true }).fill('01/06/2026 13:00');
   await page.getByRole('button', { name: 'Apply custom range' }).click();
   await expect(page).toHaveURL(/preset=custom/);
-  await expect(page).toHaveURL(/start=2026-07-31T23%3A00%3A00.000Z/);
-  await expect(charts).toHaveCount(14);
+  await expect(page).toHaveURL(/start=2026-05-25T12%3A00%3A00.000Z/);
+  await expect(charts).toHaveCount(7);
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
 
   expect(browserErrors).toEqual([]);
@@ -245,19 +251,22 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/devices');
-  const outflow = page.getByRole('row').filter({ hasText: 'outflow-a' });
-  await outflow.getByRole('link', { name: /View details/ }).click();
-  await expect(page.getByRole('heading', { name: 'outflow-a', exact: true })).toBeVisible();
+  const weather = page.getByRole('row').filter({ hasText: 'Swale weather station' });
+  await weather.getByRole('link', { name: /View details/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Swale weather station', exact: true }),
+  ).toBeVisible();
 
   const channelSelect = page.getByRole('combobox', { name: 'Sensor channel' });
   const rangeSelect = page.getByRole('combobox', { name: 'Time range' });
-  await channelSelect.selectOption({ label: 'Outflow A · mL/hour' });
+  await channelSelect.selectOption({ label: 'Rainfall intensity · mm/h' });
+  const selectedChannelId = await channelSelect.inputValue();
   await rangeSelect.selectOption('24h');
   await expect(page).toHaveURL(/preset=24h/);
   const selectedUrl = new URL(page.url());
   expect(selectedUrl.searchParams.get('start')).toBeTruthy();
   expect(selectedUrl.searchParams.get('end')).toBeTruthy();
-  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
+  await expect(channelSelect).toHaveValue(selectedChannelId);
   const chart = page.getByTestId('time-series-chart');
   await expect(chart).toContainText(/observations/);
   const hourLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
@@ -267,8 +276,9 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
 
   await rangeSelect.selectOption('7d');
   await expect(page).toHaveURL(/preset=7d/);
-  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
-  await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
+  await expect(channelSelect).toHaveValue(selectedChannelId);
+  await expect(chart).toContainText('168 observations');
+  await expect(chart).not.toContainText('displayed');
   const sevenDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
   );
@@ -277,9 +287,12 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
 
   await rangeSelect.selectOption('30d');
   await expect(page).toHaveURL(/preset=30d/);
-  await expect(channelSelect).toHaveValue('1e2ee515-73a1-5b32-862e-6ba277ff908b');
-  await expect(page.getByRole('heading', { name: 'Outflow A · Last 30 days' })).toBeVisible();
-  await expect(chart).toContainText(/observations · \d[\d,]* displayed/);
+  await expect(channelSelect).toHaveValue(selectedChannelId);
+  await expect(
+    page.getByRole('heading', { name: 'Rainfall intensity · Last 30 days' }),
+  ).toBeVisible();
+  await expect(chart).toContainText('168 observations');
+  await expect(chart).not.toContainText('displayed');
   const thirtyDayLabels = (await chart.locator('svg text').allTextContents()).filter((label) =>
     /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
   );
@@ -308,20 +321,22 @@ test('Device Detail adapts its time axis, preserves selection, and exports compl
   const downloadPromise = page.waitForEvent('download');
   await exportButton.click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^outflow-a_.+\.csv$/);
+  expect(download.suggestedFilename()).toMatch(
+    /^swale-weather-station_rainfall-intensity_.+\.csv$/,
+  );
   expect(page.url()).toBe(pageUrlBeforeExport);
   expect(browserErrors).toEqual([]);
 });
 
-test('vision-ai remains an evidence-based no-data device', async ({ page }) => {
+test('the tree-pit probe remains an evidence-based no-data device', async ({ page }) => {
   const browserErrors = collectBrowserAndApiErrors(page);
 
   await page.goto('/devices');
-  const vision = page.getByRole('row').filter({ hasText: 'vision-ai' });
-  await expect(vision.getByText('Never received')).toBeVisible();
-  await vision.getByRole('link', { name: /View details/ }).click();
-  await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Never seen / No data' })).toBeVisible();
+  const treePit = page.getByRole('row').filter({ hasText: 'Tree-pit multi-depth probe' });
+  await expect(treePit.getByText('Never received')).toBeVisible();
+  await treePit.getByRole('link', { name: /View details/ }).click();
+  await expect(page.getByRole('heading', { name: 'Tree-pit multi-depth probe' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sensor configuration pending' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Chart controls' })).toHaveCount(0);
 
   expect(browserErrors).toEqual([]);
@@ -378,9 +393,9 @@ test('mobile Overview, Explore, Devices, and Device Detail have no horizontal ov
     await monitoringFeature.evaluate((element) => getComputedStyle(element).outlineWidth),
   ).toBe('3px');
 
-  const vision = page.getByRole('row').filter({ hasText: 'vision-ai' });
-  await vision.getByRole('link', { name: /View details/ }).click();
-  await expect(page.getByRole('heading', { name: 'vision-ai' })).toBeVisible();
+  const treePit = page.getByRole('row').filter({ hasText: 'Tree-pit multi-depth probe' });
+  await treePit.getByRole('link', { name: /View details/ }).click();
+  await expect(page.getByRole('heading', { name: 'Tree-pit multi-depth probe' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   expect(browserErrors).toEqual([]);

@@ -151,7 +151,6 @@ jobs:
       - run: docker compose up -d db
       - run: docker compose run --rm backend uv run alembic upgrade head
       - run: docker compose run --rm backend uv run python -m app.db.seed
-      - run: docker compose run --rm backend uv run python -m app.db.seed_ttn_proxy
       - run: docker compose up -d backend frontend
       - run: npm run test:e2e
         working-directory: frontend
