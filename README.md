@@ -176,16 +176,3 @@ Database-writing tests and migration checks should use an isolated disposable te
 live monitoring database. GitHub Actions repeats the static, test, migration, contract, browser,
 dependency-audit, and secret-scanning gates. The complete policy is in
 [docs/change-protocol.md](docs/change-protocol.md).
-
-## Deployment scope and known limitations
-
-- The system was evaluated locally with Docker Compose; no continuously hosted production deployment
-  was implemented. Monitoring and MQTT ingestion stop when the host sleeps or shuts down.
-- No user authentication, automated backup service, retention policy, cloud deployment, TTN Storage
-  API backfill, downlink workflow, live webhook adapter, or alert engine is included.
-- Reporting schedules, calibration, and several proxy measurement meanings or units remain
-  unconfirmed; coverage is unavailable instead of inferred when required schedule metadata is absent.
-- The Orchard Park map is an approved static reference dataset and is not linked to the live proxy
-  devices or their observations.
-- Software licensing remains unresolved pending university and partner confirmation; no licence file
-  is included.
