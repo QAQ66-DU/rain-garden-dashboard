@@ -32,7 +32,7 @@ jobs:
       TTN_WEBHOOK_ENABLED: 'false'
       TTN_WEBHOOK_SECRET: test-only-webhook-secret
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           version: 0.11.29
@@ -65,7 +65,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -87,13 +87,13 @@ jobs:
   portability:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 scripts/check_portability.py
 
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           version: 0.11.29
@@ -137,7 +137,7 @@ jobs:
       DEFAULT_MEASUREMENT_RANGE_DAYS: 7
       MAX_MEASUREMENT_RESULT_ROWS: 5000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
