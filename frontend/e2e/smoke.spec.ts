@@ -216,22 +216,40 @@ test('desktop Explore loads Orchard Park channels without failed API requests', 
 
   await rangeSelect.selectOption('7d');
   await expect(page).toHaveURL(/preset=7d/);
-  await expect(charts).toHaveCount(7);
+  await expect(charts).toHaveCount(7, { timeout: 15_000 });
+  await expect(charts.first().locator('svg')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await charts.first().locator('svg text').allTextContents()).filter((label) =>
+          /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+        ).length,
+      { timeout: 10_000 },
+    )
+    .toBeGreaterThanOrEqual(3);
   const sevenDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
   );
-  expect(sevenDayLabels.length).toBeGreaterThanOrEqual(3);
   expect(sevenDayLabels.length).toBeLessThanOrEqual(8);
 
   await rangeSelect.selectOption('30d');
   await expect(page).toHaveURL(/preset=30d/);
-  await expect(charts).toHaveCount(7);
+  await expect(charts).toHaveCount(7, { timeout: 15_000 });
+  await expect(charts.first().locator('svg')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/maximum is 5000/i)).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await charts.first().locator('svg text').allTextContents()).filter((label) =>
+          /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
+        ).length,
+      { timeout: 10_000 },
+    )
+    .toBeGreaterThanOrEqual(3);
   const thirtyDayLabels = (await charts.first().locator('svg text').allTextContents()).filter(
     (label) => /^\d{1,2} [A-Z][a-z]{2}$/.test(label),
   );
-  expect(thirtyDayLabels.length).toBeGreaterThanOrEqual(3);
   expect(thirtyDayLabels.length).toBeLessThanOrEqual(8);
 
   await page.getByLabel('Custom start (Europe/London)', { exact: true }).fill('25/05/2026 13:00');
